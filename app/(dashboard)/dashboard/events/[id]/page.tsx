@@ -2,8 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getEventById } from '@/lib/db/queries';
+import { getEventById, getPhotosForEvent, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
+import { PhotoUpload } from '@/components/photo-upload';
+import { PhotoGallery } from '@/components/photo-gallery';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -17,18 +19,22 @@ export default async function EventPage({ params }: EventPageProps) {
     redirect('/dashboard/events');
   }
 
-  const event = await getEventById(eventId);
+  const [event, photos, user] = await Promise.all([
+    getEventById(eventId),
+    getPhotosForEvent(eventId, true), // Include unapproved for event owners
+    getUser()
+  ]);
   
-  if (!event) {
+  if (!event || !user) {
     redirect('/dashboard/events');
   }
 
   const eventDate = new Date(event.date);
-  const photoCount = event.photos?.length || 0;
+  const photoCount = photos?.length || 0;
 
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <div className="flex items-center mb-6">
           <Link href="/dashboard/events">
             <Button variant="ghost" size="sm" className="mr-4">
@@ -54,8 +60,9 @@ export default async function EventPage({ params }: EventPageProps) {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="md:col-span-2">
+        <div className="grid gap-6 lg:grid-cols-4">
+          <div className="lg:col-span-3 space-y-6">
+            {/* Event Details */}
             <Card>
               <CardHeader>
                 <CardTitle>Event Details</CardTitle>
@@ -69,7 +76,11 @@ export default async function EventPage({ params }: EventPageProps) {
               </CardContent>
             </Card>
 
-            <Card className="mt-6">
+            {/* Photo Upload */}
+            <PhotoUpload eventId={eventId} />
+
+            {/* Photo Gallery */}
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Users className="mr-2 h-5 w-5" />
@@ -77,19 +88,17 @@ export default async function EventPage({ params }: EventPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {photoCount > 0 ? (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">Photo gallery coming soon...</p>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No photos uploaded yet</p>
-                  </div>
-                )}
+                <PhotoGallery
+                  photos={photos || []}
+                  eventId={eventId}
+                  currentUserId={user.id}
+                  canManage={true} // Event owners can manage all photos
+                />
               </CardContent>
             </Card>
           </div>
 
+          {/* Event Settings Sidebar */}
           <div>
             <Card>
               <CardHeader>
