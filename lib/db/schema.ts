@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   integer,
+  boolean,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -43,6 +44,41 @@ export const teamMembers = pgTable('team_members', {
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
 });
 
+export const events = pgTable('events', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+  description: text('description'),
+  ownerId: integer('owner_id')
+    .notNull()
+    .references(() => users.id),
+  teamId: integer('team_id')
+    .notNull()
+    .references(() => teams.id),
+  eventDate: timestamp('event_date'),
+  location: varchar('location', { length: 255 }),
+  isPublic: boolean('is_public').notNull().default(false),
+  allowGuestUploads: boolean('allow_guest_uploads').notNull().default(true),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const photos = pgTable('photos', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id')
+    .notNull()
+    .references(() => events.id),
+  s3Key: varchar('s3_key', { length: 500 }).notNull(),
+  originalName: varchar('original_name', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  fileSize: integer('file_size').notNull(),
+  width: integer('width'),
+  height: integer('height'),
+  uploadedBy: integer('uploaded_by').references(() => users.id),
+  uploaderName: varchar('uploader_name', { length: 100 }),
+  uploaderEmail: varchar('uploader_email', { length: 255 }),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+});
+
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -72,11 +108,37 @@ export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
   invitations: many(invitations),
+  events: many(events),
 }));
 
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
+  ownedEvents: many(events),
+  uploadedPhotos: many(photos),
+}));
+
+export const eventsRelations = relations(events, ({ one, many }) => ({
+  owner: one(users, {
+    fields: [events.ownerId],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [events.teamId],
+    references: [teams.id],
+  }),
+  photos: many(photos),
+}));
+
+export const photosRelations = relations(photos, ({ one }) => ({
+  event: one(events, {
+    fields: [photos.eventId],
+    references: [events.id],
+  }),
+  uploadedByUser: one(users, {
+    fields: [photos.uploadedBy],
+    references: [users.id],
+  }),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -118,6 +180,10 @@ export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
+export type Event = typeof events.$inferSelect;
+export type NewEvent = typeof events.$inferInsert;
+export type Photo = typeof photos.$inferSelect;
+export type NewPhoto = typeof photos.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
@@ -139,4 +205,9 @@ export enum ActivityType {
   REMOVE_TEAM_MEMBER = 'REMOVE_TEAM_MEMBER',
   INVITE_TEAM_MEMBER = 'INVITE_TEAM_MEMBER',
   ACCEPT_INVITATION = 'ACCEPT_INVITATION',
+  CREATE_EVENT = 'CREATE_EVENT',
+  UPDATE_EVENT = 'UPDATE_EVENT',
+  DELETE_EVENT = 'DELETE_EVENT',
+  UPLOAD_PHOTO = 'UPLOAD_PHOTO',
+  DELETE_PHOTO = 'DELETE_PHOTO',
 }
