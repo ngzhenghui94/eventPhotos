@@ -1,19 +1,16 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Manrope } from 'next/font/google';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'Next.js SaaS Starter',
-  description: 'Get started quickly with Next.js, Postgres, and Stripe.'
+  title: 'Event Photos - Share Photos Securely',
+  description: 'Create beautiful photo galleries for your events with secure AWS S3 storage.'
 };
 
 export const viewport: Viewport = {
   maximumScale: 1
 };
-
-const manrope = Manrope({ subsets: ['latin'] });
 
 export default function RootLayout({
   children
@@ -23,7 +20,8 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
+      className="bg-white dark:bg-gray-950 text-black dark:text-white"
+      style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <body className="min-h-[100dvh] bg-gray-50">
         <SWRConfig

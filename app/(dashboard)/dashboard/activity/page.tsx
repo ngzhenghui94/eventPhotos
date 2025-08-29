@@ -9,6 +9,10 @@ import {
   UserMinus,
   Mail,
   CheckCircle,
+  Calendar,
+  Upload,
+  Trash2,
+  Edit,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -25,6 +29,11 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
   [ActivityType.INVITE_TEAM_MEMBER]: Mail,
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.CREATE_EVENT]: Calendar,
+  [ActivityType.UPDATE_EVENT]: Edit,
+  [ActivityType.DELETE_EVENT]: Trash2,
+  [ActivityType.UPLOAD_PHOTO]: Upload,
+  [ActivityType.DELETE_PHOTO]: Trash2,
 };
 
 function getRelativeTime(date: Date) {
@@ -63,6 +72,16 @@ function formatAction(action: ActivityType): string {
       return 'You invited a team member';
     case ActivityType.ACCEPT_INVITATION:
       return 'You accepted an invitation';
+    case ActivityType.CREATE_EVENT:
+      return 'You created an event';
+    case ActivityType.UPDATE_EVENT:
+      return 'You updated an event';
+    case ActivityType.DELETE_EVENT:
+      return 'You deleted an event';
+    case ActivityType.UPLOAD_PHOTO:
+      return 'You uploaded a photo';
+    case ActivityType.DELETE_PHOTO:
+      return 'You deleted a photo';
     default:
       return 'Unknown action occurred';
   }
@@ -114,8 +133,8 @@ export default async function ActivityPage() {
                 No activity yet
               </h3>
               <p className="text-sm text-gray-500 max-w-sm">
-                When you perform actions like signing in or updating your
-                account, they'll appear here.
+                When you perform actions like creating events or uploading photos,
+                they'll appear here.
               </p>
             </div>
           )}

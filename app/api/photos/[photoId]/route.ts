@@ -4,10 +4,11 @@ import { getSignedDownloadUrl } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { photoId: string } }
+  context: { params: Promise<{ photoId: string }> }
 ) {
   try {
-    const photoId = parseInt(params.photoId);
+    const { photoId: photoIdStr } = await context.params;
+    const photoId = parseInt(photoIdStr);
     if (!photoId) {
       return Response.json({ error: 'Invalid photo ID' }, { status: 400 });
     }

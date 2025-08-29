@@ -4,10 +4,11 @@ import { getSignedDownloadUrl } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { eventId: string } }
+  context: { params: Promise<{ eventId: string }> }
 ) {
   try {
-    const eventId = parseInt(params.eventId);
+    const { eventId: eventIdStr } = await context.params;
+    const eventId = parseInt(eventIdStr);
     if (!eventId) {
       return Response.json({ error: 'Invalid event ID' }, { status: 400 });
     }
