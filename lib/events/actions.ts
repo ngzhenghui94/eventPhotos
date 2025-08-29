@@ -1,9 +1,17 @@
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { events, ActivityType } from '@/lib/db/schema';
+import { events, teamMembers, ActivityType } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
-import { getUserWithTeam } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
+
+// Helper to get user's team ID
+async function getUserTeamId(userId: number) {
+  const result = await db.query.teamMembers.findFirst({
+    where: eq(teamMembers.userId, userId),
+    columns: { teamId: true }
+  });
+  return result?.teamId || null;
+}
 
 // Create Event Action
 const createEventSchema = z.object({
@@ -19,9 +27,9 @@ const createEventSchema = z.object({
 export const createEvent = validatedActionWithUser(
   createEventSchema,
   async (data, _, user) => {
-    const userWithTeam = await getUserWithTeam(user.id);
+    const teamId = await getUserTeamId(user.id);
     
-    if (!userWithTeam?.teamId) {
+    if (!teamId) {
       return { error: 'User is not part of a team' };
     }
 
@@ -35,7 +43,7 @@ export const createEvent = validatedActionWithUser(
         date: new Date(data.date),
         location: data.location || null,
         accessCode,
-        teamId: userWithTeam.teamId,
+        teamId,
         createdBy: user.id,
         isPublic: data.isPublic || false,
         allowGuestUploads: data.allowGuestUploads !== false, // Default to true
@@ -65,9 +73,9 @@ const updateEventSchema = z.object({
 export const updateEvent = validatedActionWithUser(
   updateEventSchema,
   async (data, _, user) => {
-    const userWithTeam = await getUserWithTeam(user.id);
+    const teamId = await getUserTeamId(user.id);
     
-    if (!userWithTeam?.teamId) {
+    if (!teamId) {
       return { error: 'User is not part of a team' };
     }
 
@@ -101,9 +109,9 @@ const deleteEventSchema = z.object({
 export const deleteEvent = validatedActionWithUser(
   deleteEventSchema,
   async (data, _, user) => {
-    const userWithTeam = await getUserWithTeam(user.id);
+    const teamId = await getUserTeamId(user.id);
     
-    if (!userWithTeam?.teamId) {
+    if (!teamId) {
       return { error: 'User is not part of a team' };
     }
 
