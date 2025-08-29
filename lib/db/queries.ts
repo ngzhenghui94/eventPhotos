@@ -1,6 +1,6 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import { activityLogs, teamMembers, teams, users, events, photos } from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -127,4 +127,92 @@ export async function getTeamForUser() {
   });
 
   return result?.team || null;
+}
+
+// Events queries
+export async function getEventsForTeam(teamId: number) {
+  return await db.query.events.findMany({
+    where: eq(events.teamId, teamId),
+    with: {
+      createdBy: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      photos: true
+    },
+    orderBy: desc(events.createdAt)
+  });
+}
+
+export async function getEventById(eventId: number) {
+  return await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: {
+      createdBy: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      photos: {
+        orderBy: desc(photos.uploadedAt)
+      },
+      team: true
+    }
+  });
+}
+
+export async function getEventByAccessCode(accessCode: string) {
+  return await db.query.events.findFirst({
+    where: eq(events.accessCode, accessCode),
+    with: {
+      createdBy: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      photos: {
+        where: eq(photos.isApproved, true),
+        orderBy: desc(photos.uploadedAt)
+      },
+      team: true
+    }
+  });
+}
+
+// Photos queries
+export async function getPhotosForEvent(eventId: number, includeUnapproved: boolean = false) {
+  const whereConditions = includeUnapproved 
+    ? eq(photos.eventId, eventId)
+    : and(eq(photos.eventId, eventId), eq(photos.isApproved, true));
+
+  return await db.query.photos.findMany({
+    where: whereConditions,
+    with: {
+      uploadedBy: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      }
+    },
+    orderBy: desc(photos.uploadedAt)
+  });
+}
+
+// Activity logging
+export async function logActivity(teamId: number, userId: number, action: string, ipAddress?: string) {
+  return await db.insert(activityLogs).values({
+    teamId,
+    userId,
+    action,
+    ipAddress: ipAddress || null,
+  });
 }

@@ -9,6 +9,11 @@ import {
   UserMinus,
   Mail,
   CheckCircle,
+  Calendar,
+  Edit,
+  Trash2,
+  Upload,
+  Image,
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -25,6 +30,12 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
   [ActivityType.INVITE_TEAM_MEMBER]: Mail,
   [ActivityType.ACCEPT_INVITATION]: CheckCircle,
+  [ActivityType.CREATE_EVENT]: Calendar,
+  [ActivityType.UPDATE_EVENT]: Edit,
+  [ActivityType.DELETE_EVENT]: Trash2,
+  [ActivityType.UPLOAD_PHOTO]: Upload,
+  [ActivityType.DELETE_PHOTO]: Trash2,
+  [ActivityType.APPROVE_PHOTO]: CheckCircle,
 };
 
 function getRelativeTime(date: Date) {
@@ -63,6 +74,18 @@ function formatAction(action: ActivityType): string {
       return 'You invited a team member';
     case ActivityType.ACCEPT_INVITATION:
       return 'You accepted an invitation';
+    case ActivityType.CREATE_EVENT:
+      return 'You created a new event';
+    case ActivityType.UPDATE_EVENT:
+      return 'You updated an event';
+    case ActivityType.DELETE_EVENT:
+      return 'You deleted an event';
+    case ActivityType.UPLOAD_PHOTO:
+      return 'A photo was uploaded';
+    case ActivityType.DELETE_PHOTO:
+      return 'A photo was deleted';
+    case ActivityType.APPROVE_PHOTO:
+      return 'A photo was approved';
     default:
       return 'Unknown action occurred';
   }
