@@ -6,6 +6,8 @@ import { getEventById, getPhotosForEvent, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { PhotoUpload } from '@/components/photo-upload';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { PhotoApproval } from '@/components/photo-approval';
+import { BulkDownload } from '@/components/bulk-download';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -79,17 +81,23 @@ export default async function EventPage({ params }: EventPageProps) {
             {/* Photo Upload */}
             <PhotoUpload eventId={eventId} />
 
+            {/* Photo Approval */}
+            {event.requireApproval && (
+              <PhotoApproval photos={photos || []} eventId={eventId} />
+            )}
+
             {/* Photo Gallery */}
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center">
                   <Users className="mr-2 h-5 w-5" />
-                  Photos ({photoCount})
+                  Approved Photos ({photos?.filter(p => p.isApproved).length || 0})
                 </CardTitle>
+                <BulkDownload photos={photos?.filter(p => p.isApproved) || []} />
               </CardHeader>
               <CardContent>
                 <PhotoGallery
-                  photos={photos || []}
+                  photos={photos?.filter(p => p.isApproved) || []}
                   eventId={eventId}
                   currentUserId={user.id}
                   canManage={true} // Event owners can manage all photos
