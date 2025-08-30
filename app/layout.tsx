@@ -4,8 +4,10 @@ import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
-  title: 'Event Photos - Share Photos Securely',
-  description: 'Create beautiful photo galleries for your events with secure AWS S3 storage.'
+
+  title: 'EventPhotos - Photo Sharing for Events',
+  description: 'Share and collect photos from your events with guests easily.'
+
 };
 
 export const viewport: Viewport = {

@@ -10,9 +10,10 @@ import {
   Mail,
   CheckCircle,
   Calendar,
-  Upload,
-  Trash2,
   Edit,
+  Trash2,
+  Upload,
+
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -34,6 +35,9 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.DELETE_EVENT]: Trash2,
   [ActivityType.UPLOAD_PHOTO]: Upload,
   [ActivityType.DELETE_PHOTO]: Trash2,
+
+  [ActivityType.APPROVE_PHOTO]: CheckCircle,
+
 };
 
 function getRelativeTime(date: Date) {
@@ -73,15 +77,22 @@ function formatAction(action: ActivityType): string {
     case ActivityType.ACCEPT_INVITATION:
       return 'You accepted an invitation';
     case ActivityType.CREATE_EVENT:
-      return 'You created an event';
+      return 'You created a new event';
     case ActivityType.UPDATE_EVENT:
       return 'You updated an event';
     case ActivityType.DELETE_EVENT:
       return 'You deleted an event';
     case ActivityType.UPLOAD_PHOTO:
+
       return 'You uploaded a photo';
     case ActivityType.DELETE_PHOTO:
       return 'You deleted a photo';
+
+      return 'A photo was uploaded';
+    case ActivityType.DELETE_PHOTO:
+      return 'A photo was deleted';
+    case ActivityType.APPROVE_PHOTO:
+      return 'A photo was approved';
     default:
       return 'Unknown action occurred';
   }
@@ -107,7 +118,6 @@ export default async function ActivityPage() {
                 const formattedAction = formatAction(
                   log.action as ActivityType
                 );
-
                 return (
                   <li key={log.id} className="flex items-center space-x-4">
                     <div className="bg-orange-100 rounded-full p-2">

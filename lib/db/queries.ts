@@ -1,6 +1,7 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users, events, photos, ActivityType } from './schema';
+
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -138,6 +139,7 @@ export async function getTeamForUser() {
   return result?.team || null;
 }
 
+
 // Event-related queries
 export async function getEventsForTeam(teamId: number) {
   return await db
@@ -170,6 +172,7 @@ export async function getEventById(eventId: number) {
           email: true
         }
       },
+
       team: {
         columns: {
           id: true,
