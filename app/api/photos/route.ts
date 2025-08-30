@@ -2,8 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
 import { getUser, canUserUploadToEvent, logActivity, getEventById } from '@/lib/db/queries';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { generatePhotoKey, uploadToS3 } from '@/lib/s3';
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,15 +40,11 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Event not found' }, { status: 404 });
     }
 
-  // Save file to local uploads folder
-  const uploadDir = join(process.cwd(), 'public/uploads/photos');
-  const timestamp = Date.now();
-  const randomString = Math.random().toString(36).substring(2, 15);
-  const extension = file.name.split('.').pop() || 'jpg';
-  const filename = `${timestamp}-${randomString}.${extension}`;
-  const filePath = join(uploadDir, filename);
+  // Upload to S3
+  const key = generatePhotoKey(eventId, file.name);
   const fileBuffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(filePath, fileBuffer);
+  await uploadToS3(key, fileBuffer, file.type);
+  const filename = key.split('/').pop() || file.name;
 
     // Save photo record to database
     const [newPhoto] = await db.insert(photos).values({
@@ -58,7 +53,7 @@ export async function POST(request: NextRequest) {
       originalFilename: file.name,
       mimeType: file.type,
       fileSize: file.size,
-      filePath: `/uploads/photos/${filename}`,
+  filePath: `s3:${key}`,
       uploadedBy: user?.id || null,
       guestName: user ? null : uploaderName || null,
       guestEmail: user ? null : uploaderEmail || null,

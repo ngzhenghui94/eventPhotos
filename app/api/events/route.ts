@@ -46,11 +46,11 @@ export async function POST(request: NextRequest) {
 
     const [newEvent] = await db.insert(events).values({
       name,
-      description,
+      description: (description ?? '').toString(),
       createdBy: user.id,
       teamId: team.id,
       date: eventDate ? new Date(eventDate) : new Date(),
-      location,
+      location: (location ?? '').toString(),
       isPublic: !!isPublic,
       allowGuestUploads: allowGuestUploads !== false, // Default to true
       accessCode: Math.random().toString(36).substring(2, 8).toUpperCase(),

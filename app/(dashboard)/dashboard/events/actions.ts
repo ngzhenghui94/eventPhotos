@@ -52,25 +52,28 @@ export async function createEventAction(formData: FormData) {
   // Generate a unique access code
   const accessCode = generateAccessCode();
   
-  try {
-    const [newEvent] = await db.insert(events).values({
+  const [newEvent] = await db
+    .insert(events)
+    .values({
       name: result.data.name,
-      description: result.data.description || null,
+      // Some databases currently enforce NOT NULL; use empty string instead of null
+      description: (result.data.description ?? '').toString(),
       date: new Date(result.data.date),
-      location: result.data.location || null,
+      location: (result.data.location ?? '').toString(),
       accessCode,
       teamId: userTeam.teamId,
       createdBy: user.id,
       isPublic: result.data.isPublic || false,
       allowGuestUploads: result.data.allowGuestUploads !== false, // Default to true
       requireApproval: result.data.requireApproval || false,
-    }).returning();
+    })
+    .returning()
+    .catch((error) => {
+      console.error('Error creating event:', error);
+      throw new Error('Failed to create event. Please try again.');
+    });
 
-    redirect(`/dashboard/events/${newEvent.id}`);
-  } catch (error) {
-    console.error('Error creating event:', error);
-    throw new Error('Failed to create event. Please try again.');
-  }
+  redirect(`/dashboard/events/${newEvent.id}`);
 }
 
 // Helper function to generate unique access codes

@@ -256,7 +256,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
                 <CardContent className="p-0">
                   <div className="aspect-square relative overflow-hidden">
                     <img
-                      src={photo.url}
+                      src={`/api/photos/${photo.id}`}
                       alt={photo.originalName}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       loading="lazy"
@@ -365,7 +365,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
                   size="sm"
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = selectedPhoto.url;
+                    link.href = `/api/photos/${selectedPhoto.id}/download`;
                     link.download = selectedPhoto.originalName;
                     document.body.appendChild(link);
                     link.click();
@@ -387,7 +387,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
             </div>
             <div className="flex-1 flex items-center justify-center p-4">
               <img
-                src={selectedPhoto.url}
+                src={`/api/photos/${selectedPhoto.id}`}
                 alt={selectedPhoto.originalName}
                 className="max-w-full max-h-full object-contain"
               />

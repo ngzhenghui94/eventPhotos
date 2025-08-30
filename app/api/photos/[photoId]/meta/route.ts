@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { getUser, getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
 
@@ -25,18 +25,30 @@ export async function GET(
       return Response.json({ error: 'Not authorized to view this photo' }, { status: 403 });
     }
 
-    // If stored on S3 (filePath like 's3:<key>'), redirect to a short-lived signed URL; else redirect to local URL
     const isS3 = photo.filePath?.startsWith('s3:');
     if (isS3) {
       const key = photo.filePath.replace(/^s3:/, '');
       const url = await getSignedDownloadUrl(key, 60);
-      return NextResponse.redirect(url);
+      return Response.json({
+        id: photo.id,
+        originalName: photo.originalFilename,
+        url,
+        mimeType: photo.mimeType,
+        fileSize: photo.fileSize,
+        createdAt: photo.uploadedAt,
+      });
     }
 
-    // Local fallback
-    return NextResponse.redirect(new URL(photo.filePath, request.url));
+    return Response.json({
+      id: photo.id,
+      originalName: photo.originalFilename,
+      url: photo.filePath,
+      mimeType: photo.mimeType,
+      fileSize: photo.fileSize,
+      createdAt: photo.uploadedAt,
+    });
   } catch (error) {
-    console.error('Error fetching photo:', error);
-    return Response.json({ error: 'Failed to fetch photo' }, { status: 500 });
+    console.error('Error fetching photo metadata:', error);
+    return Response.json({ error: 'Failed to fetch photo metadata' }, { status: 500 });
   }
 }

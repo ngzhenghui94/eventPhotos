@@ -13,7 +13,7 @@ export function BulkDownload({ photos }: BulkDownloadProps) {
     photos.forEach((photo, index) => {
       setTimeout(() => {
         const link = document.createElement('a');
-        link.href = photo.filePath;
+  link.href = `/api/photos/${photo.id}/download`;
         link.download = photo.originalFilename;
         document.body.appendChild(link);
         link.click();

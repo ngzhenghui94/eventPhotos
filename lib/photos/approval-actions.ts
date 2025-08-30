@@ -6,6 +6,7 @@ import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { deleteFromS3 } from '@/lib/s3';
 
 export async function approvePhotoAction(formData: FormData) {
   const user = await getUser();
@@ -90,13 +91,17 @@ export async function rejectPhotoAction(formData: FormData) {
     throw new Error('You do not have permission to reject photos for this event');
   }
 
-  // Delete the photo
-  const fs = require('fs').promises;
-  const { join } = require('path');
-  const filePath = join(process.cwd(), 'public', photo.filePath);
-  
+  // Delete the photo (S3 or local fallback)
   try {
-    await fs.unlink(filePath);
+    if (photo.filePath?.startsWith('s3:')) {
+      const key = photo.filePath.replace(/^s3:/, '');
+      await deleteFromS3(key);
+    } else if (photo.filePath) {
+      const fs = require('fs').promises;
+      const { join } = require('path');
+      const filePath = join(process.cwd(), 'public', photo.filePath);
+      await fs.unlink(filePath);
+    }
   } catch (fileError) {
     console.error('Error deleting file:', fileError);
   }

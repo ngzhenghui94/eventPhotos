@@ -8,6 +8,7 @@ import { PhotoUpload } from '@/components/photo-upload';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { PhotoApproval } from '@/components/photo-approval';
 import { BulkDownload } from '@/components/bulk-download';
+import { EventQr } from '@/components/event-qr';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -154,13 +155,19 @@ export default async function EventPage({ params }: EventPageProps) {
                     </span>
                   </div>
                 </div>
-
                 <div className="pt-4 border-t">
                   <Link href={`/guest/${event.accessCode}`} target="_blank">
                     <Button className="w-full" size="sm">
                       View Guest Page
                     </Button>
                   </Link>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium">Guest QR Code</p>
+                    <EventQr code={event.accessCode} />
+                  </div>
                 </div>
               </CardContent>
             </Card>

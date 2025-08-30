@@ -1,11 +1,11 @@
 'use server';
 
-import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { db } from '@/lib/db/drizzle';
 import { photos, events } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { uploadToS3, generatePhotoKey } from '@/lib/s3';
 
 export async function uploadGuestPhotosAction(formData: FormData) {
   const eventId = parseInt(formData.get('eventId') as string);
@@ -45,7 +45,6 @@ export async function uploadGuestPhotosAction(formData: FormData) {
   }
 
   const uploadedPhotos = [];
-  const uploadDir = join(process.cwd(), 'public/uploads/photos');
 
   for (const file of files) {
     if (file.size === 0) continue;
@@ -61,29 +60,23 @@ export async function uploadGuestPhotosAction(formData: FormData) {
     }
 
     try {
-      // Generate unique filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 15);
-      const extension = file.name.split('.').pop() || 'jpg';
-      const filename = `${timestamp}-${randomString}.${extension}`;
-      const filePath = join(uploadDir, filename);
-
-      // Convert file to buffer and save
+  // Convert file to buffer and upload to S3
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
+  const key = generatePhotoKey(event.id, file.name);
+  await uploadToS3(key, buffer, file.type);
 
       // Save to database
       const [photoRecord] = await db.insert(photos).values({
-        filename,
+  filename: key.split('/').pop() || file.name,
         originalFilename: file.name,
         mimeType: file.type,
         fileSize: file.size,
-        filePath: `/uploads/photos/${filename}`,
+  filePath: `s3:${key}`,
         eventId,
         uploadedBy: null, // Guest upload
-        guestName,
-        guestEmail,
+  guestName,
+  guestEmail,
         isApproved: !event.requireApproval, // Auto-approve if not required
       }).returning();
 
