@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Camera, Users, Shield } from 'lucide-react';
+import { ArrowRight, Calendar, Camera, ImageIcon, Users, Shield  } from 'lucide-react';
 import { Terminal } from './terminal';
 
 export default function HomePage() {
@@ -50,11 +50,13 @@ export default function HomePage() {
                 <p className="mt-2 text-base text-gray-500">
                   Create events instantly and share unique codes with guests
                   for seamless photo uploading and viewing.
+
                 </p>
               </div>
             </div>
 
             <div className="mt-10 lg:mt-0">
+
               <div className="flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white">
                 <Users className="h-6 w-6" />
               </div>
@@ -65,11 +67,13 @@ export default function HomePage() {
                 <p className="mt-2 text-base text-gray-500">
                   No registration required for guests. They can upload and
                   view photos using just your event code.
+
                 </p>
               </div>
             </div>
 
             <div className="mt-10 lg:mt-0">
+
               <div className="flex items-center justify-center h-12 w-12 rounded-md bg-blue-500 text-white">
                 <Shield className="h-6 w-6" />
               </div>
@@ -80,6 +84,7 @@ export default function HomePage() {
                 <p className="mt-2 text-base text-gray-500">
                   Optional photo approval system to ensure only appropriate
                   content appears in your event gallery.
+
                 </p>
               </div>
             </div>
@@ -92,6 +97,7 @@ export default function HomePage() {
           <div className="lg:grid lg:grid-cols-2 lg:gap-8 lg:items-center">
             <div>
               <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
+
                 Ready to start sharing photos?
               </h2>
               <p className="mt-3 max-w-3xl text-lg text-gray-500">
@@ -102,11 +108,12 @@ export default function HomePage() {
             </div>
             <div className="mt-8 lg:mt-0 flex justify-center lg:justify-end">
               <a href="/sign-up">
+
                 <Button
                   size="lg"
                   className="text-lg rounded-full bg-blue-600 hover:bg-blue-700"
                 >
-                  Get Started Today
+                  Create Event
                   <ArrowRight className="ml-3 h-6 w-6" />
                 </Button>
               </a>

@@ -4,8 +4,10 @@ import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 
 export const metadata: Metadata = {
+
   title: 'EventPhotos - Photo Sharing for Events',
   description: 'Share and collect photos from your events with guests easily.'
+
 };
 
 export const viewport: Viewport = {
@@ -21,6 +23,7 @@ export default function RootLayout({
     <html
       lang="en"
       className="bg-white dark:bg-gray-950 text-black dark:text-white"
+      style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
       <body className="min-h-[100dvh] bg-gray-50">
         <SWRConfig
