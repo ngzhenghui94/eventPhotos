@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
 import { getUser, getEventById, getPhotosForEvent, canUserAccessEvent } from '@/lib/db/queries';
-import { getSignedDownloadUrl } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
@@ -25,31 +24,20 @@ export async function GET(
       return Response.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    const photos = await getPhotosForEvent(eventId);
-
-    // Generate signed URLs for all photos
-    const photosWithUrls = await Promise.all(
-      photos.map(async (photo) => {
-        const signedUrl = await getSignedDownloadUrl(photo.s3Key, 3600);
-        return {
-          ...photo,
-          url: signedUrl,
-        };
-      })
-    );
+  const photos = await getPhotosForEvent(eventId);
 
     return Response.json({
       event: {
         id: event.id,
         name: event.name,
         description: event.description,
-        eventDate: event.eventDate,
+        eventDate: event.date,
         location: event.location,
         isPublic: event.isPublic,
         allowGuestUploads: event.allowGuestUploads,
-        owner: event.owner,
+        owner: event.createdBy,
       },
-      photos: photosWithUrls,
+      photos,
     });
   } catch (error) {
     console.error('Error fetching event photos:', error);

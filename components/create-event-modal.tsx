@@ -166,7 +166,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
               <Checkbox
                 id="isPublic"
                 checked={formData.isPublic}
-                onCheckedChange={(checked) => handleCheckboxChange('isPublic', checked as boolean)}
+                onChange={(e) => handleCheckboxChange('isPublic', e.currentTarget.checked)}
               />
               <Label htmlFor="isPublic" className="text-sm font-medium text-gray-700">
                 Make event public
@@ -180,7 +180,7 @@ export function CreateEventModal({ isOpen, onClose, onEventCreated }: CreateEven
               <Checkbox
                 id="allowGuestUploads"
                 checked={formData.allowGuestUploads}
-                onCheckedChange={(checked) => handleCheckboxChange('allowGuestUploads', checked as boolean)}
+                onChange={(e) => handleCheckboxChange('allowGuestUploads', e.currentTarget.checked)}
               />
               <Label htmlFor="allowGuestUploads" className="text-sm font-medium text-gray-700">
                 Allow guest uploads

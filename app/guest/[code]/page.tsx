@@ -19,7 +19,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
     redirect('/guest/not-found');
   }
 
-  const photos = await getPhotosForEvent(event.id, false); // Only approved photos for guests
+  const photos = (await getPhotosForEvent(event.id)).filter((p: any) => p.isApproved);
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
 

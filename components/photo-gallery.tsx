@@ -8,7 +8,7 @@ import { deletePhotoAction } from '@/lib/photos/actions';
 import type { Photo, User } from '@/lib/db/schema';
 
 interface PhotoGalleryProps {
-  photos: (Photo & { uploadedBy?: Pick<User, 'id' | 'name' | 'email'> | null })[];
+  photos: (Photo & { uploadedByUser?: Pick<User, 'id' | 'name' | 'email'> | null })[];
   eventId: number;
   currentUserId?: number;
   canManage: boolean;
@@ -59,7 +59,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
             photo={photo}
             onView={() => setSelectedPhoto(photo.filePath)}
             onDelete={() => handleDeletePhoto(photo.id)}
-            canDelete={canManage || photo.uploadedBy?.id === currentUserId}
+            canDelete={canManage || photo.uploadedByUser?.id === currentUserId}
             isDeleting={isDeleting === photo.id}
           />
         ))}
@@ -77,7 +77,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
 }
 
 interface PhotoCardProps {
-  photo: Photo & { uploadedBy?: Pick<User, 'id' | 'name' | 'email'> | null };
+  photo: Photo & { uploadedByUser?: Pick<User, 'id' | 'name' | 'email'> | null };
   onView: () => void;
   onDelete: () => void;
   canDelete: boolean;
@@ -85,7 +85,7 @@ interface PhotoCardProps {
 }
 
 function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCardProps) {
-  const uploadedBy = photo.uploadedBy?.name || photo.guestName || 'Guest';
+  const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
 
   return (

@@ -8,7 +8,7 @@ import type { Photo, User } from '@/lib/db/schema';
 import { useState } from 'react';
 
 interface PhotoApprovalProps {
-  photos: (Photo & { uploadedBy?: Pick<User, 'id' | 'name' | 'email'> | null })[];
+  photos: (Photo & { uploadedByUser?: Pick<User, 'id' | 'name' | 'email'> | null })[];
   eventId: number;
 }
 
@@ -113,7 +113,7 @@ export function PhotoApproval({ photos, eventId }: PhotoApprovalProps) {
 }
 
 interface ApprovalPhotoCardProps {
-  photo: Photo & { uploadedBy?: Pick<User, 'id' | 'name' | 'email'> | null };
+  photo: Photo & { uploadedByUser?: Pick<User, 'id' | 'name' | 'email'> | null };
   onApprove: () => void;
   onReject: () => void;
   onView: () => void;
@@ -121,7 +121,7 @@ interface ApprovalPhotoCardProps {
 }
 
 function ApprovalPhotoCard({ photo, onApprove, onReject, onView, isProcessing }: ApprovalPhotoCardProps) {
-  const uploadedBy = photo.uploadedBy?.name || photo.guestName || 'Guest';
+  const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
 
   return (

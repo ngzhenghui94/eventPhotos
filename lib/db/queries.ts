@@ -147,16 +147,17 @@ export async function getEventsForTeam(teamId: number) {
       id: events.id,
       name: events.name,
       description: events.description,
-      eventDate: events.eventDate,
+      date: events.date,
       location: events.location,
       isPublic: events.isPublic,
       allowGuestUploads: events.allowGuestUploads,
+      requireApproval: events.requireApproval,
       createdAt: events.createdAt,
       ownerName: users.name,
-      ownerId: events.ownerId
+      ownerId: events.createdBy
     })
     .from(events)
-    .leftJoin(users, eq(events.ownerId, users.id))
+    .leftJoin(users, eq(events.createdBy, users.id))
     .where(eq(events.teamId, teamId))
     .orderBy(desc(events.createdAt));
 }
@@ -165,14 +166,9 @@ export async function getEventById(eventId: number) {
   const result = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
-      owner: {
-        columns: {
-          id: true,
-          name: true,
-          email: true
-        }
+      createdBy: {
+        columns: { id: true, name: true, email: true }
       },
-
       team: {
         columns: {
           id: true,
@@ -186,24 +182,44 @@ export async function getEventById(eventId: number) {
 }
 
 export async function getPhotosForEvent(eventId: number) {
-  return await db
+  const rows = await db
     .select({
       id: photos.id,
-      s3Key: photos.s3Key,
-      originalName: photos.originalName,
+      filename: photos.filename,
+      filePath: photos.filePath,
+      originalFilename: photos.originalFilename,
       mimeType: photos.mimeType,
       fileSize: photos.fileSize,
-      width: photos.width,
-      height: photos.height,
-      uploaderName: photos.uploaderName,
-      uploaderEmail: photos.uploaderEmail,
-      createdAt: photos.createdAt,
-      uploadedByUser: users.name
+      eventId: photos.eventId,
+      uploadedAt: photos.uploadedAt,
+      isApproved: photos.isApproved,
+      uploadedById: photos.uploadedBy,
+      guestName: photos.guestName,
+      guestEmail: photos.guestEmail,
+      userId: users.id,
+      userName: users.name,
+      userEmail: users.email,
     })
     .from(photos)
     .leftJoin(users, eq(photos.uploadedBy, users.id))
     .where(eq(photos.eventId, eventId))
-    .orderBy(desc(photos.createdAt));
+    .orderBy(desc(photos.uploadedAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    filename: r.filename,
+    filePath: r.filePath,
+    originalFilename: r.originalFilename,
+    mimeType: r.mimeType,
+    fileSize: r.fileSize,
+    eventId: r.eventId,
+    uploadedAt: r.uploadedAt,
+    isApproved: r.isApproved,
+    uploadedBy: r.uploadedById,
+    uploadedByUser: r.userId ? { id: r.userId, name: r.userName, email: r.userEmail! } : null,
+    guestName: r.guestName,
+    guestEmail: r.guestEmail,
+  }));
 }
 
 export async function getPhotoById(photoId: number) {
@@ -212,13 +228,7 @@ export async function getPhotoById(photoId: number) {
     with: {
       event: {
         with: {
-          owner: {
-            columns: {
-              id: true,
-              name: true,
-              email: true
-            }
-          },
+          createdBy: { columns: { id: true, name: true, email: true } },
           team: {
             columns: {
               id: true,
@@ -245,7 +255,7 @@ export async function canUserAccessEvent(eventId: number, userId?: number) {
   if (!userId) return false;
 
   // Owner can always access
-  if (event.ownerId === userId) return true;
+  if (event.createdBy === userId) return true;
 
   // Team members can access
   const userTeam = await getUserWithTeam(userId);
@@ -260,7 +270,7 @@ export async function canUserUploadToEvent(eventId: number, userId?: number) {
   if (!event) return false;
 
   // Owner can always upload
-  if (userId && event.ownerId === userId) return true;
+  if (userId && event.createdBy === userId) return true;
 
   // Team members can upload
   if (userId) {
@@ -272,4 +282,10 @@ export async function canUserUploadToEvent(eventId: number, userId?: number) {
   if (event.isPublic && event.allowGuestUploads) return true;
 
   return false;
+}
+
+export async function getEventByAccessCode(code: string) {
+  return await db.query.events.findFirst({
+    where: eq(events.accessCode, code),
+  });
 }

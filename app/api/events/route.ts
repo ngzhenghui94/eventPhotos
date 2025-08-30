@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { name, description, eventDate, location, isPublic, allowGuestUploads } = body;
+  const { name, description, eventDate, location, isPublic, allowGuestUploads } = body;
 
     if (!name) {
       return Response.json({ error: 'Event name is required' }, { status: 400 });
@@ -47,12 +47,13 @@ export async function POST(request: NextRequest) {
     const [newEvent] = await db.insert(events).values({
       name,
       description,
-      ownerId: user.id,
+      createdBy: user.id,
       teamId: team.id,
-      eventDate: eventDate ? new Date(eventDate) : null,
+      date: eventDate ? new Date(eventDate) : new Date(),
       location,
-      isPublic: isPublic || false,
+      isPublic: !!isPublic,
       allowGuestUploads: allowGuestUploads !== false, // Default to true
+      accessCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
     }).returning();
 
     // Log activity

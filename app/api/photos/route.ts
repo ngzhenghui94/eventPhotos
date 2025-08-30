@@ -2,7 +2,8 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
 import { getUser, canUserUploadToEvent, logActivity, getEventById } from '@/lib/db/queries';
-import { uploadToS3, generatePhotoKey } from '@/lib/s3';
+import { writeFile } from 'fs/promises';
+import { join } from 'path';
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,29 +41,28 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // Generate S3 key and upload file
-    const s3Key = generatePhotoKey(eventId, file.name);
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    
-    await uploadToS3(s3Key, fileBuffer, file.type);
-
-    // Get image dimensions (basic attempt)
-    let width = null;
-    let height = null;
-    // You could add image processing library here to get actual dimensions
+  // Save file to local uploads folder
+  const uploadDir = join(process.cwd(), 'public/uploads/photos');
+  const timestamp = Date.now();
+  const randomString = Math.random().toString(36).substring(2, 15);
+  const extension = file.name.split('.').pop() || 'jpg';
+  const filename = `${timestamp}-${randomString}.${extension}`;
+  const filePath = join(uploadDir, filename);
+  const fileBuffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(filePath, fileBuffer);
 
     // Save photo record to database
     const [newPhoto] = await db.insert(photos).values({
       eventId,
-      s3Key,
-      originalName: file.name,
+      filename,
+      originalFilename: file.name,
       mimeType: file.type,
       fileSize: file.size,
-      width,
-      height,
+      filePath: `/uploads/photos/${filename}`,
       uploadedBy: user?.id || null,
-      uploaderName: user?.name || uploaderName || null,
-      uploaderEmail: user?.email || uploaderEmail || null,
+      guestName: user ? null : uploaderName || null,
+      guestEmail: user ? null : uploaderEmail || null,
+      isApproved: !event.requireApproval,
     }).returning();
 
     // Log activity
