@@ -1,6 +1,7 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users, events, photos } from './schema';
+import { activityLogs, teamMembers, teams, users, events, photos, ActivityType } from './schema';
+
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
 
@@ -34,6 +35,15 @@ export async function getUser() {
   }
 
   return user[0];
+}
+
+export async function logActivity(teamId: number, userId: number | null, action: ActivityType) {
+  await db.insert(activityLogs).values({
+    teamId,
+    userId,
+    action,
+    timestamp: new Date(),
+  });
 }
 
 export async function getTeamByStripeCustomerId(customerId: string) {
@@ -129,90 +139,153 @@ export async function getTeamForUser() {
   return result?.team || null;
 }
 
-// Events queries
+
+// Event-related queries
 export async function getEventsForTeam(teamId: number) {
-  return await db.query.events.findMany({
-    where: eq(events.teamId, teamId),
-    with: {
-      createdBy: {
-        columns: {
-          id: true,
-          name: true,
-          email: true
-        }
-      },
-      photos: true
-    },
-    orderBy: desc(events.createdAt)
-  });
+  return await db
+    .select({
+      id: events.id,
+      name: events.name,
+      description: events.description,
+      date: events.date,
+      location: events.location,
+      isPublic: events.isPublic,
+      allowGuestUploads: events.allowGuestUploads,
+      requireApproval: events.requireApproval,
+      createdAt: events.createdAt,
+      ownerName: users.name,
+      ownerId: events.createdBy
+    })
+    .from(events)
+    .leftJoin(users, eq(events.createdBy, users.id))
+    .where(eq(events.teamId, teamId))
+    .orderBy(desc(events.createdAt));
 }
 
 export async function getEventById(eventId: number) {
-  return await db.query.events.findFirst({
+  const result = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
       createdBy: {
+        columns: { id: true, name: true, email: true }
+      },
+      team: {
         columns: {
           id: true,
-          name: true,
-          email: true
-        }
-      },
-      photos: {
-        orderBy: desc(photos.uploadedAt)
-      },
-      team: true
-    }
-  });
-}
-
-export async function getEventByAccessCode(accessCode: string) {
-  return await db.query.events.findFirst({
-    where: eq(events.accessCode, accessCode),
-    with: {
-      createdBy: {
-        columns: {
-          id: true,
-          name: true,
-          email: true
-        }
-      },
-      photos: {
-        where: eq(photos.isApproved, true),
-        orderBy: desc(photos.uploadedAt)
-      },
-      team: true
-    }
-  });
-}
-
-// Photos queries
-export async function getPhotosForEvent(eventId: number, includeUnapproved: boolean = false) {
-  const whereConditions = includeUnapproved 
-    ? eq(photos.eventId, eventId)
-    : and(eq(photos.eventId, eventId), eq(photos.isApproved, true));
-
-  return await db.query.photos.findMany({
-    where: whereConditions,
-    with: {
-      uploadedBy: {
-        columns: {
-          id: true,
-          name: true,
-          email: true
+          name: true
         }
       }
-    },
-    orderBy: desc(photos.uploadedAt)
+    }
   });
+
+  return result;
 }
 
-// Activity logging
-export async function logActivity(teamId: number, userId: number, action: string, ipAddress?: string) {
-  return await db.insert(activityLogs).values({
-    teamId,
-    userId,
-    action,
-    ipAddress: ipAddress || null,
+export async function getPhotosForEvent(eventId: number) {
+  const rows = await db
+    .select({
+      id: photos.id,
+      filename: photos.filename,
+      filePath: photos.filePath,
+      originalFilename: photos.originalFilename,
+      mimeType: photos.mimeType,
+      fileSize: photos.fileSize,
+      eventId: photos.eventId,
+      uploadedAt: photos.uploadedAt,
+      isApproved: photos.isApproved,
+      uploadedById: photos.uploadedBy,
+      guestName: photos.guestName,
+      guestEmail: photos.guestEmail,
+      userId: users.id,
+      userName: users.name,
+      userEmail: users.email,
+    })
+    .from(photos)
+    .leftJoin(users, eq(photos.uploadedBy, users.id))
+    .where(eq(photos.eventId, eventId))
+    .orderBy(desc(photos.uploadedAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    filename: r.filename,
+    filePath: r.filePath,
+    originalFilename: r.originalFilename,
+    mimeType: r.mimeType,
+    fileSize: r.fileSize,
+    eventId: r.eventId,
+    uploadedAt: r.uploadedAt,
+    isApproved: r.isApproved,
+    uploadedBy: r.uploadedById,
+    uploadedByUser: r.userId ? { id: r.userId, name: r.userName, email: r.userEmail! } : null,
+    guestName: r.guestName,
+    guestEmail: r.guestEmail,
+  }));
+}
+
+export async function getPhotoById(photoId: number) {
+  const result = await db.query.photos.findFirst({
+    where: eq(photos.id, photoId),
+    with: {
+      event: {
+        with: {
+          createdBy: { columns: { id: true, name: true, email: true } },
+          team: {
+            columns: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  return result;
+}
+
+// Check if user can access event (owner, team member, or public event)
+export async function canUserAccessEvent(eventId: number, userId?: number) {
+  const event = await getEventById(eventId);
+  if (!event) return false;
+
+  // Public events can be accessed by anyone
+  if (event.isPublic) return true;
+
+  // Must be authenticated for private events
+  if (!userId) return false;
+
+  // Owner can always access
+  if (event.createdBy === userId) return true;
+
+  // Team members can access
+  const userTeam = await getUserWithTeam(userId);
+  if (userTeam && userTeam.teamId === event.teamId) return true;
+
+  return false;
+}
+
+// Check if user can upload photos to event
+export async function canUserUploadToEvent(eventId: number, userId?: number) {
+  const event = await getEventById(eventId);
+  if (!event) return false;
+
+  // Owner can always upload
+  if (userId && event.createdBy === userId) return true;
+
+  // Team members can upload
+  if (userId) {
+    const userTeam = await getUserWithTeam(userId);
+    if (userTeam && userTeam.teamId === event.teamId) return true;
+  }
+
+  // Guest uploads allowed for public events
+  if (event.isPublic && event.allowGuestUploads) return true;
+
+  return false;
+}
+
+export async function getEventByAccessCode(code: string) {
+  return await db.query.events.findFirst({
+    where: eq(events.accessCode, code),
   });
 }

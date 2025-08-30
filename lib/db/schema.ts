@@ -44,6 +44,38 @@ export const teamMembers = pgTable('team_members', {
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
 });
 
+// Consolidated Events/Photos schema (access code, approvals, and file-based photo path)
+export const events = pgTable('events', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 200 }).notNull(),
+  description: text('description'),
+  date: timestamp('date').notNull(),
+  location: varchar('location', { length: 255 }),
+  accessCode: varchar('access_code', { length: 50 }).notNull().unique(),
+  teamId: integer('team_id').notNull().references(() => teams.id),
+  createdBy: integer('created_by').notNull().references(() => users.id),
+  isPublic: boolean('is_public').notNull().default(false),
+  allowGuestUploads: boolean('allow_guest_uploads').notNull().default(true),
+  requireApproval: boolean('require_approval').notNull().default(false),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const photos = pgTable('photos', {
+  id: serial('id').primaryKey(),
+  filename: varchar('filename', { length: 255 }).notNull(),
+  originalFilename: varchar('original_filename', { length: 255 }).notNull(),
+  mimeType: varchar('mime_type', { length: 100 }).notNull(),
+  fileSize: integer('file_size').notNull(),
+  filePath: text('file_path').notNull(),
+  eventId: integer('event_id').notNull().references(() => events.id),
+  uploadedBy: integer('uploaded_by').references(() => users.id), // null for guest uploads
+  guestName: varchar('guest_name', { length: 100 }),
+  guestEmail: varchar('guest_email', { length: 255 }),
+  isApproved: boolean('is_approved').notNull().default(true),
+  uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
+});
+
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
   teamId: integer('team_id')
@@ -69,43 +101,6 @@ export const invitations = pgTable('invitations', {
   status: varchar('status', { length: 20 }).notNull().default('pending'),
 });
 
-export const events = pgTable('events', {
-  id: serial('id').primaryKey(),
-  name: varchar('name', { length: 200 }).notNull(),
-  description: text('description'),
-  date: timestamp('date').notNull(),
-  location: varchar('location', { length: 255 }),
-  accessCode: varchar('access_code', { length: 50 }).notNull().unique(),
-  teamId: integer('team_id')
-    .notNull()
-    .references(() => teams.id),
-  createdBy: integer('created_by')
-    .notNull()
-    .references(() => users.id),
-  isPublic: boolean('is_public').notNull().default(false),
-  allowGuestUploads: boolean('allow_guest_uploads').notNull().default(true),
-  requireApproval: boolean('require_approval').notNull().default(false),
-  createdAt: timestamp('created_at').notNull().defaultNow(),
-  updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
-
-export const photos = pgTable('photos', {
-  id: serial('id').primaryKey(),
-  filename: varchar('filename', { length: 255 }).notNull(),
-  originalFilename: varchar('original_filename', { length: 255 }).notNull(),
-  mimeType: varchar('mime_type', { length: 100 }).notNull(),
-  fileSize: integer('file_size').notNull(),
-  filePath: text('file_path').notNull(),
-  eventId: integer('event_id')
-    .notNull()
-    .references(() => events.id),
-  uploadedBy: integer('uploaded_by').references(() => users.id), // null for guest uploads
-  guestName: varchar('guest_name', { length: 100 }), // for guest uploads
-  guestEmail: varchar('guest_email', { length: 255 }), // for guest uploads
-  isApproved: boolean('is_approved').notNull().default(true),
-  uploadedAt: timestamp('uploaded_at').notNull().defaultNow(),
-});
-
 export const teamsRelations = relations(teams, ({ many }) => ({
   teamMembers: many(teamMembers),
   activityLogs: many(activityLogs),
@@ -116,8 +111,8 @@ export const teamsRelations = relations(teams, ({ many }) => ({
 export const usersRelations = relations(users, ({ many }) => ({
   teamMembers: many(teamMembers),
   invitationsSent: many(invitations),
-  eventsCreated: many(events),
-  photosUploaded: many(photos),
+  ownedEvents: many(events),
+  uploadedPhotos: many(photos),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -182,14 +177,14 @@ export type Team = typeof teams.$inferSelect;
 export type NewTeam = typeof teams.$inferInsert;
 export type TeamMember = typeof teamMembers.$inferSelect;
 export type NewTeamMember = typeof teamMembers.$inferInsert;
-export type ActivityLog = typeof activityLogs.$inferSelect;
-export type NewActivityLog = typeof activityLogs.$inferInsert;
-export type Invitation = typeof invitations.$inferSelect;
-export type NewInvitation = typeof invitations.$inferInsert;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type Photo = typeof photos.$inferSelect;
 export type NewPhoto = typeof photos.$inferInsert;
+export type ActivityLog = typeof activityLogs.$inferSelect;
+export type NewActivityLog = typeof activityLogs.$inferInsert;
+export type Invitation = typeof invitations.$inferSelect;
+export type NewInvitation = typeof invitations.$inferInsert;
 export type TeamDataWithMembers = Team & {
   teamMembers: (TeamMember & {
     user: Pick<User, 'id' | 'name' | 'email'>;
@@ -216,5 +211,7 @@ export enum ActivityType {
   DELETE_EVENT = 'DELETE_EVENT',
   UPLOAD_PHOTO = 'UPLOAD_PHOTO',
   DELETE_PHOTO = 'DELETE_PHOTO',
+
   APPROVE_PHOTO = 'APPROVE_PHOTO',
+
 }

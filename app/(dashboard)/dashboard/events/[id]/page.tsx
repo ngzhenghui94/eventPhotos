@@ -23,7 +23,7 @@ export default async function EventPage({ params }: EventPageProps) {
 
   const [event, photos, user] = await Promise.all([
     getEventById(eventId),
-    getPhotosForEvent(eventId, true), // Include unapproved for event owners
+    getPhotosForEvent(eventId),
     getUser()
   ]);
   
@@ -91,13 +91,13 @@ export default async function EventPage({ params }: EventPageProps) {
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center">
                   <Users className="mr-2 h-5 w-5" />
-                  Approved Photos ({photos?.filter(p => p.isApproved).length || 0})
+                  Approved Photos ({photos?.filter((p: any) => p.isApproved).length || 0})
                 </CardTitle>
-                <BulkDownload photos={photos?.filter(p => p.isApproved) || []} />
+                <BulkDownload photos={(photos as any[])?.filter((p) => p.isApproved) || []} />
               </CardHeader>
               <CardContent>
                 <PhotoGallery
-                  photos={photos?.filter(p => p.isApproved) || []}
+                  photos={(photos as any[])?.filter((p) => p.isApproved) || []}
                   eventId={eventId}
                   currentUserId={user.id}
                   canManage={true} // Event owners can manage all photos
