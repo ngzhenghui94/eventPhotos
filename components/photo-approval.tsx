@@ -13,7 +13,7 @@ interface PhotoApprovalProps {
 }
 
 export function PhotoApproval({ photos, eventId }: PhotoApprovalProps) {
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
   const [processingId, setProcessingId] = useState<number | null>(null);
 
   const pendingPhotos = photos.filter(photo => !photo.isApproved);
@@ -93,7 +93,7 @@ export function PhotoApproval({ photos, eventId }: PhotoApprovalProps) {
                 photo={photo}
                 onApprove={() => handleApprove(photo.id)}
                 onReject={() => handleReject(photo.id)}
-                onView={() => setSelectedPhoto(photo.filePath)}
+                onView={() => setSelectedPhoto(photo.id)}
                 isProcessing={processingId === photo.id}
               />
             ))}
@@ -102,9 +102,9 @@ export function PhotoApproval({ photos, eventId }: PhotoApprovalProps) {
       </Card>
 
       {/* Photo Modal */}
-      {selectedPhoto && (
+      {selectedPhoto !== null && (
         <PhotoModal
-          src={selectedPhoto}
+          photoId={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
         />
       )}
@@ -128,7 +128,7 @@ function ApprovalPhotoCard({ photo, onApprove, onReject, onView, isProcessing }:
     <div className="bg-white rounded-lg border border-yellow-200 overflow-hidden">
       <div className="aspect-square relative">
         <img
-          src={photo.filePath}
+          src={`/api/photos/${photo.id}`}
           alt={photo.originalFilename}
           className="w-full h-full object-cover"
         />
@@ -186,11 +186,11 @@ function ApprovalPhotoCard({ photo, onApprove, onReject, onView, isProcessing }:
 }
 
 interface PhotoModalProps {
-  src: string;
+  photoId: number;
   onClose: () => void;
 }
 
-function PhotoModal({ src, onClose }: PhotoModalProps) {
+function PhotoModal({ photoId, onClose }: PhotoModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={onClose}>
       <div className="relative max-w-4xl max-h-[90vh] mx-4">
@@ -203,7 +203,7 @@ function PhotoModal({ src, onClose }: PhotoModalProps) {
           <X className="h-4 w-4" />
         </Button>
         <img
-          src={src}
+          src={`/api/photos/${photoId}`}
           alt="Full size photo"
           className="max-w-full max-h-full object-contain rounded-lg"
           onClick={(e) => e.stopPropagation()}

@@ -1,5 +1,6 @@
 import { NextRequest } from 'next/server';
 import { getUser, getEventById, getPhotosForEvent, canUserAccessEvent } from '@/lib/db/queries';
+import { getSignedDownloadUrl } from '@/lib/s3';
 
 export async function GET(
   request: NextRequest,
@@ -24,7 +25,23 @@ export async function GET(
       return Response.json({ error: 'Event not found' }, { status: 404 });
     }
 
-  const photos = await getPhotosForEvent(eventId);
+  const rawPhotos = await getPhotosForEvent(eventId);
+
+  // Map file paths: if S3 key, provide signed URL via /api/photos/[id] for viewing
+  const photos = await Promise.all(
+    rawPhotos.map(async (p) => {
+      if (p.filePath?.startsWith('s3:')) {
+        // We will not expose the raw signed URL here; the client will call /api/photos/[id]
+        // which now redirects to a short-lived signed S3 URL after authorization checks.
+        return {
+          ...p,
+          // Keep a placeholder; frontends will use /api/photos/:id
+          filePath: `/api/photos/${p.id}`,
+        };
+      }
+      return p;
+    })
+  );
 
     return Response.json({
       event: {

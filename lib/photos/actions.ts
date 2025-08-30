@@ -1,12 +1,12 @@
 'use server';
 
-import { writeFile } from 'fs/promises';
 import { join } from 'path';
 import { db } from '@/lib/db/drizzle';
 import { photos, events, teamMembers } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
+import { uploadToS3, generatePhotoKey, deleteFromS3 } from '@/lib/s3';
 
 export async function uploadPhotosAction(formData: FormData) {
   const user = await getUser();
@@ -46,7 +46,6 @@ export async function uploadPhotosAction(formData: FormData) {
   }
 
   const uploadedPhotos = [];
-  const uploadDir = join(process.cwd(), 'public/uploads/photos');
 
   for (const file of files) {
     if (file.size === 0) continue;
@@ -62,25 +61,19 @@ export async function uploadPhotosAction(formData: FormData) {
     }
 
     try {
-      // Generate unique filename
-      const timestamp = Date.now();
-      const randomString = Math.random().toString(36).substring(2, 15);
-      const extension = file.name.split('.').pop() || 'jpg';
-      const filename = `${timestamp}-${randomString}.${extension}`;
-      const filePath = join(uploadDir, filename);
-
-      // Convert file to buffer and save
+      // Convert file to buffer and upload to S3
       const bytes = await file.arrayBuffer();
       const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
+      const key = generatePhotoKey(eventId, file.name);
+      await uploadToS3(key, buffer, file.type);
 
       // Save to database
       const [photoRecord] = await db.insert(photos).values({
-        filename,
+        filename: key.split('/').pop() || file.name,
         originalFilename: file.name,
         mimeType: file.type,
         fileSize: file.size,
-        filePath: `/uploads/photos/${filename}`,
+        filePath: `s3:${key}`,
         eventId,
         uploadedBy: user.id,
         guestName: null,
@@ -141,14 +134,19 @@ export async function deletePhotoAction(formData: FormData) {
   }
 
   try {
-    // Delete file from filesystem
-    const fs = require('fs').promises;
-    const filePath = join(process.cwd(), 'public', photo.filePath);
+    // Delete object from S3 if stored there, otherwise try filesystem as fallback
     try {
-      await fs.unlink(filePath);
+      if (photo.filePath.startsWith('s3:')) {
+        const key = photo.filePath.replace(/^s3:/, '');
+        await deleteFromS3(key);
+      } else {
+        const fs = require('fs').promises;
+        const filePath = join(process.cwd(), 'public', photo.filePath);
+        await fs.unlink(filePath);
+      }
     } catch (fileError) {
-      console.error('Error deleting file:', fileError);
-      // Continue with database deletion even if file deletion fails
+      console.error('Error deleting media:', fileError);
+      // Continue with database deletion even if media deletion fails
     }
 
     // Delete from database

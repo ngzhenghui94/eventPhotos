@@ -8,6 +8,20 @@
       "when": 1726443359662,
       "tag": "0000_soft_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756512000000,
+      "tag": "0001_add_events_photos",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1756512300000,
+      "tag": "0002_relax_event_columns",
+      "breakpoints": false
     }
   ]
 }

@@ -39,9 +39,9 @@ export const createEvent = validatedActionWithUser(
     try {
       const [newEvent] = await db.insert(events).values({
         name: data.name,
-        description: data.description || null,
+        description: (data.description ?? '').toString(),
         date: new Date(data.date),
-        location: data.location || null,
+        location: (data.location ?? '').toString(),
         accessCode,
         teamId,
         createdBy: user.id,
@@ -83,9 +83,9 @@ export const updateEvent = validatedActionWithUser(
       await db.update(events)
         .set({
           name: data.name,
-          description: data.description || null,
+          description: (data.description ?? '').toString(),
           date: new Date(data.date),
-          location: data.location || null,
+          location: (data.location ?? '').toString(),
           isPublic: data.isPublic || false,
           allowGuestUploads: data.allowGuestUploads !== false,
           requireApproval: data.requireApproval || false,
