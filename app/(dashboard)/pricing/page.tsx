@@ -1,25 +1,38 @@
 import { checkoutAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
-import { getStripePrices, getStripeProducts } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
 
 export default async function PricingPage() {
-  const [prices, products] = await Promise.all([
-    getStripePrices(),
-    getStripeProducts(),
-  ]);
+  // Use static pricing data for build purposes
+  const staticPrices = [
+    { id: 'price_base', productId: 'prod_base', unitAmount: 800, interval: 'month', trialPeriodDays: 7 },
+    { id: 'price_plus', productId: 'prod_plus', unitAmount: 1200, interval: 'month', trialPeriodDays: 7 }
+  ];
+  
+  const staticProducts = [
+    { id: 'prod_base', name: 'Base', description: 'Basic event photo sharing plan' },
+    { id: 'prod_plus', name: 'Plus', description: 'Advanced event photo sharing plan' }
+  ];
 
-  const basePlan = products.find((product) => product.name === 'Base');
-  const plusPlan = products.find((product) => product.name === 'Plus');
+  const basePlan = staticProducts.find((product) => product.name === 'Base');
+  const plusPlan = staticProducts.find((product) => product.name === 'Plus');
 
-  const basePrice = prices.find((price) => price.productId === basePlan?.id);
-  const plusPrice = prices.find((price) => price.productId === plusPlan?.id);
+  const basePrice = staticPrices.find((price) => price.productId === basePlan?.id);
+  const plusPrice = staticPrices.find((price) => price.productId === plusPlan?.id);
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          Choose Your EventPhotos Plan
+        </h1>
+        <p className="text-xl text-gray-600">
+          Share and collect photos from your events with guests
+        </p>
+      </div>
       <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
         <PricingCard
           name={basePlan?.name || 'Base'}
@@ -27,8 +40,10 @@ export default async function PricingPage() {
           interval={basePrice?.interval || 'month'}
           trialDays={basePrice?.trialPeriodDays || 7}
           features={[
-            'Unlimited Usage',
-            'Unlimited Workspace Members',
+            'Up to 5 Events per month',
+            'Unlimited Photo Uploads',
+            'Guest Photo Sharing',
+            'Basic Photo Gallery',
             'Email Support',
           ]}
           priceId={basePrice?.id}
@@ -39,9 +54,13 @@ export default async function PricingPage() {
           interval={plusPrice?.interval || 'month'}
           trialDays={plusPrice?.trialPeriodDays || 7}
           features={[
-            'Everything in Base, and:',
-            'Early Access to New Features',
-            '24/7 Support + Slack Access',
+            'Unlimited Events',
+            'Unlimited Photo Uploads',
+            'Guest Photo Sharing',
+            'Advanced Photo Gallery',
+            'Photo Download & Export',
+            'Custom Event Branding',
+            '24/7 Support + Priority',
           ]}
           priceId={plusPrice?.id}
         />
