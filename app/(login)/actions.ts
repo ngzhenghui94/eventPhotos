@@ -126,9 +126,10 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
   const passwordHash = await hashPassword(password);
 
   const newUser: NewUser = {
-    email,
-    passwordHash,
-    role: 'owner' // Default role, will be overridden if there's an invitation
+  email,
+  passwordHash,
+  // Do not set a global user role here. Rely on DB default ('member') and
+  // determine privileges via teamMembers.role per team.
   };
 
   const [createdUser] = await db.insert(users).values(newUser).returning();
