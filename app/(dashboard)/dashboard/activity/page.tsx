@@ -13,7 +13,7 @@ import {
   Edit,
   Trash2,
   Upload,
-  Image,
+
   type LucideIcon,
 } from 'lucide-react';
 import { ActivityType } from '@/lib/db/schema';
@@ -35,7 +35,9 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.DELETE_EVENT]: Trash2,
   [ActivityType.UPLOAD_PHOTO]: Upload,
   [ActivityType.DELETE_PHOTO]: Trash2,
+
   [ActivityType.APPROVE_PHOTO]: CheckCircle,
+
 };
 
 function getRelativeTime(date: Date) {
@@ -81,6 +83,11 @@ function formatAction(action: ActivityType): string {
     case ActivityType.DELETE_EVENT:
       return 'You deleted an event';
     case ActivityType.UPLOAD_PHOTO:
+
+      return 'You uploaded a photo';
+    case ActivityType.DELETE_PHOTO:
+      return 'You deleted a photo';
+
       return 'A photo was uploaded';
     case ActivityType.DELETE_PHOTO:
       return 'A photo was deleted';
@@ -111,7 +118,6 @@ export default async function ActivityPage() {
                 const formattedAction = formatAction(
                   log.action as ActivityType
                 );
-
                 return (
                   <li key={log.id} className="flex items-center space-x-4">
                     <div className="bg-orange-100 rounded-full p-2">
@@ -137,8 +143,8 @@ export default async function ActivityPage() {
                 No activity yet
               </h3>
               <p className="text-sm text-gray-500 max-w-sm">
-                When you perform actions like signing in or updating your
-                account, they'll appear here.
+                When you perform actions like creating events or uploading photos,
+                they'll appear here.
               </p>
             </div>
           )}
