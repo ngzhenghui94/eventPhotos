@@ -15,7 +15,7 @@ interface PhotoGalleryProps {
 }
 
 export function PhotoGallery({ photos, eventId, currentUserId, canManage }: PhotoGalleryProps) {
-  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
   const handleDeletePhoto = async (photoId: number) => {
@@ -57,7 +57,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
           <PhotoCard
             key={photo.id}
             photo={photo}
-            onView={() => setSelectedPhoto(photo.filePath)}
+            onView={() => setSelectedPhoto(photo.id)}
             onDelete={() => handleDeletePhoto(photo.id)}
             canDelete={canManage || photo.uploadedByUser?.id === currentUserId}
             isDeleting={isDeleting === photo.id}
@@ -65,10 +65,10 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
         ))}
       </div>
 
-      {/* Photo Modal */}
-      {selectedPhoto && (
+  {/* Photo Modal */}
+  {selectedPhoto !== null && (
         <PhotoModal
-          src={selectedPhoto}
+          photoId={selectedPhoto}
           onClose={() => setSelectedPhoto(null)}
         />
       )}
@@ -92,7 +92,7 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCard
     <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
       <div className="aspect-square relative">
         <img
-          src={photo.filePath}
+          src={`/api/photos/${photo.id}`}
           alt={photo.originalFilename}
           className="w-full h-full object-cover cursor-pointer"
           onClick={onView}
@@ -115,7 +115,7 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCard
               asChild
               className="bg-white/90 hover:bg-white"
             >
-              <a href={photo.filePath} download={photo.originalFilename}>
+              <a href={`/api/photos/${photo.id}/download`} download={photo.originalFilename}>
                 <Download className="h-4 w-4" />
               </a>
             </Button>
@@ -154,11 +154,11 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCard
 }
 
 interface PhotoModalProps {
-  src: string;
+  photoId: number;
   onClose: () => void;
 }
 
-function PhotoModal({ src, onClose }: PhotoModalProps) {
+function PhotoModal({ photoId, onClose }: PhotoModalProps) {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={onClose}>
       <div className="relative max-w-4xl max-h-[90vh] mx-4">
@@ -171,7 +171,7 @@ function PhotoModal({ src, onClose }: PhotoModalProps) {
           <X className="h-4 w-4" />
         </Button>
         <img
-          src={src}
+          src={`/api/photos/${photoId}`}
           alt="Full size photo"
           className="max-w-full max-h-full object-contain rounded-lg"
           onClick={(e) => e.stopPropagation()}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
+import { UserMenu } from '@/components/user-menu';
 
 export default function HomePage() {
   return (
@@ -16,10 +17,7 @@ export default function HomePage() {
           <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
             <Link href="/demo" className="hover:text-gray-900">Demo</Link>
             <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
-            <Link href="/sign-in" className="hover:text-gray-900">Sign in</Link>
-            <Link href="/sign-up">
-              <Button size="sm" className="rounded-full bg-blue-600 hover:bg-blue-700">Create free event</Button>
-            </Link>
+            <UserMenu />
           </nav>
         </div>
       </header>
