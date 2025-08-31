@@ -15,8 +15,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
-import { events as eventsTable, teamMembers } from '@/lib/db/schema';
+import { events as eventsTable, teamMembers, photos as photosTable, ActivityType } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
+import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -76,6 +77,62 @@ export default async function EventPage({ params }: EventPageProps) {
       .where(eq(eventsTable.id, eventId));
   revalidatePath(`/dashboard/events/${eventId}`);
   redirect(`/dashboard/events/${eventId}?updated=1`);
+  }
+
+  async function deleteEventAction(formData: FormData) {
+    'use server';
+    const eventId = Number(formData.get('eventId'));
+    const confirmText = String(formData.get('confirmText') ?? '').trim();
+    const u = await getUser();
+    if (!u) return redirect('/sign-in');
+
+    const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
+    if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
+
+    // Permission: creator or team owner
+    const isCreator = existing.createdBy === u.id;
+    const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
+    const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
+    if (!isCreator && !isTeamOwner && !u.isOwner) {
+      return redirect(`/dashboard/events/${eventId}?error=${encodeURIComponent('You do not have permission to delete this event')}`);
+    }
+
+    // Double confirmation: must match event name or access code or literal DELETE
+    const ok = confirmText === existing.name || confirmText === existing.accessCode || confirmText.toUpperCase() === 'DELETE';
+    if (!ok) {
+      return redirect(`/dashboard/events/${eventId}?error=${encodeURIComponent('Confirmation text does not match. Type the event name, access code, or DELETE.')}`);
+    }
+
+    // Collect photo keys for deletion
+    const eventPhotos = await db.select().from(photosTable).where(eq(photosTable.eventId, eventId));
+
+    // Delete S3/local files best-effort
+    for (const p of eventPhotos) {
+      try {
+        if (p.filePath?.startsWith('s3:')) {
+          const key = p.filePath.replace(/^s3:/, '');
+          await deleteFromS3(key).catch(() => {});
+          // attempt to delete thumbnails
+          const sm = deriveThumbKey(key, 'sm');
+          const md = deriveThumbKey(key, 'md');
+          await deleteFromS3(sm).catch(() => {});
+          await deleteFromS3(md).catch(() => {});
+        } else if (p.filePath) {
+          // local public file fallback
+          const { join } = await import('path');
+          const fs = (await import('fs')).promises;
+          const filePath = join(process.cwd(), 'public', p.filePath);
+          await fs.unlink(filePath).catch(() => {});
+        }
+      } catch {}
+    }
+
+    // Delete DB rows: photos then event
+    await db.delete(photosTable).where(eq(photosTable.eventId, eventId));
+    await db.delete(eventsTable).where(eq(eventsTable.id, eventId));
+
+    // Redirect with toast
+    redirect('/dashboard/events?deleted=1');
   }
 
   const toMB = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MB`;
@@ -280,6 +337,25 @@ export default async function EventPage({ params }: EventPageProps) {
                       </div>
                       <div className="flex justify-end">
                         <Button size="sm" type="submit">Save Changes</Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+
+                {isEventOwner && (
+                  <div className="pt-6 mt-2 border-t">
+                    <p className="text-sm font-medium text-red-600 mb-2">Danger Zone</p>
+                    <div className="text-xs text-gray-600 mb-3">
+                      Deleting this event will permanently remove all photos and cannot be undone.
+                    </div>
+                    <form action={deleteEventAction} className="space-y-3">
+                      <input type="hidden" name="eventId" value={String(eventId)} />
+                      <div className="space-y-1.5">
+                        <Label htmlFor="confirmText">Type the event name, access code, or DELETE to confirm</Label>
+                        <Input id="confirmText" name="confirmText" placeholder={event.name} />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button variant="destructive" size="sm" type="submit">Delete Event</Button>
                       </div>
                     </form>
                   </div>

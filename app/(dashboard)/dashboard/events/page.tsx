@@ -4,6 +4,7 @@ import { Calendar, Plus } from 'lucide-react';
 import { getTeamForUser, getEventsForTeam } from '@/lib/db/queries';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import UpdateToast from '@/components/update-toast';
 
 export default async function EventsPage() {
   const team = await getTeamForUser();
@@ -13,6 +14,7 @@ export default async function EventsPage() {
 
   return (
     <section className="flex-1 p-4 lg:p-8">
+  <UpdateToast />
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
         <div>
           <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-2">Events</h1>

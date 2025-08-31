@@ -254,14 +254,21 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
                 onClick={() => setSelectedPhoto(photo)}
               >
                 <CardContent className="p-0">
-                  <div className="aspect-square relative overflow-hidden">
+                  <div className="aspect-square relative overflow-hidden bg-gray-100">
                     <img
-                      src={`/api/photos/${photo.id}`}
-                      alt={photo.originalName}
+                      src={`/api/photos/${photo.id}/thumb`}
+                      alt={(photo as any).originalFilename || (photo as any).originalName || (photo as any).filename || 'Event photo'}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                       loading="lazy"
+                      decoding="async"
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        if (!target.dataset.fallback) {
+                          target.dataset.fallback = '1';
+                          target.src = `/api/photos/${photo.id}`;
+                        }
+                      }}
                     />
-                    <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-200" />
                   </div>
                 </CardContent>
               </Card>
@@ -355,7 +362,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
               <div>
                 <h3 className="text-lg font-medium">{selectedPhoto.originalName}</h3>
                 <p className="text-sm text-gray-300">
-                  {formatFileSize(selectedPhoto.fileSize)} • {formatDate(selectedPhoto.createdAt)}
+                  {formatFileSize(selectedPhoto.fileSize)} • {formatDate(((selectedPhoto as any).createdAt || (selectedPhoto as any).uploadedAt) as string)}
                   {selectedPhoto.uploaderName && ` • by ${selectedPhoto.uploaderName}`}
                 </p>
               </div>

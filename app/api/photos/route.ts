@@ -3,6 +3,22 @@ import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
 import { getUser, canUserUploadToEvent, logActivity, getEventById } from '@/lib/db/queries';
 import { generatePhotoKey, uploadToS3 } from '@/lib/s3';
+import { DEMO_ACCESS_CODE } from '@/lib/db/demo';
+
+// Simple in-memory rate limit for demo: 5 uploads per IP per hour
+const demoRateMap = new Map<string, { count: number; resetAt: number }>();
+function rateLimitDemo(ip: string | null | undefined) {
+  if (!ip) return { ok: true };
+  const now = Date.now();
+  const rec = demoRateMap.get(ip);
+  if (!rec || rec.resetAt < now) {
+    demoRateMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return { ok: true };
+  }
+  if (rec.count >= 5) return { ok: false, retryAt: rec.resetAt } as const;
+  rec.count += 1;
+  return { ok: true } as const;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,7 +42,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'File size must be less than 10MB' }, { status: 400 });
     }
 
-    const user = await getUser();
+  const user = await getUser();
     
     // Check if user can upload to this event
     const canUpload = await canUserUploadToEvent(eventId, user?.id);
@@ -38,6 +54,16 @@ export async function POST(request: NextRequest) {
     const event = await getEventById(eventId);
     if (!event) {
       return Response.json({ error: 'Event not found' }, { status: 404 });
+    }
+
+    // If this is the demo event (access code DEMO), apply IP rate limit and allow guest uploads freely
+    if (event.accessCode === DEMO_ACCESS_CODE) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || null;
+      const rl = rateLimitDemo(ip);
+      if (!rl.ok) {
+        const waitMins = Math.ceil(((rl.retryAt! - Date.now()) / 1000) / 60);
+        return Response.json({ error: `Demo limit reached. Try again in ~${waitMins} min.` }, { status: 429 });
+      }
     }
 
   // Upload to S3
