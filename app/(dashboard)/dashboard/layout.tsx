@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu, Calendar, ShieldCheck, LogOut } from 'lucide-react';
 import { signOut } from '@/app/(login)/actions';
+import { UserMenu } from '@/components/user-menu';
 
 export default function DashboardLayout({
   children
@@ -45,22 +46,33 @@ export default function DashboardLayout({
     : baseItems;
 
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
-      <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
-        <div className="flex items-center">
-          <span className="font-medium">Dashboard</span>
+    <div className="flex flex-col min-h-[100dvh] w-full">
+      {/* Top Navbar (same style as homepage) */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Button
+              className="lg:hidden -ml-2"
+              variant="ghost"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Toggle sidebar</span>
+            </Button>
+            <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white text-xs">MV</span>
+              <span>MemoriesVault</span>
+            </Link>
+          </div>
+          <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
+            <Link href="/demo" className="hover:text-gray-900">Demo</Link>
+            <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
+            <UserMenu />
+          </nav>
         </div>
-        <Button
-          className="-mr-3"
-          variant="ghost"
-          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        >
-          <Menu className="h-6 w-6" />
-          <span className="sr-only">Toggle sidebar</span>
-        </Button>
-      </div>
+      </header>
 
-      <div className="flex flex-1 overflow-hidden h-full">
+      <div className="flex flex-1 overflow-hidden h-full max-w-7xl mx-auto w-full">
         <aside
           className={`w-64 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${
             isSidebarOpen ? 'block' : 'hidden'
