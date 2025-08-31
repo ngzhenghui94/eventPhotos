@@ -25,6 +25,7 @@ import {
   validatedAction,
   validatedActionWithUser
 } from '@/lib/auth/middleware';
+// Removed email verification flow
 
 async function logActivity(
   teamId: number | null | undefined,
@@ -90,6 +91,9 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
     setSession(foundUser),
     logActivity(foundTeam?.id, foundUser.id, ActivityType.SIGN_IN)
   ]);
+
+  // Optionally, nudge unverified users toward verification page
+  // (We are not blocking sign-in, but you can redirect('/verify') here if desired.)
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
@@ -212,6 +216,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
     logActivity(teamId, createdUser.id, ActivityType.SIGN_UP),
     setSession(createdUser)
   ]);
+
+  // Email verification disabled: no verification email is sent.
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {

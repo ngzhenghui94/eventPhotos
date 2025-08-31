@@ -22,6 +22,20 @@
       "when": 1756512300000,
       "tag": "0002_relax_event_columns",
       "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1756684800000,
+      "tag": "0003_add_is_owner_to_users",
+      "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1756771200000,
+      "tag": "0004_email_verification",
+      "breakpoints": false
     }
   ]
 }

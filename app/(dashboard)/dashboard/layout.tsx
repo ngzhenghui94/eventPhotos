@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Users, Settings, Shield, Activity, Menu, Calendar } from 'lucide-react';
+import { Users, Settings, Shield, Activity, Menu, Calendar, ShieldCheck, LogOut } from 'lucide-react';
+import { signOut } from '@/app/(login)/actions';
 
 export default function DashboardLayout({
   children
@@ -13,8 +14,25 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const router = useRouter();
 
-  const navItems = [
+  async function handleSignOut() {
+    await signOut();
+    router.push('/');
+  }
+
+  useEffect(() => {
+    // Fetch current user to determine if super admin
+    fetch('/api/user').then(async (res) => {
+      const u = await res.json();
+      if (u && (u.email === 'ngzhenghui94@gmail.com' || u.isOwner === true)) {
+        setIsAdmin(true);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const baseItems = [
     { href: '/dashboard', icon: Users, label: 'Team' },
     { href: '/dashboard/events', icon: Calendar, label: 'Events' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
@@ -22,9 +40,12 @@ export default function DashboardLayout({
     { href: '/dashboard/security', icon: Shield, label: 'Security' }
   ];
 
+  const navItems = isAdmin
+    ? [...baseItems, { href: '/dashboard/admin', icon: ShieldCheck, label: 'Admin' }]
+    : baseItems;
+
   return (
     <div className="flex flex-col min-h-[calc(100dvh-68px)] max-w-7xl mx-auto w-full">
-      {/* Mobile header */}
       <div className="lg:hidden flex items-center justify-between bg-white border-b border-gray-200 p-4">
         <div className="flex items-center">
           <span className="font-medium">Dashboard</span>
@@ -40,7 +61,6 @@ export default function DashboardLayout({
       </div>
 
       <div className="flex flex-1 overflow-hidden h-full">
-        {/* Sidebar */}
         <aside
           className={`w-64 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${
             isSidebarOpen ? 'block' : 'hidden'
@@ -48,7 +68,7 @@ export default function DashboardLayout({
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <nav className="h-full overflow-y-auto p-4">
+          <nav className="h-full overflow-y-auto p-4 flex flex-col">
             {navItems.map((item) => (
               <Link key={item.href} href={item.href} passHref>
                 <Button
@@ -63,10 +83,19 @@ export default function DashboardLayout({
                 </Button>
               </Link>
             ))}
+            <div className="mt-auto pt-3 border-t border-gray-200">
+              <Button
+                variant="ghost"
+                className="shadow-none my-1 w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleSignOut}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign out
+              </Button>
+            </div>
           </nav>
         </aside>
 
-        {/* Main content */}
         <main className="flex-1 overflow-y-auto p-0 lg:p-4">{children}</main>
       </div>
     </div>
