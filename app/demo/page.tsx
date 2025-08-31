@@ -7,96 +7,6 @@ import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft } from 'lucide
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
 
-const demoEvent = {
-  id: 1,
-  name: "Sarah's Wedding Reception",
-  description: "Join us in celebrating Sarah and Mike's special day! Share your favorite moments from the reception.",
-  eventDate: "2024-01-15",
-  location: "Garden Vista Venue, San Francisco",
-  isPublic: true,
-  allowGuestUploads: true,
-  owner: {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah@example.com"
-  }
-};
-
-const demoPhotos = [
-  {
-    id: 1,
-    originalName: "wedding-ceremony-01.jpg",
-    url: "https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=800&h=800&fit=crop&crop=center",
-    mimeType: "image/jpeg",
-    fileSize: 2451840,
-    width: 800,
-    height: 800,
-    uploaderName: "John Smith",
-    uploaderEmail: "john@example.com",
-    createdAt: "2024-01-15T18:30:00Z"
-  },
-  {
-    id: 2,
-    originalName: "bride-groom-dance.jpg",
-    url: "https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?w=800&h=800&fit=crop&crop=center",
-    mimeType: "image/jpeg",
-    fileSize: 3221225,
-    width: 800,
-    height: 800,
-    uploaderName: "Emily Davis",
-    uploaderEmail: "emily@example.com",
-    createdAt: "2024-01-15T19:15:00Z"
-  },
-  {
-    id: 3,
-    originalName: "reception-table.jpg",
-    url: "https://images.unsplash.com/photo-1464207687429-7505649dae38?w=800&h=800&fit=crop&crop=center",
-    mimeType: "image/jpeg",
-    fileSize: 1835008,
-    width: 800,
-    height: 800,
-    uploaderName: "Michael Brown",
-    uploaderEmail: "michael@example.com",
-    createdAt: "2024-01-15T19:45:00Z"
-  },
-  {
-    id: 4,
-    originalName: "wedding-cake.jpg",
-    url: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=800&h=800&fit=crop&crop=center",
-    mimeType: "image/jpeg",
-    fileSize: 2097152,
-    width: 800,
-    height: 800,
-    uploaderName: "Lisa Wilson",
-    uploaderEmail: "lisa@example.com",
-    createdAt: "2024-01-15T20:00:00Z"
-  },
-  {
-    id: 5,
-    originalName: "group-photo.jpg",
-    url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800&h=800&fit=crop&crop=center",
-    mimeType: "image/jpeg",
-    fileSize: 4194304,
-    width: 800,
-    height: 800,
-    uploaderName: "David Martinez",
-    uploaderEmail: "david@example.com",
-    createdAt: "2024-01-15T20:30:00Z"
-  },
-  {
-    id: 6,
-    originalName: "flowers-decoration.jpg",
-    url: "https://images.unsplash.com/photo-1520854221256-17451cc331bf?w=800&h=800&fit=crop&crop=center",
-    mimeType: "image/jpeg",
-    fileSize: 1572864,
-    width: 800,
-    height: 800,
-    uploaderName: "Anna Thompson",
-    uploaderEmail: "anna@example.com",
-    createdAt: "2024-01-15T18:45:00Z"
-  }
-];
-
 type DemoMeta = {
   id: number;
   name: string;
@@ -227,10 +137,14 @@ export default function DemoGallery() {
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{demo?.name || demoEvent.name}</h1>
+              <h1 className="text-3xl font-bold text-gray-900">{demo?.name || 'MemoriesVault Demo Event'}</h1>
               <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
-                <div className="flex items-center"><Calendar className="h-4 w-4 mr-1" />{demo?.date ? formatDate(demo.date) : formatDate(demoEvent.eventDate)}</div>
-                <div className="flex items-center"><MapPin className="h-4 w-4 mr-1" />{demo?.location || demoEvent.location}</div>
+                {demo?.date && (
+                  <div className="flex items-center"><Calendar className="h-4 w-4 mr-1" />{formatDate(demo.date)}</div>
+                )}
+                {demo?.location && (
+                  <div className="flex items-center"><MapPin className="h-4 w-4 mr-1" />{demo.location}</div>
+                )}
                 <div className="flex items-center"><Camera className="h-4 w-4 mr-1" />{photos.length} photos</div>
               </div>
             </div>
@@ -245,7 +159,9 @@ export default function DemoGallery() {
 
           {/* Description */}
           <div className="mt-6">
-            <p className="text-gray-700">{demo?.description || demoEvent.description}</p>
+            {demo?.description && (
+              <p className="text-gray-700">{demo.description}</p>
+            )}
             <div className="text-xs text-gray-500 mt-2">Uploads are open on the live demo and rate-limited to 5 per IP/hour.</div>
             {demo && (
               <div className="mt-4 flex flex-col sm:flex-row items-start gap-4">
