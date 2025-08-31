@@ -59,12 +59,14 @@ export async function getSignedDownloadUrl(
   return await getSignedUrl(s3Client, command, { expiresIn });
 }
 
-export async function getSignedUploadUrl(key: string, contentType: string, expiresIn: number = 3600): Promise<string> {
+export async function getSignedUploadUrl(key: string, contentType?: string, expiresIn: number = 3600): Promise<string> {
   ensureConfigured();
+  // Do not include ContentType in the signed request to avoid client/server header mismatches.
+  // The browser can still send Content-Type and S3 will store it as object metadata.
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
-    ContentType: contentType,
+    // Intentionally omit ContentType from the signature
   });
 
   return await getSignedUrl(s3Client, command, { expiresIn });

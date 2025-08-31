@@ -172,7 +172,8 @@ export async function getEventById(eventId: number) {
       team: {
         columns: {
           id: true,
-          name: true
+          name: true,
+          planName: true,
         }
       }
     }

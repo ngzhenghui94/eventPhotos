@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 type Props = {
@@ -10,9 +10,15 @@ type Props = {
 };
 
 export function EventQr({ code, className, size = 192 }: Props) {
-  const url = useMemo(() => {
-    if (typeof window === 'undefined') return `/guest/${code}`;
-    return `${window.location.origin}/guest/${code}`;
+  // Start with a stable SSR value to avoid hydration mismatches, then upgrade on mount
+  const [url, setUrl] = useState<string>(() => `/guest/${code}`);
+  useEffect(() => {
+    try {
+      const origin = window.location.origin;
+      setUrl(`${origin}/guest/${code}`);
+    } catch {
+      // in non-browser contexts, keep the relative path
+    }
   }, [code]);
 
   const copyLink = async () => {

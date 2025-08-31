@@ -1,30 +1,64 @@
-import { checkoutAction } from '@/lib/payments/actions';
+import { checkoutAction, chooseFreePlanAction } from '@/lib/payments/actions';
 import { Check } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import { getStripeProducts, getStripePrices } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 
 // Prices are fresh for one hour max
 export const revalidate = 3600;
 
 export default async function PricingPage() {
-  // Use static pricing data for build purposes
-  const staticPrices = [
-    { id: 'price_base', productId: 'prod_base', unitAmount: 800, interval: 'month', trialPeriodDays: 7 },
-    { id: 'price_plus', productId: 'prod_plus', unitAmount: 1200, interval: 'month', trialPeriodDays: 7 }
-  ];
-  
-  const staticProducts = [
-    { id: 'prod_base', name: 'Base', description: 'Basic event photo sharing plan' },
-    { id: 'prod_plus', name: 'Plus', description: 'Advanced event photo sharing plan' }
-  ];
+  // Fetch Stripe products/prices dynamically to resolve real price IDs
+  // Requires STRIPE_SECRET_KEY to be set, but no per-price envs needed.
+  let baseStripeId: string | undefined;
+  let plusStripeId: string | undefined;
+  let baseUnitAmount = 800;
+  let plusUnitAmount = 1200;
+  let baseInterval = 'month';
+  let plusInterval = 'month';
+  let baseTrialDays = 0;
+  let plusTrialDays = 0;
 
-  const basePlan = staticProducts.find((product) => product.name === 'Base');
-  const plusPlan = staticProducts.find((product) => product.name === 'Plus');
+  try {
+    const [products, prices] = await Promise.all([
+      getStripeProducts(),
+      getStripePrices()
+    ]);
 
-  const basePrice = staticPrices.find((price) => price.productId === basePlan?.id);
-  const plusPrice = staticPrices.find((price) => price.productId === plusPlan?.id);
+    const byName = (n: string) => products.find(p => p.name.toLowerCase() === n);
+    const baseProduct = byName('base');
+    const plusProduct = byName('plus');
+
+    const priceForProduct = (productId?: string) => prices.find(pr => pr.productId === productId);
+    const basePrice = priceForProduct(baseProduct?.id);
+    const plusPrice = priceForProduct(plusProduct?.id);
+
+    baseStripeId = basePrice?.id || baseProduct?.defaultPriceId;
+    plusStripeId = plusPrice?.id || plusProduct?.defaultPriceId;
+
+    if (basePrice?.unitAmount) baseUnitAmount = basePrice.unitAmount;
+    if (plusPrice?.unitAmount) plusUnitAmount = plusPrice.unitAmount;
+    if (basePrice?.interval) baseInterval = basePrice.interval;
+    if (plusPrice?.interval) plusInterval = plusPrice.interval;
+  // Trials disabled
+  } catch (e) {
+    // Keep static values; buttons will degrade to sign-up if IDs aren't resolved
+  }
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="flex items-center justify-between mb-6">
+        <div />
+        <div className="space-x-2">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="sm">Dashboard</Button>
+          </Link>
+          <Link href="/dashboard/general">
+            <Button variant="outline" size="sm">Account</Button>
+          </Link>
+        </div>
+      </div>
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">
           Choose Your EventPhotos Plan
@@ -33,36 +67,53 @@ export default async function PricingPage() {
           Share and collect photos from your events with guests
         </p>
       </div>
-      <div className="grid md:grid-cols-2 gap-8 max-w-xl mx-auto">
+      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
         <PricingCard
-          name={basePlan?.name || 'Base'}
-          price={basePrice?.unitAmount || 800}
-          interval={basePrice?.interval || 'month'}
-          trialDays={basePrice?.trialPeriodDays || 7}
+          name={'Free'}
+          price={0}
+          interval={'month'}
+          trialDays={0}
           features={[
-            'Up to 5 Events per month',
-            'Unlimited Photo Uploads',
+            '1 Event',
+            '20 photos per event',
+            '10MB per upload',
+            'Guest Photo Sharing',
+            'Basic Photo Gallery',
+          ]}
+          // Use a server action to set the team to Free without Stripe
+          free
+        />
+        <PricingCard
+          name={'Base'}
+          price={baseUnitAmount}
+          interval={baseInterval}
+          trialDays={0}
+          features={[
+            'Up to 5 Events',
+            '50 photos per event',
+            '25MB per upload',
             'Guest Photo Sharing',
             'Basic Photo Gallery',
             'Email Support',
           ]}
-          priceId={basePrice?.id}
+          priceId={baseStripeId}
         />
         <PricingCard
-          name={plusPlan?.name || 'Plus'}
-          price={plusPrice?.unitAmount || 1200}
-          interval={plusPrice?.interval || 'month'}
-          trialDays={plusPrice?.trialPeriodDays || 7}
+          name={'Plus'}
+          price={plusUnitAmount}
+          interval={plusInterval}
+          trialDays={0}
           features={[
             'Unlimited Events',
-            'Unlimited Photo Uploads',
+            '100 photos per event',
+            '50MB per upload',
             'Guest Photo Sharing',
             'Advanced Photo Gallery',
             'Photo Download & Export',
             'Custom Event Branding',
             '24/7 Support + Priority',
           ]}
-          priceId={plusPrice?.id}
+          priceId={plusStripeId}
         />
       </div>
     </main>
@@ -76,6 +127,7 @@ function PricingCard({
   trialDays,
   features,
   priceId,
+  free,
 }: {
   name: string;
   price: number;
@@ -83,15 +135,18 @@ function PricingCard({
   trialDays: number;
   features: string[];
   priceId?: string;
+  free?: boolean;
 }) {
   return (
     <div className="pt-6">
       <h2 className="text-2xl font-medium text-gray-900 mb-2">{name}</h2>
-      <p className="text-sm text-gray-600 mb-4">
-        with {trialDays} day free trial
-      </p>
+      {trialDays > 0 ? (
+        <p className="text-sm text-gray-600 mb-4">with {trialDays} day free trial</p>
+      ) : (
+        <p className="text-sm text-gray-600 mb-4">no credit card required</p>
+      )}
       <p className="text-4xl font-medium text-gray-900 mb-6">
-        ${price / 100}{' '}
+        {price === 0 ? '$0' : `$${price / 100}`} {' '}
         <span className="text-xl font-normal text-gray-600">
           per user / {interval}
         </span>
@@ -104,10 +159,23 @@ function PricingCard({
           </li>
         ))}
       </ul>
-      <form action={checkoutAction}>
-        <input type="hidden" name="priceId" value={priceId} />
-        <SubmitButton />
-      </form>
+      {free ? (
+        <form action={chooseFreePlanAction}>
+          <SubmitButton />
+        </form>
+      ) : priceId ? (
+        <form action={checkoutAction}>
+          <input type="hidden" name="priceId" value={priceId} />
+          <SubmitButton />
+        </form>
+      ) : (
+        <div className="space-y-2">
+          <a href="/sign-up" className="inline-block">
+            <SubmitButton />
+          </a>
+          <p className="text-xs text-gray-500">Stripe price not configured. Set STRIPE_PRICE_BASE_ID / STRIPE_PRICE_PLUS_ID in your environment.</p>
+        </div>
+      )}
     </div>
   );
 }

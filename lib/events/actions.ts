@@ -1,8 +1,9 @@
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { events, teamMembers, ActivityType } from '@/lib/db/schema';
+import { events, teamMembers, ActivityType, teams } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
+import { canCreateAnotherEvent, getTeamPlanName } from '@/lib/plans';
 
 // Helper to get user's team ID
 async function getUserTeamId(userId: number) {
@@ -31,6 +32,19 @@ export const createEvent = validatedActionWithUser(
     
     if (!teamId) {
       return { error: 'User is not part of a team' };
+    }
+
+    // Enforce plan event limits
+    const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
+    const planName = getTeamPlanName(team?.planName ?? null);
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(events)
+      .where(eq(events.teamId, teamId));
+    const currentCount = result?.[0]?.count ?? 0;
+    if (!canCreateAnotherEvent(planName, currentCount)) {
+      const limitText = planName === 'free' ? '1 event' : planName === 'base' ? '5 events' : 'unlimited';
+      return { error: `Your plan (${planName}) allows ${limitText}. Please upgrade to create more events.` };
     }
 
     // Generate a unique access code

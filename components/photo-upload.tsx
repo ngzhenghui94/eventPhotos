@@ -1,25 +1,35 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
-import { uploadPhotosAction } from '@/lib/photos/actions';
+import { createSignedUploadUrlsAction, finalizeUploadedPhotosAction } from '@/lib/photos/actions';
+import { getTeamForUser } from '@/lib/db/queries';
+import { getUploadLimitForTeam } from '@/lib/plans';
 
 interface PhotoUploadProps {
   eventId: number;
+  teamPlanName?: string | null;
 }
 
-export function PhotoUpload({ eventId }: PhotoUploadProps) {
+export function PhotoUpload({ eventId, teamPlanName }: PhotoUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const [maxBytes, setMaxBytes] = useState<number | null>(null);
+
+  // Lazy load max upload size (client-safe; falls back to 10MB until fetched)
+  // We don’t want to import server-only code here; so we’ll fetch via an action
+  // but to keep this simple and avoid extra endpoints, we infer from the first presign.
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
     
-    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+  const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     setSelectedFiles(prev => [...prev, ...imageFiles]);
   };
 
@@ -48,14 +58,54 @@ export function PhotoUpload({ eventId }: PhotoUploadProps) {
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('eventId', eventId.toString());
-      selectedFiles.forEach(file => {
-        formData.append('photos', file);
-      });
+      // 1) Ask server for presigned PUT URLs
+      const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
+  const { uploads, maxFileSize } = await createSignedUploadUrlsAction(eventId, meta);
+  if (!maxBytes) setMaxBytes(maxFileSize);
 
-      await uploadPhotosAction(formData);
-      setSelectedFiles([]);
+      // 2) Upload directly to S3 using presigned URLs
+      const remaining = [...uploads];
+      const succeeded: typeof uploads = [];
+      const failures: Array<{ name: string; status?: number; detail?: string }> = [];
+      for (const file of selectedFiles) {
+        const idx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
+        if (idx === -1) continue;
+        const u = remaining.splice(idx, 1)[0];
+        const res = await fetch(u.url, {
+          method: 'PUT',
+          // Omit Content-Type header to reduce signature/CORS mismatch risk; S3 will infer or store default
+          // headers: { 'Content-Type': file.type },
+          body: file,
+        });
+        if (!res.ok) {
+          let detail = '';
+          try { detail = await res.text(); } catch {}
+          console.error('S3 upload failed', { name: file.name, status: res.status, statusText: res.statusText, detail });
+          failures.push({ name: file.name, status: res.status, detail });
+          continue;
+        }
+        succeeded.push(u);
+      }
+
+      // 3) Finalize in DB
+      if (succeeded.length > 0) {
+        await finalizeUploadedPhotosAction(
+          eventId,
+          succeeded.map(u => ({
+            key: u.key,
+            originalFilename: u.originalFilename,
+            mimeType: u.mimeType,
+            fileSize: u.fileSize,
+          }))
+        );
+      }
+
+  setSelectedFiles([]);
+  router.refresh();
+      if (failures.length) {
+        const first = failures[0];
+        alert(`Uploaded ${succeeded.length} file(s). ${failures.length} failed. First error: ${first.name}${first.status ? ` (${first.status})` : ''}`);
+      }
     } catch (error) {
       console.error('Upload error:', error);
       alert('Failed to upload photos. Please try again.');
@@ -98,7 +148,12 @@ export function PhotoUpload({ eventId }: PhotoUploadProps) {
               Drop photos here or click to browse
             </p>
             <p className="text-sm text-gray-500">
-              Supports JPG, PNG, GIF up to 10MB each
+              Supports JPG, PNG, GIF up to {(() => {
+                if (maxBytes) return Math.round(maxBytes / (1024 * 1024));
+                if (teamPlanName?.toLowerCase().includes('plus')) return 50;
+                if (teamPlanName?.toLowerCase().includes('base')) return 25;
+                return 10;
+              })()}MB each
             </p>
           </div>
           <Button

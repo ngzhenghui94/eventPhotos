@@ -80,7 +80,7 @@ export default async function EventPage({ params }: EventPageProps) {
             </Card>
 
             {/* Photo Upload */}
-            <PhotoUpload eventId={eventId} />
+            <PhotoUpload eventId={eventId} teamPlanName={event.team.planName ?? null} />
 
             {/* Photo Approval */}
             {event.requireApproval && (
