@@ -245,18 +245,21 @@ export async function getPhotoById(photoId: number) {
 }
 
 // Check if user can access event (owner, team member, or public event)
-export async function canUserAccessEvent(eventId: number, userId?: number) {
+export async function canUserAccessEvent(eventId: number, userId?: number, accessCode?: string | null) {
   const event = await getEventById(eventId);
   if (!event) return false;
 
   // Public events can be accessed by anyone
   if (event.isPublic) return true;
 
+  // If a valid access code is provided, allow access
+  if (accessCode && accessCode.toUpperCase() === event.accessCode.toUpperCase()) return true;
+
   // Must be authenticated for private events
   if (!userId) return false;
 
   // Owner can always access
-  if (event.createdBy === userId) return true;
+  if (event.createdBy?.id === userId) return true;
 
   // Team members can access
   const userTeam = await getUserWithTeam(userId);
@@ -288,6 +291,17 @@ export async function canUserUploadToEvent(eventId: number, userId?: number) {
 export async function getEventByAccessCode(code: string) {
   return await db.query.events.findFirst({
     where: eq(events.accessCode, code),
+    with: {
+      createdBy: {
+        columns: { id: true, name: true, email: true }
+      }
+    }
+  });
+}
+
+export async function getEventByEventCode(code: string) {
+  return await db.query.events.findFirst({
+    where: eq(events.eventCode, code),
     with: {
       createdBy: {
         columns: { id: true, name: true, email: true }

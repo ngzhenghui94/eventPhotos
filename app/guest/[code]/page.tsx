@@ -1,23 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Users, Upload, Camera } from 'lucide-react';
-import { getEventByAccessCode, getPhotosForEvent } from '@/lib/db/queries';
+import { Calendar, MapPin, Users, Upload, Camera, Lock } from 'lucide-react';
+import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { Input } from '@/components/ui/input';
+import { cookies } from 'next/headers';
 
-interface GuestEventPageProps {
-  params: Promise<{ code: string }>;
-}
+interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
 export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const { code } = await params;
-  
-  const event = await getEventByAccessCode(code.toUpperCase());
+
+  const event = await getEventByEventCode(code.toUpperCase());
   
   if (!event) {
     redirect('/guest/not-found');
   }
+
+  const cookieStore = await cookies();
+  const cookieKey = `evt:${event.eventCode}:access`;
+  const accessCodeCookie = cookieStore.get(cookieKey)?.value || '';
+  const hasAccess = event.isPublic || (accessCodeCookie && accessCodeCookie.toUpperCase() === event.accessCode.toUpperCase());
 
   const photos = (await getPhotosForEvent(event.id)).filter((p: any) => p.isApproved);
   const eventDate = new Date(event.date);
@@ -67,7 +72,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             )}
 
             {/* Photo Upload for Guests */}
-            {event.allowGuestUploads && (
+            {hasAccess && event.allowGuestUploads && (
               <GuestPhotoUpload eventId={event.id} />
             )}
 
@@ -80,11 +85,16 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <PhotoGallery
-                  photos={photos || []}
-                  eventId={event.id}
-                  canManage={false} // Guests cannot manage photos
-                />
+        {hasAccess ? (
+                  <PhotoGallery
+                    photos={photos || []}
+                    eventId={event.id}
+                    canManage={false}
+          accessCode={event.isPublic ? undefined : accessCodeCookie}
+                  />
+                ) : (
+                  <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />
+                )}
               </CardContent>
             </Card>
           </div>
@@ -100,11 +110,11 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                   <div className="bg-gray-100 rounded-lg p-4 mb-4">
                     <p className="text-xs text-gray-500 mb-1">Event Code</p>
                     <p className="font-mono text-lg font-bold text-gray-900">
-                      {event.accessCode}
+                      {event.eventCode}
                     </p>
                   </div>
                   <p className="text-sm text-gray-600">
-                    Share this code with other guests so they can access this event
+                    Share this event code so guests can find your event. Private events still require an access code.
                   </p>
                 </div>
 
@@ -167,5 +177,34 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
         </div>
       </div>
     </div>
+  );
+}
+
+// Private access prompt component
+async function PrivateAccessGate({ eventName, eventCode }: { eventName: string; eventCode: string }) {
+  const cookieStore = await cookies();
+  const cookieKey = `evt:${eventCode}:access`;
+  const existing = cookieStore.get(cookieKey)?.value || '';
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Lock className="h-4 w-4" /> Private Event</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form action={async (formData) => {
+          'use server';
+          const input = String(formData.get('access'))?.toUpperCase().trim();
+          const cookieJar = await cookies();
+          if (input && input.length === 6) {
+            cookieJar.set(cookieKey, input, { httpOnly: false, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 });
+          }
+        }} className="flex items-center gap-2">
+          <Input name="access" defaultValue={existing} placeholder="Enter 6-char access code" className="max-w-xs" />
+          <Button type="submit">Unlock</Button>
+        </form>
+        <p className="text-xs text-gray-500 mt-2">Ask the host for the 6-character access code for "{eventName}".</p>
+      </CardContent>
+    </Card>
   );
 }

@@ -14,6 +14,7 @@ export default async function AdminEventsPage() {
       id: events.id,
       name: events.name,
       date: events.date,
+  eventCode: events.eventCode,
       accessCode: events.accessCode,
       isPublic: events.isPublic,
       teamName: teams.name,
@@ -48,7 +49,7 @@ export default async function AdminEventsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>Owner: {e.ownerName} ({e.ownerEmail})</div>
                 <div>Team: {e.teamName}</div>
-                <div>Access: {e.isPublic ? 'Public' : 'Private'} • Code: {e.accessCode}</div>
+                <div>Access: {e.isPublic ? 'Public' : 'Private'} • Event Code: {e.eventCode} • Access Code: {e.accessCode} • <Link className="text-blue-600" href={`/guest/${e.eventCode}`}>Guest link</Link></div>
               </div>
             </CardContent>
           </Card>

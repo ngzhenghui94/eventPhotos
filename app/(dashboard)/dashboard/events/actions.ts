@@ -49,8 +49,9 @@ export async function createEventAction(formData: FormData) {
     throw new Error(result.error.errors[0].message);
   }
 
-  // Generate a unique access code
-  const accessCode = generateAccessCode();
+  // Generate unique codes
+  const eventCode = generateEventCode(); // 8 chars
+  const accessCode = generateAccessCode(); // 6 chars
   
   const [newEvent] = await db
     .insert(events)
@@ -60,6 +61,7 @@ export async function createEventAction(formData: FormData) {
       description: (result.data.description ?? '').toString(),
       date: new Date(result.data.date),
       location: (result.data.location ?? '').toString(),
+      eventCode,
       accessCode,
       teamId: userTeam.teamId,
       createdBy: user.id,
@@ -78,6 +80,16 @@ export async function createEventAction(formData: FormData) {
 
 // Helper function to generate unique access codes
 function generateAccessCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+// Helper to generate 8-char event codes
+function generateEventCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < 8; i++) {

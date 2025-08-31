@@ -54,6 +54,7 @@ export const events = pgTable('events', {
   description: text('description'),
   date: timestamp('date').notNull(),
   location: varchar('location', { length: 255 }),
+  eventCode: varchar('event_code', { length: 50 }).notNull().unique(),
   accessCode: varchar('access_code', { length: 50 }).notNull().unique(),
   teamId: integer('team_id').notNull().references(() => teams.id),
   createdBy: integer('created_by').notNull().references(() => users.id),

@@ -28,7 +28,8 @@ export async function uploadGuestPhotosAction(formData: FormData) {
       id: true,
       allowGuestUploads: true,
       requireApproval: true,
-      accessCode: true
+      accessCode: true,
+      eventCode: true,
     }
   });
 
@@ -92,7 +93,7 @@ export async function uploadGuestPhotosAction(formData: FormData) {
   }
 
   // Revalidate the guest page to show new photos
-  revalidatePath(`/guest/${event.accessCode}`);
+  revalidatePath(`/guest/${event.eventCode}`);
   
   return { success: true, count: uploadedPhotos.length };
 }

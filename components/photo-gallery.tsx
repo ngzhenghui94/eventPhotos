@@ -13,9 +13,10 @@ interface PhotoGalleryProps {
   eventId: number;
   currentUserId?: number;
   canManage: boolean;
+  accessCode?: string;
 }
 
-export function PhotoGallery({ photos, eventId, currentUserId, canManage }: PhotoGalleryProps) {
+export function PhotoGallery({ photos, eventId, currentUserId, canManage, accessCode }: PhotoGalleryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
@@ -69,8 +70,12 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
             photo={photo}
             onView={() => setSelectedPhoto(photo.id)}
             onDelete={() => handleDeletePhoto(photo.id)}
-            canDelete={canManage || photo.uploadedByUser?.id === currentUserId}
+            canDelete={
+              Boolean(canManage) ||
+              (typeof currentUserId === 'number' && photo.uploadedByUser?.id === currentUserId)
+            }
             isDeleting={isDeleting === photo.id}
+            accessCode={accessCode}
           />
         ))}
       </div>
@@ -79,6 +84,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
   {selectedPhoto !== null && (
         <PhotoModal
           photoId={selectedPhoto}
+          accessCode={accessCode}
           onClose={() => setSelectedPhoto(null)}
         />
       )}
@@ -92,20 +98,29 @@ interface PhotoCardProps {
   onDelete: () => void;
   canDelete: boolean;
   isDeleting: boolean;
+  accessCode?: string;
 }
 
-function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCardProps) {
+function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode }: PhotoCardProps) {
   const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
+  const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
 
   return (
     <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
       <div className="aspect-square relative">
                 <img
-                  src={`/api/photos/${photo.id}/thumb`}
+                  src={`/api/photos/${photo.id}/thumb${codeQuery}`}
           alt={photo.originalFilename}
           className="w-full h-full object-cover cursor-pointer"
           onClick={onView}
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = '1';
+              img.src = `/api/photos/${photo.id}${codeQuery}`;
+            }
+          }}
         />
         
         {/* Overlay with actions */}
@@ -125,7 +140,7 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCard
               asChild
               className="bg-white/90 hover:bg-white"
             >
-              <a href={`/api/photos/${photo.id}/download`} download={photo.originalFilename}>
+              <a href={`/api/photos/${photo.id}/download${codeQuery}`} download={photo.originalFilename}>
                 <Download className="h-4 w-4" />
               </a>
             </Button>
@@ -166,9 +181,11 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCard
 interface PhotoModalProps {
   photoId: number;
   onClose: () => void;
+  accessCode?: string;
 }
 
-function PhotoModal({ photoId, onClose }: PhotoModalProps) {
+function PhotoModal({ photoId, onClose, accessCode }: PhotoModalProps) {
+  const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
   return (
     <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={onClose}>
       <div className="relative max-w-4xl max-h-[90vh] mx-4">
@@ -181,10 +198,17 @@ function PhotoModal({ photoId, onClose }: PhotoModalProps) {
           <X className="h-4 w-4" />
         </Button>
                 <img
-                  src={`/api/photos/${photoId}/thumb`}
+                  src={`/api/photos/${photoId}/thumb${codeQuery}`}
           alt="Full size photo"
           className="max-w-full max-h-full object-contain rounded-lg"
           onClick={(e) => e.stopPropagation()}
+          onError={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            if (!img.dataset.fallback) {
+              img.dataset.fallback = '1';
+              img.src = `/api/photos/${photoId}${codeQuery}`;
+            }
+          }}
         />
       </div>
     </div>

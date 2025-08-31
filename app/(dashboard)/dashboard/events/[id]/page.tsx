@@ -18,6 +18,7 @@ import { db } from '@/lib/db/drizzle';
 import { events as eventsTable, teamMembers, photos as photosTable, ActivityType } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
+import { generateAccessCode } from '@/lib/events/actions';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -133,6 +134,24 @@ export default async function EventPage({ params }: EventPageProps) {
 
     // Redirect with toast
     redirect('/dashboard/events?deleted=1');
+  }
+
+  async function regenerateAccessCode(formData: FormData) {
+    'use server';
+    const eventId = Number(formData.get('eventId'));
+    const u = await getUser();
+    if (!u) return redirect('/sign-in');
+    const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
+    if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
+    const isCreator = existing.createdBy === u.id;
+    const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
+    const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
+    if (!isCreator && !isTeamOwner && !u.isOwner) {
+      return redirect(`/dashboard/events/${eventId}?error=${encodeURIComponent('You do not have permission to update access code')}`);
+    }
+    const code = generateAccessCode();
+    await db.update(eventsTable).set({ accessCode: code, updatedAt: new Date() }).where(eq(eventsTable.id, eventId));
+    redirect(`/dashboard/events/${eventId}?updated=1`);
   }
 
   const toMB = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MB`;
@@ -291,17 +310,31 @@ export default async function EventPage({ params }: EventPageProps) {
                   </div>
                 </div>
                 <div className="pt-4 border-t">
-                  <Link href={`/guest/${event.accessCode}`} target="_blank">
+                  <Link href={`/guest/${event.eventCode}`} target="_blank">
                     <Button size="sm" className="px-3 py-1.5 text-sm">
                       View Guest Page
                     </Button>
                   </Link>
                 </div>
 
+                {isEventOwner && !event.isPublic && (
+                  <div className="pt-4 border-t">
+                    <p className="text-sm font-medium mb-2">Access Code</p>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{event.accessCode}</span>
+                      <form action={regenerateAccessCode}>
+                        <input type="hidden" name="eventId" value={String(eventId)} />
+                        <Button size="sm" variant="outline">Regenerate</Button>
+                      </form>
+                    </div>
+                    <p className="text-xs text-gray-500">Share this 6-character code with guests to access a private event.</p>
+                  </div>
+                )}
+
         <div className="pt-4 border-t">
                   <div className="space-y-3">
                     <p className="text-sm font-medium">Guest QR Code</p>
-          <EventQr code={event.accessCode} size={160} compact />
+          <EventQr code={event.eventCode} size={160} compact />
                   </div>
                 </div>
 

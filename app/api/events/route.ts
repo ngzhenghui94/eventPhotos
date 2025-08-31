@@ -44,6 +44,10 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Event name is required' }, { status: 400 });
     }
 
+    // Generate eventCode (8 chars) and accessCode (6 chars)
+    const eventCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+    const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
     const [newEvent] = await db.insert(events).values({
       name,
       description: (description ?? '').toString(),
@@ -53,7 +57,8 @@ export async function POST(request: NextRequest) {
       location: (location ?? '').toString(),
       isPublic: !!isPublic,
       allowGuestUploads: allowGuestUploads !== false, // Default to true
-      accessCode: Math.random().toString(36).substring(2, 8).toUpperCase(),
+      eventCode,
+      accessCode,
     }).returning();
 
     // Log activity

@@ -47,6 +47,7 @@ export async function ensureDemoEvent(ownerEmail: string) {
         description: 'Public demo event for uploads and gallery preview.',
         date: new Date(),
         location: 'Online',
+  eventCode: 'DEMO1234',
         accessCode: DEMO_ACCESS_CODE,
         teamId: team.id,
         createdBy: owner.id,
@@ -75,6 +76,6 @@ export async function getDemoEvent(ownerEmail: string) {
     team: { id: team.id, name: team.name },
     owner: { id: owner.id, email: owner.email, name: owner.name },
     galleryPath: `/gallery/${event.id}`,
-    guestPath: `/guest/${event.accessCode}`,
+  guestPath: `/guest/${event.eventCode}`,
   };
 }

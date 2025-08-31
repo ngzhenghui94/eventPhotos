@@ -164,13 +164,13 @@ export default function DemoGallery() {
             )}
             <div className="text-xs text-gray-500 mt-2">Uploads are open on the live demo and rate-limited to 5 per IP/hour.</div>
             {demo && (
-              <div className="mt-4 flex flex-col sm:flex-row items-start gap-4">
-                <div>
+              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="min-w-0">
                   <div className="text-sm text-gray-600">Guest link</div>
-                  <Link className="text-blue-600 hover:underline" href={demo.guestPath}>{demo.guestPath}</Link>
+                  <Link className="text-blue-600 hover:underline break-all" href={demo.guestPath}>{demo.guestPath}</Link>
                 </div>
-                <div className="flex-1">
-                  <EventQr code={demo.accessCode} compact />
+                <div className="sm:ml-auto">
+                  <EventQr code={demo.guestPath.replace('/guest/','')} compact />
                 </div>
               </div>
             )}

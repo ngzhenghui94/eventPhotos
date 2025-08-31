@@ -51,7 +51,7 @@ export async function approvePhotoAction(formData: FormData) {
 
   // Revalidate pages
   revalidatePath(`/dashboard/events/${eventId}`);
-  revalidatePath(`/guest/${photo.event.accessCode}`);
+  revalidatePath(`/guest/${photo.event.eventCode}`);
 }
 
 export async function rejectPhotoAction(formData: FormData) {
@@ -110,5 +110,5 @@ export async function rejectPhotoAction(formData: FormData) {
 
   // Revalidate pages
   revalidatePath(`/dashboard/events/${eventId}`);
-  revalidatePath(`/guest/${photo.event.accessCode}`);
+  revalidatePath(`/guest/${photo.event.eventCode}`);
 }

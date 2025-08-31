@@ -47,7 +47,8 @@ export const createEvent = validatedActionWithUser(
       return { error: `Your plan (${planName}) allows ${limitText}. Please upgrade to create more events.` };
     }
 
-    // Generate a unique access code
+  // Generate codes
+  const eventCode = generateEventCode();
     const accessCode = generateAccessCode();
     
     try {
@@ -56,6 +57,7 @@ export const createEvent = validatedActionWithUser(
         description: (data.description ?? '').toString(),
         date: new Date(data.date),
         location: (data.location ?? '').toString(),
+          eventCode,
         accessCode,
         teamId,
         createdBy: user.id,
@@ -155,7 +157,16 @@ export const deleteEvent = validatedActionWithUser(
 );
 
 // Helper function to generate unique access codes
-function generateAccessCode(): string {
+export function generateAccessCode(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+export function generateEventCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let result = '';
   for (let i = 0; i < 8; i++) {
