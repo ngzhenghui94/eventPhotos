@@ -9,6 +9,14 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { PhotoApproval } from '@/components/photo-approval';
 import { BulkDownload } from '@/components/bulk-download';
 import { EventQr } from '@/components/event-qr';
+import UpdateToast from '@/components/update-toast';
+import { getPhotoCapForTeam, getUploadLimitForTeam } from '@/lib/plans';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { revalidatePath } from 'next/cache';
+import { db } from '@/lib/db/drizzle';
+import { events as eventsTable, teamMembers } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 interface EventPageProps {
   params: Promise<{ id: string }>;
@@ -34,9 +42,47 @@ export default async function EventPage({ params }: EventPageProps) {
 
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
+  const approvedCount = (photos as any[])?.filter((p) => p.isApproved)?.length || 0;
+  const planUploadLimit = getUploadLimitForTeam(event.team.planName ?? null);
+  const planPhotoCap = getPhotoCapForTeam(event.team.planName ?? null);
+  const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
+  // createdBy is a user object in this query result; compare its id
+  const isEventOwner = user.id === event.createdBy.id || !!user.isOwner;
+  async function saveEvent(formData: FormData) {
+    'use server';
+    const eventId = Number(formData.get('eventId'));
+    const name = String(formData.get('name') ?? '').trim();
+    const isPublic = !!formData.get('isPublic');
+    const allowGuestUploads = !!formData.get('allowGuestUploads');
+    const requireApproval = !!formData.get('requireApproval');
+
+  const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
+    if (!existing) return;
+  const u = await getUser();
+  if (!u) return;
+  const isCreator = existing.createdBy === u.id;
+  const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
+    const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
+    if (!isCreator && !isTeamOwner) return;
+
+    await db.update(eventsTable)
+      .set({
+        name: name || existing.name,
+        isPublic,
+        allowGuestUploads,
+        requireApproval,
+        updatedAt: new Date(),
+      })
+      .where(eq(eventsTable.id, eventId));
+  revalidatePath(`/dashboard/events/${eventId}`);
+  redirect(`/dashboard/events/${eventId}?updated=1`);
+  }
+
+  const toMB = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MB`;
 
   return (
     <section className="flex-1 p-4 lg:p-8">
+  <UpdateToast />
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center mb-6">
           <Link href="/dashboard/events">
@@ -60,6 +106,7 @@ export default async function EventPage({ params }: EventPageProps) {
                 </>
               )}
             </div>
+            <div className="text-sm text-gray-600 mt-1">Host: {event.createdBy.name || 'Unknown'}</div>
           </div>
         </div>
 
@@ -108,7 +155,38 @@ export default async function EventPage({ params }: EventPageProps) {
           </div>
 
           {/* Event Settings Sidebar */}
-          <div>
+          <div className="space-y-6">
+            {/* Plan Limits */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Plan Limits</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Current plan</span>
+                  <span className="font-medium capitalize">{event.team.planName?.toLowerCase() || 'free'}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Per-upload size</span>
+                  <span className="font-medium">{toMB(planUploadLimit)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-gray-600">Photo cap per event</span>
+                  <span className="font-medium">{planPhotoCap}</span>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-sm mb-1">
+                    <span className="text-gray-600">Current photos</span>
+                    <span className="font-medium">{photoCount} / {planPhotoCap}</span>
+                  </div>
+                  <div className="h-2 rounded bg-gray-100 overflow-hidden">
+                    <div className="h-2 bg-orange-500" style={{ width: `${usedPct}%` }} />
+                  </div>
+                  <p className="mt-1 text-xs text-gray-500">Approved: {approvedCount}</p>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card>
               <CardHeader>
                 <CardTitle>Event Settings</CardTitle>
@@ -157,18 +235,55 @@ export default async function EventPage({ params }: EventPageProps) {
                 </div>
                 <div className="pt-4 border-t">
                   <Link href={`/guest/${event.accessCode}`} target="_blank">
-                    <Button className="w-full" size="sm">
+                    <Button size="sm" className="px-3 py-1.5 text-sm">
                       View Guest Page
                     </Button>
                   </Link>
                 </div>
 
-                <div className="pt-4 border-t">
+        <div className="pt-4 border-t">
                   <div className="space-y-3">
                     <p className="text-sm font-medium">Guest QR Code</p>
-                    <EventQr code={event.accessCode} />
+          <EventQr code={event.accessCode} size={160} compact />
                   </div>
                 </div>
+
+                {isEventOwner && (
+                  <div className="pt-4 border-t">
+                    <p className="text-sm font-medium mb-2">Edit Event</p>
+                    <form action={saveEvent} className="space-y-3">
+                      <input type="hidden" name="eventId" value={String(eventId)} />
+                      <div className="space-y-1.5">
+                        <Label htmlFor="name">Name</Label>
+                        <Input id="name" name="name" defaultValue={event.name} required maxLength={200} />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="isPublic">Public</Label>
+                          <p className="text-xs text-gray-500">Visible to anyone with the link</p>
+                        </div>
+                        <input id="isPublic" name="isPublic" type="checkbox" defaultChecked={!!event.isPublic} className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="allowGuestUploads">Guest uploads</Label>
+                          <p className="text-xs text-gray-500">Allow guests to upload photos</p>
+                        </div>
+                        <input id="allowGuestUploads" name="allowGuestUploads" type="checkbox" defaultChecked={!!event.allowGuestUploads} className="h-4 w-4" />
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <Label htmlFor="requireApproval">Require approval</Label>
+                          <p className="text-xs text-gray-500">New uploads need approval</p>
+                        </div>
+                        <input id="requireApproval" name="requireApproval" type="checkbox" defaultChecked={!!event.requireApproval} className="h-4 w-4" />
+                      </div>
+                      <div className="flex justify-end">
+                        <Button size="sm" type="submit">Save Changes</Button>
+                      </div>
+                    </form>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

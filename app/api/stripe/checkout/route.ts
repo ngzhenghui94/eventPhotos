@@ -15,6 +15,9 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    if (!stripe) {
+      return NextResponse.redirect(new URL('/pricing', request.url));
+    }
     const session = await stripe.checkout.sessions.retrieve(sessionId, {
       expand: ['customer', 'subscription'],
     });
@@ -33,7 +36,7 @@ export async function GET(request: NextRequest) {
       throw new Error('No subscription found for this session.');
     }
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
       expand: ['items.data.price.product'],
     });
 

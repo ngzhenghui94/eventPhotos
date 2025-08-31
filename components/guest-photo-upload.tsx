@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -62,15 +63,15 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
 
       await uploadGuestPhotosAction(formData);
       
-      // Reset form
+  // Reset form
       setSelectedFiles([]);
       setGuestName('');
       setGuestEmail('');
       
-      alert('Photos uploaded successfully! They may need approval before appearing in the gallery.');
+  toast.success('Photos uploaded successfully!', { description: 'They may need approval before appearing in the gallery.' });
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload photos. Please try again.');
+  toast.error('Failed to upload photos. Please try again.');
     } finally {
       setIsUploading(false);
     }

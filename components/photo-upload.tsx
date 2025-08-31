@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
@@ -104,11 +105,14 @@ export function PhotoUpload({ eventId, teamPlanName }: PhotoUploadProps) {
   router.refresh();
       if (failures.length) {
         const first = failures[0];
-        alert(`Uploaded ${succeeded.length} file(s). ${failures.length} failed. First error: ${first.name}${first.status ? ` (${first.status})` : ''}`);
+        toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
+      } else {
+        toast.success(`Uploaded ${succeeded.length} file${succeeded.length !== 1 ? 's' : ''}`);
       }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Failed to upload photos. Please try again.');
+      const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+      toast.error('Failed to upload photos', { description: String(message) });
     } finally {
       setIsUploading(false);
     }

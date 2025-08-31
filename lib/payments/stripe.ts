@@ -7,7 +7,8 @@ import {
   updateTeamSubscription
 } from '@/lib/db/queries';
 
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
+export const stripe: Stripe | null = STRIPE_SECRET ? new Stripe(STRIPE_SECRET) : null;
 
 export async function createCheckoutSession({
   team,
@@ -20,6 +21,11 @@ export async function createCheckoutSession({
 
   if (!team || !user) {
     redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+  }
+
+  if (!stripe) {
+    // Stripe not configured; route user to pricing page
+    redirect('/pricing');
   }
 
   const session = await stripe.checkout.sessions.create({
@@ -42,6 +48,9 @@ export async function createCheckoutSession({
 }
 
 export async function createCustomerPortalSession(team: Team) {
+  if (!stripe) {
+    redirect('/pricing');
+  }
   if (!team.stripeCustomerId || !team.stripeProductId) {
     redirect('/pricing');
   }
@@ -142,6 +151,7 @@ export async function handleSubscriptionChange(
 }
 
 export async function getStripePrices() {
+  if (!stripe) return [] as Array<{ id: string; productId: string; unitAmount: number | null; currency: string | null; interval: string | null; trialPeriodDays: number | null; }>;
   const prices = await stripe.prices.list({
     expand: ['data.product'],
     active: true,
@@ -160,6 +170,7 @@ export async function getStripePrices() {
 }
 
 export async function getStripeProducts() {
+  if (!stripe) return [] as Array<{ id: string; name: string; description: string | null; defaultPriceId?: string | null; }>;
   const products = await stripe.products.list({
     active: true,
     expand: ['data.default_price']

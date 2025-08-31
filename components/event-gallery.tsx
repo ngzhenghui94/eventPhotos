@@ -204,7 +204,7 @@ export function EventGallery({ event, onBack }: EventGalleryProps) {
               <CardContent className="p-0">
                 <div className="aspect-square relative overflow-hidden">
                   <img
-                    src={`/api/photos/${photo.id}`}
+                    src={`/api/photos/${photo.id}/thumb`}
                     alt={photo.originalName}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
                     loading="lazy"
@@ -303,7 +303,7 @@ export function EventGallery({ event, onBack }: EventGalleryProps) {
             </div>
             <div className="flex-1 flex items-center justify-center p-4">
               <img
-                src={`/api/photos/${selectedPhoto.id}`}
+                src={`/api/photos/${selectedPhoto.id}/thumb`}
                 alt={selectedPhoto.originalName}
                 className="max-w-full max-h-full object-contain"
               />

@@ -34,8 +34,8 @@ export default async function PricingPage() {
     const basePrice = priceForProduct(baseProduct?.id);
     const plusPrice = priceForProduct(plusProduct?.id);
 
-    baseStripeId = basePrice?.id || baseProduct?.defaultPriceId;
-    plusStripeId = plusPrice?.id || plusProduct?.defaultPriceId;
+  baseStripeId = basePrice?.id || (baseProduct?.defaultPriceId ?? undefined);
+  plusStripeId = plusPrice?.id || (plusProduct?.defaultPriceId ?? undefined);
 
     if (basePrice?.unitAmount) baseUnitAmount = basePrice.unitAmount;
     if (plusPrice?.unitAmount) plusUnitAmount = plusPrice.unitAmount;

@@ -288,5 +288,10 @@ export async function canUserUploadToEvent(eventId: number, userId?: number) {
 export async function getEventByAccessCode(code: string) {
   return await db.query.events.findFirst({
     where: eq(events.accessCode, code),
+    with: {
+      createdBy: {
+        columns: { id: true, name: true, email: true }
+      }
+    }
   });
 }

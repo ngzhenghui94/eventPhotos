@@ -26,7 +26,7 @@ export async function uploadPhotosAction(formData: FormData) {
   // Verify event exists and user has access
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
-    with: { team: true }
+    with: { team: true, createdBy: true }
   });
 
   if (!event) {
@@ -93,7 +93,8 @@ export async function uploadPhotosAction(formData: FormData) {
         fileSize: file.size,
         filePath: `s3:${key}`,
         eventId,
-        uploadedBy: user.id,
+        // Attribute dashboard uploads to the event owner for display ("By XXX")
+        uploadedBy: event.createdBy?.id ?? user.id,
         guestName: null,
         guestEmail: null,
         isApproved: !event.requireApproval, // Auto-approve if not required

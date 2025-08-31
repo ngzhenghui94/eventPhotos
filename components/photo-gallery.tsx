@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, Download, Eye, X } from 'lucide-react';
@@ -18,19 +19,28 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage }: Phot
   const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
 
+  const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const handleDeletePhoto = async (photoId: number) => {
-    if (!confirm('Are you sure you want to delete this photo?')) return;
-    
+    if (confirmingId !== photoId) {
+      setConfirmingId(photoId);
+      toast.info('Click delete again to confirm photo removal.', { description: 'This action cannot be undone.' });
+      setTimeout(() => setConfirmingId(null), 3000);
+      return;
+    }
+
     setIsDeleting(photoId);
     try {
       const formData = new FormData();
       formData.append('photoId', photoId.toString());
       await deletePhotoAction(formData);
-    } catch (error) {
+      toast.success('Photo deleted');
+    } catch (error: unknown) {
       console.error('Error deleting photo:', error);
-      alert('Failed to delete photo');
+      const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+      toast.error(`Failed to delete photo: ${message}`);
     } finally {
       setIsDeleting(null);
+      setConfirmingId(null);
     }
   };
 
@@ -91,8 +101,8 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting }: PhotoCard
   return (
     <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
       <div className="aspect-square relative">
-        <img
-          src={`/api/photos/${photo.id}`}
+                <img
+                  src={`/api/photos/${photo.id}/thumb`}
           alt={photo.originalFilename}
           className="w-full h-full object-cover cursor-pointer"
           onClick={onView}
@@ -170,8 +180,8 @@ function PhotoModal({ photoId, onClose }: PhotoModalProps) {
         >
           <X className="h-4 w-4" />
         </Button>
-        <img
-          src={`/api/photos/${photoId}`}
+                <img
+                  src={`/api/photos/${photoId}/thumb`}
           alt="Full size photo"
           className="max-w-full max-h-full object-contain rounded-lg"
           onClick={(e) => e.stopPropagation()}

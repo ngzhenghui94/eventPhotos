@@ -45,6 +45,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                   </>
                 )}
               </div>
+              <div className="text-sm text-gray-600 mt-1">Host: {event.createdBy?.name || 'Unknown'}</div>
             </div>
           </div>
         </div>

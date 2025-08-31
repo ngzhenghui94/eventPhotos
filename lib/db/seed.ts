@@ -4,6 +4,10 @@ import { users, teams, teamMembers } from './schema';
 import { hashPassword } from '@/lib/auth/session';
 
 async function createStripeProducts() {
+  if (!stripe) {
+    console.log('Stripe not configured; skipping Stripe product/price creation.');
+    return;
+  }
   console.log('Creating Stripe products and prices...');
 
   const baseProduct = await stripe.products.create({

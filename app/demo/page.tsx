@@ -249,7 +249,8 @@ export default function DemoGallery() {
                   size="sm"
                   onClick={() => {
                     // In demo mode, just show an alert
-                    alert('In a real deployment, this would download the original high-resolution photo from AWS S3.');
+                    // eslint-disable-next-line no-undef
+                    (window as any).__EP_TOAST?.error?.('Download is disabled in demo', { description: 'In production this would fetch from S3.' });
                   }}
                   className="text-white hover:bg-white/20"
                 >

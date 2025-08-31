@@ -77,7 +77,7 @@ const updateEventSchema = z.object({
   eventId: z.string().transform(Number),
   name: z.string().min(1, 'Event name is required').max(200, 'Event name too long'),
   description: z.string().optional(),
-  date: z.string().min(1, 'Event date is required'),
+  date: z.string().optional(),
   location: z.string().optional(),
   isPublic: z.boolean().optional(),
   allowGuestUploads: z.boolean().optional(),
@@ -87,22 +87,36 @@ const updateEventSchema = z.object({
 export const updateEvent = validatedActionWithUser(
   updateEventSchema,
   async (data, _, user) => {
-    const teamId = await getUserTeamId(user.id);
-    
-    if (!teamId) {
-      return { error: 'User is not part of a team' };
+    // Load the event to verify ownership and get current values
+    const existing = await db.query.events.findFirst({ where: eq(events.id, data.eventId) });
+    if (!existing) {
+      return { error: 'Event not found' };
+    }
+
+    // Only the event creator or team owners can edit
+    const userTeamId = await getUserTeamId(user.id);
+    const isCreator = existing.createdBy === user.id;
+    let isTeamOwner = false;
+    if (userTeamId) {
+      const membership = await db.query.teamMembers.findFirst({
+        where: eq(teamMembers.userId, user.id),
+      });
+      isTeamOwner = membership?.role?.toLowerCase() === 'owner';
+    }
+    if (!isCreator && !isTeamOwner) {
+      return { error: 'You do not have permission to edit this event.' };
     }
 
     try {
       await db.update(events)
         .set({
-          name: data.name,
-          description: (data.description ?? '').toString(),
-          date: new Date(data.date),
-          location: (data.location ?? '').toString(),
-          isPublic: data.isPublic || false,
-          allowGuestUploads: data.allowGuestUploads !== false,
-          requireApproval: data.requireApproval || false,
+          name: data.name ?? existing.name,
+          description: (data.description ?? existing.description ?? '').toString(),
+          date: data.date ? new Date(data.date) : existing.date,
+          location: (data.location ?? existing.location ?? '').toString(),
+          isPublic: typeof data.isPublic === 'boolean' ? data.isPublic : existing.isPublic,
+          allowGuestUploads: typeof data.allowGuestUploads === 'boolean' ? data.allowGuestUploads : existing.allowGuestUploads,
+          requireApproval: typeof data.requireApproval === 'boolean' ? data.requireApproval : existing.requireApproval,
           updatedAt: new Date(),
         })
         .where(eq(events.id, data.eventId));

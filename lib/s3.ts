@@ -88,3 +88,10 @@ export function generatePhotoKey(eventId: number, fileName: string): string {
   const extension = fileName.split('.').pop();
   return `events/${eventId}/photos/${timestamp}-${randomString}.${extension}`;
 }
+
+export function deriveThumbKey(originalKey: string, size: 'sm' | 'md' = 'sm'): string {
+  const lastSlash = originalKey.lastIndexOf('/');
+  const dir = originalKey.substring(0, lastSlash);
+  const file = originalKey.substring(lastSlash + 1);
+  return `${dir}/thumbs/${size}-${file}`;
+}
