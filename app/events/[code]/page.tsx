@@ -32,16 +32,16 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
     <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
       {/* Decorative */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-blue-200/30 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-purple-200/30 blur-3xl" />
+        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-rose-200/30 blur-3xl" />
       </div>
 
       {/* Header */}
       <div className="border-b border-slate-200/60 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
-            <div className="bg-blue-100 rounded-full p-3 ring-1 ring-blue-200/60">
-              <Camera className="h-6 w-6 text-blue-600" />
+            <div className="bg-amber-100 rounded-full p-3 ring-1 ring-amber-200/60">
+              <Camera className="h-6 w-6 text-amber-600" />
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold text-slate-900 truncate">{event.name}</h1>
@@ -136,8 +136,8 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex items-start space-x-3">
-                  <div className="bg-blue-100 rounded-full p-2 flex-shrink-0">
-                    <Upload className="h-4 w-4 text-blue-600" />
+                  <div className="bg-amber-100 rounded-full p-2 flex-shrink-0">
+                    <Upload className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-900">Upload Photos</p>

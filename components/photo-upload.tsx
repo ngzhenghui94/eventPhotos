@@ -139,7 +139,7 @@ export function PhotoUpload({ eventId, teamPlanName }: PhotoUploadProps) {
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
             isDragging
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-amber-500 bg-amber-50'
               : 'border-gray-300 hover:border-gray-400'
           }`}
           onDrop={handleDrop}

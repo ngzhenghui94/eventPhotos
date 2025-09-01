@@ -21,14 +21,14 @@ export default function EventNotFoundPage() {
               The event code you're looking for doesn't exist or may have been removed.
             </p>
             
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
               <div className="flex items-center space-x-3">
-                <Camera className="h-5 w-5 text-blue-500" />
+                <Camera className="h-5 w-5 text-amber-600" />
                 <div className="text-left">
-                  <p className="text-sm font-medium text-blue-900">
+                  <p className="text-sm font-medium text-amber-900">
                     Looking for an event?
                   </p>
-                  <p className="text-sm text-blue-800">
+                  <p className="text-sm text-amber-800">
                     Double-check the event code with the event organizer
                   </p>
                 </div>

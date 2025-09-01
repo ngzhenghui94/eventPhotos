@@ -301,7 +301,7 @@ export default async function EventPage({ params }: EventPageProps) {
                     <span className="text-sm font-medium">Guest Uploads</span>
                     <span className={`text-xs px-2 py-1 rounded-full ${
                       event.allowGuestUploads 
-                        ? 'bg-blue-100 text-blue-800' 
+                        ? 'bg-amber-100 text-amber-800' 
                         : 'bg-gray-100 text-gray-800'
                     }`}>
                       {event.allowGuestUploads ? 'Enabled' : 'Disabled'}
