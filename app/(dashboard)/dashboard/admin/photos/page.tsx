@@ -16,6 +16,7 @@ export default async function AdminPhotosPage() {
       isApproved: photos.isApproved,
       uploadedAt: photos.uploadedAt,
       eventId: photos.eventId,
+      eventCode: events.eventCode,
       eventName: events.name,
       uploadedById: users.id,
       uploadedByName: users.name,
@@ -48,7 +49,7 @@ export default async function AdminPhotosPage() {
             </CardHeader>
             <CardContent className="text-sm text-gray-600">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div>Event: <Link className="underline" href={`/dashboard/events/${p.eventId}`}>{p.eventName}</Link></div>
+                <div>Event: <Link className="underline" href={`/dashboard/events/${p.eventCode}`}>{p.eventName}</Link></div>
                 <div>Uploader: {p.uploadedByName || 'Guest'} {p.uploadedByEmail ? `(${p.uploadedByEmail})` : ''}</div>
                 <div>Status: {p.isApproved ? 'Approved' : 'Pending'}</div>
               </div>

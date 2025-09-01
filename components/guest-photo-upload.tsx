@@ -1,19 +1,21 @@
 'use client';
 
 import { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Image as ImageIcon, User } from 'lucide-react';
-import { uploadGuestPhotosAction } from '@/lib/photos/guest-actions';
+// Using API route directly to avoid server action double-invocation in dev
 
 interface GuestPhotoUploadProps {
   eventId: number;
 }
 
 export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
+  const router = useRouter();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -53,25 +55,66 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
 
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('eventId', eventId.toString());
-      formData.append('guestName', guestName.trim());
-      formData.append('guestEmail', guestEmail.trim());
-      selectedFiles.forEach(file => {
-        formData.append('photos', file);
-      });
+  // We call the REST API directly to avoid server action quirks with FormData in dev
+      let eventCode = '';
+      try {
+        const parts = window.location.pathname.split('/');
+        const idx = parts.findIndex((p) => p === 'guest');
+        eventCode = idx >= 0 ? (parts[idx + 1] || '') : '';
+      } catch {}
 
-      await uploadGuestPhotosAction(formData);
-      
+      const cookieName = eventCode ? `evt:${eventCode.toUpperCase()}:access` : '';
+      const cookieMap: Record<string, string> = document.cookie
+        .split(';')
+        .map((c) => c.trim().split('='))
+        .reduce((acc, [k, v]) => { if (k) acc[k] = decodeURIComponent(v || ''); return acc; }, {} as Record<string, string>);
+      const accessCode = cookieName ? (cookieMap[cookieName] || '') : '';
+
+      let successCount = 0;
+      const failures: { name: string; message: string }[] = [];
+      for (const file of selectedFiles) {
+        const fd = new FormData();
+        fd.append('eventId', eventId.toString());
+        fd.append('guestName', guestName.trim());
+        if (guestEmail.trim()) fd.append('guestEmail', guestEmail.trim());
+        // The /api/photos endpoint expects a single file under 'file'
+        fd.append('file', file);
+        try {
+          const res = await fetch('/api/photos', {
+            method: 'POST',
+            headers: accessCode ? { 'x-access-code': accessCode } : undefined,
+            body: fd,
+          });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            failures.push({ name: file.name, message: data?.error || 'Upload failed' });
+          } else {
+            successCount += 1;
+          }
+        } catch (e) {
+          failures.push({ name: file.name, message: 'Network error' });
+        }
+      }
+
+      if (successCount > 0) {
+        toast.success('Photos uploaded', { description: `${successCount} photo${successCount > 1 ? 's' : ''} uploaded.` });
+        // Refresh the current route so the new photos render
+        router.refresh();
+      }
+      if (failures.length > 0) {
+        const first = failures[0];
+        const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : '';
+        toast.error('Some uploads failed', { description: `${first.name}: ${first.message}${more}` });
+      }
+
   // Reset form
       setSelectedFiles([]);
       setGuestName('');
       setGuestEmail('');
       
-  toast.success('Photos uploaded successfully!', { description: 'They may need approval before appearing in the gallery.' });
     } catch (error) {
       console.error('Upload error:', error);
-  toast.error('Failed to upload photos. Please try again.');
+      toast.error('Failed to upload photos. Please try again.');
     } finally {
       setIsUploading(false);
     }

@@ -4,9 +4,9 @@ import { join } from 'path';
 import { db } from '@/lib/db/drizzle';
 import { photos, events, teamMembers } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
-import { eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
-import { uploadToS3, generatePhotoKey, deleteFromS3, getSignedUploadUrl } from '@/lib/s3';
+import { uploadToS3, generatePhotoKey, deleteFromS3, getSignedUploadUrl, deriveThumbKey } from '@/lib/s3';
 import { getTeamForUser } from '@/lib/db/queries';
 import { getUploadLimitForTeam, getPhotoCapForTeam } from '@/lib/plans';
 
@@ -111,7 +111,7 @@ export async function uploadPhotosAction(formData: FormData) {
     throw new Error('No photos were uploaded successfully');
   }
 
-  redirect(`/dashboard/events/${eventId}`);
+  redirect(`/dashboard/events/${event.eventCode}`);
 }
 
 export async function deletePhotoAction(formData: FormData) {
@@ -176,7 +176,90 @@ export async function deletePhotoAction(formData: FormData) {
   }
 
   // Perform redirect outside of try/catch so the framework can handle it
-  redirect(`/dashboard/events/${photo.eventId}`);
+  // Use eventCode for the updated dashboard route
+  redirect(`/dashboard/events/${photo.event.eventCode}`);
+}
+
+// Bulk delete photos: expects eventId and a JSON array of photoIds in formData
+export async function deletePhotosBulkAction(formData: FormData) {
+  const user = await getUser();
+  if (!user) {
+    redirect('/sign-in');
+  }
+
+  const rawEventId = formData.get('eventId');
+  const rawIds = formData.get('photoIds');
+  const eventId = Number(rawEventId);
+  if (!eventId || Number.isNaN(eventId)) {
+    throw new Error('Invalid event ID');
+  }
+  let photoIds: number[] = [];
+  try {
+    const parsed = typeof rawIds === 'string' ? JSON.parse(rawIds) : [];
+    if (Array.isArray(parsed)) {
+      photoIds = parsed.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+    }
+  } catch {}
+  if (photoIds.length === 0) {
+    throw new Error('No photos selected');
+  }
+
+  // Verify event and user permissions
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { team: true }
+  });
+  if (!event) throw new Error('Event not found');
+
+  const userTeam = await db.query.teamMembers.findFirst({
+    where: eq(teamMembers.userId, user.id),
+    columns: { teamId: true }
+  });
+  const isCreator = event.createdBy === user.id;
+  const sameTeam = userTeam && userTeam.teamId === event.teamId;
+  if (!isCreator && !sameTeam) {
+    throw new Error('You do not have permission to delete photos for this event');
+  }
+
+  // Fetch target photos that belong to this event
+  const target = await db.query.photos.findMany({
+    where: and(eq(photos.eventId, eventId), inArray(photos.id, photoIds)),
+    columns: { id: true, filePath: true }
+  });
+  if (target.length === 0) {
+    return { count: 0 };
+  }
+  const targetIds = target.map((p) => p.id);
+
+  // Delete media from S3 (original + thumbs when applicable)
+  for (const p of target) {
+    try {
+      if (p.filePath?.startsWith('s3:')) {
+        const key = p.filePath.replace(/^s3:/, '');
+        await deleteFromS3(key).catch(() => {});
+        const sm = deriveThumbKey(key, 'sm');
+        const md = deriveThumbKey(key, 'md');
+        await deleteFromS3(sm).catch(() => {});
+        await deleteFromS3(md).catch(() => {});
+      } else if (p.filePath) {
+        const fs = require('fs').promises;
+        const filePath = join(process.cwd(), 'public', p.filePath);
+        await fs.unlink(filePath).catch(() => {});
+      }
+    } catch {}
+  }
+
+  // Delete DB records
+  await db.delete(photos).where(inArray(photos.id, targetIds));
+
+  // Revalidate pages
+  try {
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath(`/dashboard/events/${event.eventCode}`);
+    revalidatePath(`/events/${event.eventCode}`);
+  } catch {}
+
+  return { count: targetIds.length };
 }
 
 // New: Direct-to-S3 upload flow to avoid Server Actions 10MB body limit

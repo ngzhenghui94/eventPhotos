@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft } from 'lucide-react';
+import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
 import { brand } from '@/lib/brand';
@@ -40,6 +40,15 @@ export default function DemoGallery() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DemoPhoto[]>([]);
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+
+  const guestUrl = useMemo(() => {
+    if (!demo) return '';
+    try {
+      return new URL(demo.guestPath, window.location.origin).toString();
+    } catch {
+      return demo.guestPath;
+    }
+  }, [demo]);
 
   useEffect(() => {
     let active = true;
@@ -96,6 +105,8 @@ export default function DemoGallery() {
     if (!demo || files.length === 0) return;
     setUploading(true);
     try {
+      let successCount = 0;
+      const failures: { name: string; message: string }[] = [];
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         const form = new FormData();
@@ -107,11 +118,20 @@ export default function DemoGallery() {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           const msg = data?.error || `Failed to upload ${file.name}`;
-          (window as any).__EP_TOAST?.error?.('Upload failed', { description: msg });
+          failures.push({ name: file.name, message: msg });
           if (res.status === 429) break;
+        } else {
+          successCount += 1;
         }
       }
-  (window as any).__EP_TOAST?.success?.('Uploaded', { description: 'Your photos were submitted.' });
+      if (successCount > 0) {
+        (window as any).__EP_TOAST?.success?.('Upload complete', { description: `${successCount} photo${successCount > 1 ? 's' : ''} uploaded.` });
+      }
+      if (failures.length > 0) {
+        const first = failures[0];
+        const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : '';
+        (window as any).__EP_TOAST?.error?.('Some uploads failed', { description: `${first.name}: ${first.message}${more}` });
+      }
   // Refresh the grid to show new uploads
   await loadPhotos(demo.id);
       setShowUploadModal(false);
@@ -124,90 +144,147 @@ export default function DemoGallery() {
     }
   };
 
+  const heroBg = useMemo(() => {
+    const first = photos[0];
+    if (!first) return undefined;
+    return `url(/api/photos/${first.id}/thumb)`;
+  }, [photos]);
+
+  const copyGuestLink = async () => {
+    try {
+      await navigator.clipboard.writeText(guestUrl);
+      (window as any).__EP_TOAST?.success?.('Link copied', { description: 'Guest link copied to clipboard.' });
+    } catch {
+      (window as any).__EP_TOAST?.error?.('Copy failed', { description: 'Unable to copy link.' });
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="flex items-center gap-4 mb-6">
-            <Button variant="ghost" onClick={() => window.history.back()} className="p-2 hover:bg-gray-100 rounded-full">
+    <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
+      {/* Decorative backdrop */}
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
+      </div>
+
+      {/* Header / Hero */}
+      <div className="border-b border-slate-200/60 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center gap-3 mb-6">
+            <Button variant="ghost" onClick={() => window.history.back()} className="p-2 hover:bg-slate-100 rounded-full">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="bg-blue-100 text-blue-800 text-sm px-3 py-1 rounded-full">Demo Gallery</div>
+            <span className="inline-flex items-center rounded-full bg-slate-900 text-white px-3 py-1 text-xs tracking-wide">Demo Gallery</span>
           </div>
 
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{demo?.name || `${brand.productName} Demo Event`}</h1>
-              <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
-                {demo?.date && (
-                  <div className="flex items-center"><Calendar className="h-4 w-4 mr-1" />{formatDate(demo.date)}</div>
+          <div className="relative overflow-hidden rounded-3xl shadow-sm bg-white/70 ring-1 ring-slate-200/60">
+            {/* Subtle image/gradient backdrop */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-white" style={heroBg ? { backgroundImage: `${heroBg}`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(30px)', opacity: 0.18 } : {}} />
+            <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-0">
+              <div className="col-span-2 p-6 sm:p-10">
+                <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+                  {demo?.name || `${brand.productName} Demo Event`}
+                </h1>
+                <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
+                  {demo?.date && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><Calendar className="h-4 w-4" /> {formatDate(demo.date)}</span>
+                  )}
+                  {demo?.location && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><MapPin className="h-4 w-4" /> {demo.location}</span>
+                  )}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><Camera className="h-4 w-4" /> {photos.length} photos</span>
+                </div>
+
+                <div className="mt-6 space-y-3">
+                  {demo?.description && (
+                    <p className="text-slate-700 leading-relaxed">
+                      {demo.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-slate-500">Uploads are open on the live demo and rate-limited to 5 per IP/hour.</p>
+
+                  {demo && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2 items-start">
+                      <div className="min-w-0">
+                        <div className="text-xs text-slate-500">Guest link</div>
+                        <div className="mt-1 flex items-center gap-2">
+                          <Link className="text-blue-600 hover:underline break-all flex items-center gap-1" href={demo.guestPath}><LinkIcon className="h-4 w-4" /> {guestUrl || demo.guestPath}</Link>
+                          <Button type="button" variant="outline" size="sm" onClick={copyGuestLink} className="h-7 px-3">
+                            <Copy className="h-3.5 w-3.5" />
+                            Copy
+                          </Button>
+                          <Link href={demo.guestPath} target="_blank" className="inline-flex items-center text-slate-600 hover:text-slate-900 text-sm">
+                            <ExternalLink className="h-4 w-4" />
+                          </Link>
+                        </div>
+                      </div>
+
+                      <div className="sm:text-right">
+                        <Button onClick={() => setShowUploadModal(true)} className="rounded-full px-6">
+                          <Upload className="h-4 w-4 mr-2" /> Add Photos
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="col-span-1 p-6 sm:p-10 border-t lg:border-l border-slate-200/60 bg-white/40">
+                {demo && (
+                  <div className="mx-auto w-full max-w-[260px]">
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-sm">
+                      <EventQr code={demo.guestPath.replace('/events/','')} />
+                      <div className="mt-3 text-center text-xs text-slate-600">
+                        Scan to open guest link
+                      </div>
+                    </div>
+                  </div>
                 )}
-                {demo?.location && (
-                  <div className="flex items-center"><MapPin className="h-4 w-4 mr-1" />{demo.location}</div>
-                )}
-                <div className="flex items-center"><Camera className="h-4 w-4 mr-1" />{photos.length} photos</div>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <Button onClick={() => setShowUploadModal(true)} variant="outline" className="rounded-full px-6 py-2">
-                <Upload className="h-4 w-4" />
-                Add Photos
-              </Button>
-            </div>
-          </div>
-
-          {/* Description */}
-          <div className="mt-6">
-            {demo?.description && (
-              <p className="text-gray-700">{demo.description}</p>
-            )}
-            <div className="text-xs text-gray-500 mt-2">Uploads are open on the live demo and rate-limited to 5 per IP/hour.</div>
-            {demo && (
-              <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="text-sm text-gray-600">Guest link</div>
-                  <Link className="text-blue-600 hover:underline break-all" href={demo.guestPath}>{demo.guestPath}</Link>
-                </div>
-                <div className="sm:ml-auto">
-                  <EventQr code={demo.guestPath.replace('/guest/','')} compact />
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Photo Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {photos.map((photo) => (
-            <Card key={photo.id} className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden" onClick={() => setSelectedPhoto(photo)}>
-              <CardContent className="p-0">
-                <div className="aspect-square relative overflow-hidden">
-                  <img
-                    src={`/api/photos/${photo.id}/thumb`}
-                    alt={photo.originalFilename || photo.filename || 'Event photo'}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    loading="lazy"
-                    onError={(e) => {
-                      const img = e.currentTarget as HTMLImageElement;
-                      if (!img.dataset.fallback) {
-                        img.dataset.fallback = '1';
-                        img.src = `/api/photos/${photo.id}`;
-                      }
-                    }}
-                  />
-                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity duration-200" />
-                  <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <div className="bg-black/70 text-white text-xs px-2 py-1 rounded truncate">{photo.guestName || photo.uploadedByUser?.name || ''}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="rounded-3xl bg-white/70 ring-1 ring-slate-200/60 p-4 sm:p-6">
+          {/* Photo Grid */}
+          {loadingPhotos ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {Array.from({ length: 10 }).map((_, i) => (
+                <div key={i} className="aspect-square rounded-xl bg-slate-200/60 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {photos.map((photo) => (
+                <Card key={photo.id} className="group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden rounded-xl" onClick={() => setSelectedPhoto(photo)}>
+                  <CardContent className="p-0">
+                    <div className="aspect-square relative overflow-hidden">
+                      <img
+                        src={`/api/photos/${photo.id}/thumb`}
+                        alt={photo.originalFilename || photo.filename || 'Event photo'}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                        onError={(e) => {
+                          const img = e.currentTarget as HTMLImageElement;
+                          if (!img.dataset.fallback) {
+                            img.dataset.fallback = '1';
+                            img.src = `/api/photos/${photo.id}`;
+                          }
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity duration-300" />
+                      <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="backdrop-blur bg-black/60 text-white text-xs px-2 py-1 rounded truncate">{photo.guestName || photo.uploadedByUser?.name || ''}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -279,6 +356,13 @@ export default function DemoGallery() {
           </div>
         </div>
       )}
+
+      {/* Floating Upload Button */}
+      <div className="fixed bottom-6 right-6 z-40">
+        <Button onClick={() => setShowUploadModal(true)} className="rounded-full shadow-lg">
+          <Upload className="h-4 w-4 mr-2" /> Add Photos
+        </Button>
+      </div>
     </div>
   );
 }

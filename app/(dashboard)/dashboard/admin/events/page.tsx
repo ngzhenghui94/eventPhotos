@@ -37,7 +37,7 @@ export default async function AdminEventsPage() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-base">{e.name}</CardTitle>
               <div className="space-x-2">
-                <Link href={`/dashboard/events/${e.id}`}>
+                <Link href={`/dashboard/events/${e.eventCode}`}>
                   <Button size="sm" variant="secondary">Open</Button>
                 </Link>
                 <form action={`/api/admin/events/${e.id}/delete`} method="post">
@@ -49,7 +49,7 @@ export default async function AdminEventsPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>Owner: {e.ownerName} ({e.ownerEmail})</div>
                 <div>Team: {e.teamName}</div>
-                <div>Access: {e.isPublic ? 'Public' : 'Private'} • Event Code: {e.eventCode} • Access Code: {e.accessCode} • <Link className="text-blue-600" href={`/guest/${e.eventCode}`}>Guest link</Link></div>
+                <div>Access: {e.isPublic ? 'Public' : 'Private'} • Event Code: {e.eventCode} • Access Code: {e.accessCode} • <Link className="text-blue-600" href={`/events/${e.eventCode}`}>Guest link</Link></div>
               </div>
             </CardContent>
           </Card>

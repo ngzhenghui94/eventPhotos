@@ -5,16 +5,39 @@ import { db } from '@/lib/db/drizzle';
 import { photos, events } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
 import { uploadToS3, generatePhotoKey } from '@/lib/s3';
 
 export async function uploadGuestPhotosAction(formData: FormData) {
-  const eventId = parseInt(formData.get('eventId') as string);
+  let eventId = parseInt(formData.get('eventId') as string);
+  const eventCodeFromForm = (formData.get('eventCode') as string | null)?.trim().toUpperCase() || null;
   const guestName = (formData.get('guestName') as string)?.trim();
   const guestEmail = (formData.get('guestEmail') as string)?.trim() || null;
   const files = formData.getAll('photos') as File[];
 
+  // Allow fallback via eventCode when eventId is not provided
   if (!eventId || isNaN(eventId)) {
-    throw new Error('Invalid event ID');
+    let resolvedCode = eventCodeFromForm;
+    if (!resolvedCode) {
+      // Try to infer from cookies like evt:{EVENTCODE}:access
+      const jar = await cookies();
+      // @ts-ignore - getAll exists in Next cookies API
+      const all = typeof jar.getAll === 'function' ? jar.getAll() : [];
+      const match = all.find((c: any) => typeof c?.name === 'string' && c.name.startsWith('evt:') && c.name.endsWith(':access'));
+      if (match) {
+        const name: string = match.name;
+        resolvedCode = name.slice(4, -7).toUpperCase();
+      }
+    }
+    if (!resolvedCode) {
+      throw new Error('Invalid event ID');
+    }
+    const byCode = await db.query.events.findFirst({
+      where: eq(events.eventCode, resolvedCode),
+      columns: { id: true },
+    });
+    if (!byCode) throw new Error('Event not found');
+    eventId = byCode.id;
   }
 
   if (!guestName) {
@@ -30,6 +53,7 @@ export async function uploadGuestPhotosAction(formData: FormData) {
       requireApproval: true,
       accessCode: true,
       eventCode: true,
+      isPublic: true,
     }
   });
 
@@ -39,6 +63,15 @@ export async function uploadGuestPhotosAction(formData: FormData) {
 
   if (!event.allowGuestUploads) {
     throw new Error('Guest uploads are not allowed for this event');
+  }
+
+  // For private events, require a valid access code previously entered on the guest page
+  if (!event.isPublic) {
+    const cookieKey = `evt:${event.eventCode}:access`;
+    const code = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
+    if (!code || code !== event.accessCode.toUpperCase()) {
+      throw new Error('Access code required to upload to this private event');
+    }
   }
 
   if (files.length === 0) {
@@ -93,7 +126,7 @@ export async function uploadGuestPhotosAction(formData: FormData) {
   }
 
   // Revalidate the guest page to show new photos
-  revalidatePath(`/guest/${event.eventCode}`);
+  revalidatePath(`/events/${event.eventCode}`);
   
   return { success: true, count: uploadedPhotos.length };
 }

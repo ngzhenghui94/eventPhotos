@@ -69,13 +69,13 @@ export async function createEventAction(formData: FormData) {
       allowGuestUploads: result.data.allowGuestUploads !== false, // Default to true
       requireApproval: result.data.requireApproval || false,
     })
-    .returning()
+  .returning({ id: events.id, eventCode: events.eventCode })
     .catch((error) => {
       console.error('Error creating event:', error);
       throw new Error('Failed to create event. Please try again.');
     });
 
-  redirect(`/dashboard/events/${newEvent.id}`);
+  redirect(`/dashboard/events/${newEvent.eventCode}`);
 }
 
 // Helper function to generate unique access codes

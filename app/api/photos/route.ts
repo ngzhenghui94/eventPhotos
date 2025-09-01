@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
 import { getUser, canUserUploadToEvent, logActivity, getEventById } from '@/lib/db/queries';
@@ -25,8 +26,12 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const eventId = parseInt(formData.get('eventId') as string);
     const file = formData.get('file') as File;
-    const uploaderName = formData.get('uploaderName') as string;
-    const uploaderEmail = formData.get('uploaderEmail') as string;
+  // Accept both demo/gallery fields (uploaderName/uploaderEmail) and guest upload fields (guestName/guestEmail)
+  const uploaderName = (formData.get('uploaderName') || formData.get('guestName')) as string;
+  const uploaderEmail = (formData.get('uploaderEmail') || formData.get('guestEmail')) as string;
+  // Access code can arrive via header, query, or form (for private guest uploads)
+  const url = new URL(request.url);
+  const accessCode = (request.headers.get('x-access-code') || url.searchParams.get('code') || (formData.get('accessCode') as string) || '').toUpperCase().trim();
 
     if (!eventId || !file) {
       return Response.json({ error: 'Event ID and file are required' }, { status: 400 });
@@ -44,8 +49,8 @@ export async function POST(request: NextRequest) {
 
   const user = await getUser();
     
-    // Check if user can upload to this event
-    const canUpload = await canUserUploadToEvent(eventId, user?.id);
+    // Check if user can upload to this event (supports guest uploads for private events with valid access code)
+    const canUpload = await canUserUploadToEvent(eventId, user?.id, accessCode || null);
     if (!canUpload) {
       return Response.json({ error: 'Not authorized to upload to this event' }, { status: 403 });
     }
@@ -56,7 +61,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Event not found' }, { status: 404 });
     }
 
-    // If this is the demo event (access code DEMO), apply IP rate limit and allow guest uploads freely
+  // If this is the demo event (access code DEMO), apply IP rate limit
     if (event.accessCode === DEMO_ACCESS_CODE) {
   const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || null;
       const rl = rateLimitDemo(ip);
@@ -72,7 +77,7 @@ export async function POST(request: NextRequest) {
   await uploadToS3(key, fileBuffer, file.type);
   const filename = key.split('/').pop() || file.name;
 
-    // Save photo record to database
+  // Save photo record to database
     const [newPhoto] = await db.insert(photos).values({
       eventId,
       filename,
@@ -80,11 +85,18 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
       fileSize: file.size,
   filePath: `s3:${key}`,
-      uploadedBy: user?.id || null,
-      guestName: user ? null : uploaderName || null,
-      guestEmail: user ? null : uploaderEmail || null,
+  uploadedBy: user?.id || null,
+  guestName: user ? null : (uploaderName || null),
+  guestEmail: user ? null : (uploaderEmail || null),
       isApproved: !event.requireApproval,
     }).returning();
+
+    // Revalidate the guest page so newly uploaded photos appear on refresh
+    try {
+      if (event.eventCode) {
+        revalidatePath(`/events/${event.eventCode}`);
+      }
+    } catch {}
 
     // Log activity
     if (user) {

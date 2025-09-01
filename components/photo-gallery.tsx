@@ -1,11 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, Download, Eye, X } from 'lucide-react';
-import { deletePhotoAction } from '@/lib/photos/actions';
+import { deletePhotoAction, deletePhotosBulkAction } from '@/lib/photos/actions';
 import type { Photo, User } from '@/lib/db/schema';
 
 interface PhotoGalleryProps {
@@ -19,6 +19,10 @@ interface PhotoGalleryProps {
 export function PhotoGallery({ photos, eventId, currentUserId, canManage, accessCode }: PhotoGalleryProps) {
   const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
+  const [multiMode, setMultiMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const allIds = useMemo(() => photos.map(p => p.id), [photos]);
+  const allSelected = selectedIds.size > 0 && selectedIds.size === allIds.length;
 
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const handleDeletePhoto = async (photoId: number) => {
@@ -61,8 +65,59 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
     );
   }
 
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => setSelectedIds(new Set(allIds));
+  const clearAll = () => setSelectedIds(new Set());
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    const confirmText = selectedIds.size === 1 ? 'Delete 1 photo?' : `Delete ${selectedIds.size} photos?`;
+    if (!confirm(confirmText)) return;
+    try {
+      const formData = new FormData();
+      formData.append('eventId', String(eventId));
+      formData.append('photoIds', JSON.stringify(Array.from(selectedIds)));
+      const result = await deletePhotosBulkAction(formData);
+      toast.success(`${result?.count ?? selectedIds.size} photo(s) deleted`);
+      clearAll();
+      setMultiMode(false);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
+      toast.error(`Failed to delete photos: ${message}`);
+    }
+  };
+
   return (
     <>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          {canManage && (
+            <>
+              <Button size="sm" variant={multiMode ? 'secondary' : 'outline'} onClick={() => setMultiMode(!multiMode)}>
+                {multiMode ? 'Cancel multi-select' : 'Select multiple'}
+              </Button>
+              {multiMode && (
+                <>
+                  <Button size="sm" variant="outline" onClick={allSelected ? clearAll : selectAll}>
+                    {allSelected ? 'Clear all' : 'Select all'}
+                  </Button>
+                  <Button size="sm" variant="destructive" disabled={selectedIds.size === 0} onClick={deleteSelected}>
+                    Delete selected ({selectedIds.size})
+                  </Button>
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
         {photos.map((photo) => (
           <PhotoCard
@@ -76,6 +131,9 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
             }
             isDeleting={isDeleting === photo.id}
             accessCode={accessCode}
+            multiMode={multiMode}
+            selected={selectedIds.has(photo.id)}
+            onToggleSelect={() => toggleSelect(photo.id)}
           />
         ))}
       </div>
@@ -101,7 +159,7 @@ interface PhotoCardProps {
   accessCode?: string;
 }
 
-function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode }: PhotoCardProps) {
+function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode, multiMode, selected, onToggleSelect }: PhotoCardProps & { multiMode?: boolean; selected?: boolean; onToggleSelect?: () => void; }) {
   const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
   const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
@@ -109,6 +167,12 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode 
   return (
     <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
       <div className="aspect-square relative">
+        {multiMode && (
+          <label className="absolute top-2 left-2 z-10 inline-flex items-center gap-2 bg-white/90 px-2 py-1 rounded text-xs cursor-pointer shadow">
+            <input type="checkbox" className="h-3 w-3" checked={!!selected} onChange={onToggleSelect} />
+            <span>Select</span>
+          </label>
+        )}
                 <img
                   src={`/api/photos/${photo.id}/thumb${codeQuery}`}
           alt={photo.originalFilename}

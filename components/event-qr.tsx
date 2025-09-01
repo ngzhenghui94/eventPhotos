@@ -12,11 +12,11 @@ type Props = {
 
 export function EventQr({ code, className, size = 192, compact = false }: Props) {
   // Start with a stable SSR value to avoid hydration mismatches, then upgrade on mount
-  const [url, setUrl] = useState<string>(() => `/guest/${code}`);
+  const [url, setUrl] = useState<string>(() => `/events/${code}`);
   useEffect(() => {
     try {
       const origin = window.location.origin;
-      setUrl(`${origin}/guest/${code}`);
+  setUrl(`${origin}/events/${code}`);
     } catch {
       // in non-browser contexts, keep the relative path
     }

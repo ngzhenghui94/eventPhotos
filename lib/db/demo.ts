@@ -76,6 +76,6 @@ export async function getDemoEvent(ownerEmail: string) {
     team: { id: team.id, name: team.name },
     owner: { id: owner.id, email: owner.email, name: owner.name },
     galleryPath: `/gallery/${event.id}`,
-  guestPath: `/guest/${event.eventCode}`,
+  guestPath: `/events/${event.eventCode}`,
   };
 }

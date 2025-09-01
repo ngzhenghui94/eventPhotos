@@ -50,8 +50,8 @@ export async function approvePhotoAction(formData: FormData) {
     .where(eq(photos.id, photoId));
 
   // Revalidate pages
-  revalidatePath(`/dashboard/events/${eventId}`);
-  revalidatePath(`/guest/${photo.event.eventCode}`);
+  revalidatePath(`/dashboard/events/${photo.event.eventCode}`);
+  revalidatePath(`/events/${photo.event.eventCode}`);
 }
 
 export async function rejectPhotoAction(formData: FormData) {
@@ -109,6 +109,6 @@ export async function rejectPhotoAction(formData: FormData) {
   await db.delete(photos).where(eq(photos.id, photoId));
 
   // Revalidate pages
-  revalidatePath(`/dashboard/events/${eventId}`);
-  revalidatePath(`/guest/${photo.event.eventCode}`);
+  revalidatePath(`/dashboard/events/${photo.event.eventCode}`);
+  revalidatePath(`/events/${photo.event.eventCode}`);
 }

@@ -69,7 +69,7 @@ function EventCard({ event }: { event: any }) {
             </div>
           </div>
           <div className="flex space-x-1">
-            <Link href={`/dashboard/events/${event.id}`}>
+            <Link href={`/dashboard/events/${event.eventCode}`}> 
               <Button variant="ghost" size="sm">Open</Button>
             </Link>
           </div>

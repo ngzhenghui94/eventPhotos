@@ -146,6 +146,12 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
           </div>
 
           <div className="mt-6">
+            <a
+              href={`/api/auth/google${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ''}`}
+              className="w-full flex justify-center py-2 px-4 mb-3 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+            >
+              Continue with Google
+            </a>
             <Link
               href={`${mode === 'signin' ? '/sign-up' : '/sign-in'}${
                 redirect ? `?redirect=${redirect}` : ''

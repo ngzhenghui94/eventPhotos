@@ -13,7 +13,7 @@ export function JoinByCode() {
     e?.preventDefault();
     const value = code.trim().toUpperCase();
     if (!value) return;
-    router.push(`/guest/${encodeURIComponent(value)}`);
+  router.push(`/events/${encodeURIComponent(value)}`);
   };
 
   return (

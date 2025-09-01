@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
 import Link from 'next/link';
-import { getEventById, getPhotosForEvent, getUser } from '@/lib/db/queries';
+import { getEventByEventCode, getPhotosForEvent, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { PhotoUpload } from '@/components/photo-upload';
 import { PhotoGallery } from '@/components/photo-gallery';
@@ -15,41 +15,58 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
-import { events as eventsTable, teamMembers, photos as photosTable, ActivityType } from '@/lib/db/schema';
+import { events as eventsTable, teamMembers, photos as photosTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
 import { generateAccessCode } from '@/lib/events/actions';
 
 interface EventPageProps {
-  params: Promise<{ id: string }>;
+  params: Promise<{ code: string }>;
 }
 
 export default async function EventPage({ params }: EventPageProps) {
-  const { id } = await params;
-  const eventId = parseInt(id);
-  
-  if (isNaN(eventId)) {
-    redirect('/dashboard/events');
+  const { code } = await params;
+  const raw = (code || '').toString();
+  const upper = raw.toUpperCase();
+  const isNumericId = /^[0-9]+$/.test(raw);
+  // Need team info; re-query with team relation
+  let event = await getEventByEventCode(upper);
+  // Fallback: if user visited /dashboard/events/{id}, redirect to the code route
+  if (!event && isNumericId) {
+    const byId = await db.query.events.findFirst({ where: eq(eventsTable.id, Number(raw)), columns: { id: true, eventCode: true } });
+    if (byId?.eventCode) {
+      return redirect(`/dashboard/events/${byId.eventCode}`);
+    }
   }
+  if (event) {
+    // Ensure team is loaded (getEventByEventCode may not include team)
+    if (!(event as any).team) {
+      const full = await db.query.events.findFirst({
+        where: eq(eventsTable.id, event.id),
+        with: { createdBy: { columns: { id: true, name: true, email: true } }, team: { columns: { id: true, name: true, planName: true } } }
+      });
+      // @ts-ignore
+      event = full as any;
+    }
+  }
+  const user = await getUser();
 
-  const [event, photos, user] = await Promise.all([
-    getEventById(eventId),
-    getPhotosForEvent(eventId),
-    getUser()
-  ]);
-  
   if (!event || !user) {
     redirect('/dashboard/events');
   }
 
+  const eventId = event.id;
+  const eventCode = event.eventCode;
+  const photos = await getPhotosForEvent(eventId);
+
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
   const approvedCount = (photos as any[])?.filter((p) => p.isApproved)?.length || 0;
-  const planUploadLimit = getUploadLimitForTeam(event.team.planName ?? null);
-  const planPhotoCap = getPhotoCapForTeam(event.team.planName ?? null);
+  const planUploadLimit = getUploadLimitForTeam((event as any).team?.planName ?? null);
+  const planPhotoCap = getPhotoCapForTeam((event as any).team?.planName ?? null);
   const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
-  // createdBy is a user object in this query result; compare its id
   const isEventOwner = user.id === event.createdBy.id || !!user.isOwner;
+
   async function saveEvent(formData: FormData) {
     'use server';
     const eventId = Number(formData.get('eventId'));
@@ -58,12 +75,12 @@ export default async function EventPage({ params }: EventPageProps) {
     const allowGuestUploads = !!formData.get('allowGuestUploads');
     const requireApproval = !!formData.get('requireApproval');
 
-  const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
+    const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return;
-  const u = await getUser();
-  if (!u) return;
-  const isCreator = existing.createdBy === u.id;
-  const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
+    const u = await getUser();
+    if (!u) return;
+    const isCreator = existing.createdBy === u.id;
+    const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
     const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
     if (!isCreator && !isTeamOwner) return;
 
@@ -76,8 +93,10 @@ export default async function EventPage({ params }: EventPageProps) {
         updatedAt: new Date(),
       })
       .where(eq(eventsTable.id, eventId));
-  revalidatePath(`/dashboard/events/${eventId}`);
-  redirect(`/dashboard/events/${eventId}?updated=1`);
+    const refreshed = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
+    const ec = refreshed?.eventCode ?? existing.eventCode;
+    revalidatePath(`/dashboard/events/${ec}`);
+    redirect(`/dashboard/events/${ec}?updated=1`);
   }
 
   async function deleteEventAction(formData: FormData) {
@@ -90,36 +109,29 @@ export default async function EventPage({ params }: EventPageProps) {
     const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
 
-    // Permission: creator or team owner
     const isCreator = existing.createdBy === u.id;
     const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
     const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
     if (!isCreator && !isTeamOwner && !u.isOwner) {
-      return redirect(`/dashboard/events/${eventId}?error=${encodeURIComponent('You do not have permission to delete this event')}`);
+      return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('You do not have permission to delete this event')}`);
     }
 
-    // Double confirmation: must match event name or access code or literal DELETE
     const ok = confirmText === existing.name || confirmText === existing.accessCode || confirmText.toUpperCase() === 'DELETE';
     if (!ok) {
-      return redirect(`/dashboard/events/${eventId}?error=${encodeURIComponent('Confirmation text does not match. Type the event name, access code, or DELETE.')}`);
+      return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('Confirmation text does not match. Type the event name, access code, or DELETE.')}`);
     }
 
-    // Collect photo keys for deletion
     const eventPhotos = await db.select().from(photosTable).where(eq(photosTable.eventId, eventId));
-
-    // Delete S3/local files best-effort
     for (const p of eventPhotos) {
       try {
         if (p.filePath?.startsWith('s3:')) {
           const key = p.filePath.replace(/^s3:/, '');
           await deleteFromS3(key).catch(() => {});
-          // attempt to delete thumbnails
           const sm = deriveThumbKey(key, 'sm');
           const md = deriveThumbKey(key, 'md');
           await deleteFromS3(sm).catch(() => {});
           await deleteFromS3(md).catch(() => {});
         } else if (p.filePath) {
-          // local public file fallback
           const { join } = await import('path');
           const fs = (await import('fs')).promises;
           const filePath = join(process.cwd(), 'public', p.filePath);
@@ -128,11 +140,9 @@ export default async function EventPage({ params }: EventPageProps) {
       } catch {}
     }
 
-    // Delete DB rows: photos then event
     await db.delete(photosTable).where(eq(photosTable.eventId, eventId));
     await db.delete(eventsTable).where(eq(eventsTable.id, eventId));
 
-    // Redirect with toast
     redirect('/dashboard/events?deleted=1');
   }
 
@@ -147,18 +157,18 @@ export default async function EventPage({ params }: EventPageProps) {
     const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
     const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
     if (!isCreator && !isTeamOwner && !u.isOwner) {
-      return redirect(`/dashboard/events/${eventId}?error=${encodeURIComponent('You do not have permission to update access code')}`);
+      return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('You do not have permission to update access code')}`);
     }
     const code = generateAccessCode();
     await db.update(eventsTable).set({ accessCode: code, updatedAt: new Date() }).where(eq(eventsTable.id, eventId));
-    redirect(`/dashboard/events/${eventId}?updated=1`);
+    redirect(`/dashboard/events/${existing.eventCode}?updated=1`);
   }
 
   const toMB = (bytes: number) => `${Math.round(bytes / (1024 * 1024))} MB`;
 
   return (
     <section className="flex-1 p-4 lg:p-8">
-  <UpdateToast />
+      <UpdateToast />
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center mb-6">
           <Link href="/dashboard/events">
@@ -203,7 +213,7 @@ export default async function EventPage({ params }: EventPageProps) {
             </Card>
 
             {/* Photo Upload */}
-            <PhotoUpload eventId={eventId} teamPlanName={event.team.planName ?? null} />
+            <PhotoUpload eventId={eventId} teamPlanName={(event as any).team?.planName ?? null} />
 
             {/* Photo Approval */}
             {event.requireApproval && (
@@ -224,7 +234,7 @@ export default async function EventPage({ params }: EventPageProps) {
                   photos={(photos as any[])?.filter((p) => p.isApproved) || []}
                   eventId={eventId}
                   currentUserId={user.id}
-                  canManage={true} // Event owners can manage all photos
+                  canManage={true}
                 />
               </CardContent>
             </Card>
@@ -240,7 +250,7 @@ export default async function EventPage({ params }: EventPageProps) {
               <CardContent className="space-y-3">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Current plan</span>
-                  <span className="font-medium capitalize">{event.team.planName?.toLowerCase() || 'free'}</span>
+                  <span className="font-medium capitalize">{((event as any).team?.planName || 'free').toLowerCase()}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Per-upload size</span>
@@ -310,7 +320,7 @@ export default async function EventPage({ params }: EventPageProps) {
                   </div>
                 </div>
                 <div className="pt-4 border-t">
-                  <Link href={`/guest/${event.eventCode}`} target="_blank">
+                  <Link href={`/events/${eventCode}`} target="_blank">
                     <Button size="sm" className="px-3 py-1.5 text-sm">
                       View Guest Page
                     </Button>
@@ -331,10 +341,10 @@ export default async function EventPage({ params }: EventPageProps) {
                   </div>
                 )}
 
-        <div className="pt-4 border-t">
+                <div className="pt-4 border-t">
                   <div className="space-y-3">
                     <p className="text-sm font-medium">Guest QR Code</p>
-          <EventQr code={event.eventCode} size={160} compact />
+                    <EventQr code={eventCode} size={160} compact />
                   </div>
                 </div>
 

@@ -145,6 +145,7 @@ export async function getEventsForTeam(teamId: number) {
   return await db
     .select({
       id: events.id,
+  eventCode: events.eventCode,
       name: events.name,
       description: events.description,
       date: events.date,
@@ -269,12 +270,16 @@ export async function canUserAccessEvent(eventId: number, userId?: number, acces
 }
 
 // Check if user can upload photos to event
-export async function canUserUploadToEvent(eventId: number, userId?: number) {
+export async function canUserUploadToEvent(
+  eventId: number,
+  userId?: number,
+  accessCode?: string | null
+) {
   const event = await getEventById(eventId);
   if (!event) return false;
 
   // Owner can always upload
-  if (userId && event.createdBy === userId) return true;
+  if (userId && event.createdBy?.id === userId) return true;
 
   // Team members can upload
   if (userId) {
@@ -282,8 +287,13 @@ export async function canUserUploadToEvent(eventId: number, userId?: number) {
     if (userTeam && userTeam.teamId === event.teamId) return true;
   }
 
-  // Guest uploads allowed for public events
-  if (event.isPublic && event.allowGuestUploads) return true;
+  // Guest uploads allowed when enabled:
+  // - Public events: anyone can upload when allowGuestUploads is true
+  // - Private events: require a matching access code
+  if (event.allowGuestUploads) {
+    if (event.isPublic) return true;
+    if (accessCode && accessCode.toUpperCase() === event.accessCode.toUpperCase()) return true;
+  }
 
   return false;
 }
