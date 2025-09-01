@@ -127,20 +127,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-10 border-t bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px]">{brand.productShort.toUpperCase()}</span>
-            <span>{brand.productName}</span>
-          </div>
-          <div className="flex items-center gap-6">
-            <Link href="/demo" className="hover:text-gray-900">Demo</Link>
-            <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
-            <Link href="/sign-in" className="hover:text-gray-900">Sign in</Link>
-          </div>
-        </div>
-      </footer>
+  {/* Footer is provided globally in root layout */}
     </main>
   );
 }
