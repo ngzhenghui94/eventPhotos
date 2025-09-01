@@ -61,7 +61,7 @@ export default function DashboardLayout({
               <span className="sr-only">Toggle sidebar</span>
             </Button>
             <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white text-xs">{brand.productShort.toUpperCase()}</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-amber-600 text-white text-xs">{brand.productShort.toUpperCase()}</span>
               <span>{brand.productName}</span>
             </Link>
           </div>

@@ -117,8 +117,8 @@ export default function NewEventPage() {
                 </div>
               </div>
 
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4">
-                <p className="text-sm text-blue-800">
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+                <p className="text-sm text-amber-800">
                   <strong>Note:</strong> After creating the event, you'll receive a unique access code 
                   that guests can use to access the event and upload photos.
                 </p>

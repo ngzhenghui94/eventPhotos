@@ -167,7 +167,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
             isDragging
-              ? 'border-blue-500 bg-blue-50'
+              ? 'border-amber-500 bg-amber-50'
               : 'border-gray-300 hover:border-gray-400'
           }`}
           onDrop={handleDrop}
@@ -261,14 +261,14 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         )}
 
         {/* Info Message */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <div className="flex items-start space-x-3">
-            <User className="h-5 w-5 text-blue-500 mt-0.5" />
+            <User className="h-5 w-5 text-amber-600 mt-0.5" />
             <div>
-              <p className="text-sm font-medium text-blue-900 mb-1">
+              <p className="text-sm font-medium text-amber-900 mb-1">
                 Guest Upload Guidelines
               </p>
-              <ul className="text-sm text-blue-800 space-y-1">
+              <ul className="text-sm text-amber-800 space-y-1">
                 <li>• Please provide your name so others know who shared the photos</li>
                 <li>• Your photos may require approval before appearing in the gallery</li>
                 <li>• Only upload photos that are appropriate and relevant to this event</li>

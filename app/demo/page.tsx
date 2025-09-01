@@ -164,7 +164,7 @@ export default function DemoGallery() {
       {/* Decorative backdrop */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-blue-200/30 blur-3xl" />
+  <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl" />
       </div>
 
       {/* Header / Hero */}
@@ -208,7 +208,7 @@ export default function DemoGallery() {
                       <div className="min-w-0">
                         <div className="text-xs text-slate-500">Guest link</div>
                         <div className="mt-1 flex items-center gap-2">
-                          <Link className="text-blue-600 hover:underline break-all flex items-center gap-1" href={demo.guestPath}><LinkIcon className="h-4 w-4" /> {guestUrl || demo.guestPath}</Link>
+                          <Link className="text-amber-600 hover:underline break-all flex items-center gap-1" href={demo.guestPath}><LinkIcon className="h-4 w-4" /> {guestUrl || demo.guestPath}</Link>
                           <Button type="button" variant="outline" size="sm" onClick={copyGuestLink} className="h-7 px-3">
                             <Copy className="h-3.5 w-3.5" />
                             Copy
