@@ -20,9 +20,9 @@ export async function ensureDemoEvent(ownerEmail: string) {
   }
 
   // 2) Ensure a demo team
-  let team = (await db.select().from(teams).where(eq(teams.name, 'MemoriesVault Demo')).limit(1))[0];
+  let team = (await db.select().from(teams).where(eq(teams.name, 'memoriesVault Demo')).limit(1))[0];
   if (!team) {
-    [team] = await db.insert(teams).values({ name: 'MemoriesVault Demo', planName: 'Base' }).returning();
+    [team] = await db.insert(teams).values({ name: 'memoriesVault Demo', planName: 'Base' }).returning();
   }
 
   // 3) Ensure membership as owner
@@ -43,7 +43,7 @@ export async function ensureDemoEvent(ownerEmail: string) {
     const inserted = await db
       .insert(events)
       .values({
-        name: 'MemoriesVault Demo Event',
+  name: 'memoriesVault Demo Event',
         description: 'Public demo event for uploads and gallery preview.',
         date: new Date(),
         location: 'Online',

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu, Calendar, ShieldCheck, LogOut } from 'lucide-react';
 import { signOut } from '@/app/(login)/actions';
 import { UserMenu } from '@/components/user-menu';
+import { brand } from '@/lib/brand';
 
 export default function DashboardLayout({
   children
@@ -60,8 +61,8 @@ export default function DashboardLayout({
               <span className="sr-only">Toggle sidebar</span>
             </Button>
             <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white text-xs">MV</span>
-              <span>MemoriesVault</span>
+              <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white text-xs">{brand.productShort.toUpperCase()}</span>
+              <span>{brand.productName}</span>
             </Link>
           </div>
           <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">

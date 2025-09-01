@@ -17,6 +17,6 @@ function getTransport() {
 
 export async function sendMail(opts: { to: string; subject: string; html: string; from?: string }) {
   const transporter = getTransport();
-  const from = opts.from || process.env.MAIL_FROM || 'no-reply@example.com';
+  const from = opts.from || process.env.MAIL_FROM || 'no-reply@events.danielninetyfour.com';
   await transporter.sendMail({ from, to: opts.to, subject: opts.subject, html: opts.html });
 }

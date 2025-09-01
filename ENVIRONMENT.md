@@ -17,6 +17,7 @@ POSTGRES_URL=postgres://...
 AUTH_SECRET=change-me
 
 # Optional
+# For production, set to https://events.danielninetyfour.com
 BASE_URL=http://localhost:3000
 ```
 

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
 import { UserMenu } from '@/components/user-menu';
+import { brand } from '@/lib/brand';
 
 export default function HomePage() {
   return (
@@ -11,8 +12,8 @@ export default function HomePage() {
       <header className="sticky top-0 z-20 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white text-xs">MV</span>
-            <span>MemoriesVault</span>
+            <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-blue-600 text-white text-xs">{brand.productShort.toUpperCase()}</span>
+            <span>{brand.productName}</span>
           </Link>
           <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
             <Link href="/demo" className="hover:text-gray-900">Demo</Link>
@@ -69,7 +70,7 @@ export default function HomePage() {
       {/* How it works */}
       <section className="py-12 sm:py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center">How MemoriesVault works</h2>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center">How {brand.productName} works</h2>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border bg-white p-5">
               <div className="h-10 w-10 rounded-lg bg-blue-600 text-white flex items-center justify-center"><Calendar className="h-5 w-5"/></div>
@@ -130,8 +131,8 @@ export default function HomePage() {
       <footer className="py-10 border-t bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600">
           <div className="flex items-center gap-2">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px]">MV</span>
-            <span>MemoriesVault</span>
+            <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-blue-600 text-white text-[10px]">{brand.productShort.toUpperCase()}</span>
+            <span>{brand.productName}</span>
           </div>
           <div className="flex items-center gap-6">
             <Link href="/demo" className="hover:text-gray-900">Demo</Link>

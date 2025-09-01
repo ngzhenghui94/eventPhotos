@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { CircleIcon } from 'lucide-react';
+import { brand } from '@/lib/brand';
 
 export default function NotFound() {
   return (
@@ -17,6 +18,7 @@ export default function NotFound() {
         </p>
         <Link
           href="/"
+          aria-label={`Back to ${brand.productName} home`}
           className="max-w-48 mx-auto flex justify-center py-2 px-4 border border-gray-300 rounded-full shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
         >
           Back to Home

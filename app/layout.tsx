@@ -1,12 +1,25 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import { brand } from '@/lib/brand';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
-  title: 'MemoriesVault - Photo Sharing for Events',
-  description: 'Share and collect photos from your events with guests easily.'
+  metadataBase: new URL(brand.siteUrl),
+  title: `${brand.productName} - Photo Sharing for Events`,
+  description: 'Share and collect photos from your events with guests easily.',
+  openGraph: {
+    siteName: brand.productName,
+    url: brand.siteUrl,
+    title: `${brand.productName} - Photo Sharing for Events`,
+    description: 'Share and collect photos from your events with guests easily.'
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: `${brand.productName} - Photo Sharing for Events`,
+    description: 'Share and collect photos from your events with guests easily.'
+  }
 };
 
 export const viewport: Viewport = {

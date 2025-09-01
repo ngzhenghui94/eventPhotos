@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
+import { brand } from '@/lib/brand';
 
 type DemoMeta = {
   id: number;
@@ -137,7 +138,7 @@ export default function DemoGallery() {
 
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{demo?.name || 'MemoriesVault Demo Event'}</h1>
+              <h1 className="text-3xl font-bold text-gray-900">{demo?.name || `${brand.productName} Demo Event`}</h1>
               <div className="flex flex-wrap gap-4 mt-2 text-sm text-gray-600">
                 {demo?.date && (
                   <div className="flex items-center"><Calendar className="h-4 w-4 mr-1" />{formatDate(demo.date)}</div>
