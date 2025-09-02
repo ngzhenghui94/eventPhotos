@@ -11,7 +11,7 @@ import { deleteFromS3 } from '@/lib/s3';
 export async function approvePhotoAction(formData: FormData) {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   const photoId = parseInt(formData.get('photoId') as string);
@@ -57,7 +57,7 @@ export async function approvePhotoAction(formData: FormData) {
 export async function rejectPhotoAction(formData: FormData) {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   const photoId = parseInt(formData.get('photoId') as string);

@@ -20,7 +20,8 @@ export async function createCheckoutSession({
   const user = await getUser();
 
   if (!team || !user) {
-    redirect(`/sign-up?redirect=checkout&priceId=${priceId}`);
+    const back = `/api/stripe/start?priceId=${encodeURIComponent(priceId)}`;
+    redirect(`/api/auth/google?redirect=${encodeURIComponent(back)}`);
   }
 
   if (!stripe) {

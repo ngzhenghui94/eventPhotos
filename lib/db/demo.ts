@@ -1,7 +1,6 @@
 import { db } from './drizzle';
 import { users, teams, teamMembers, events } from './schema';
 import { eq } from 'drizzle-orm';
-import { hashPassword } from '@/lib/auth/session';
 
 export const DEMO_ACCESS_CODE = 'DEMO';
 
@@ -9,10 +8,9 @@ export async function ensureDemoEvent(ownerEmail: string) {
   // 1) Ensure owner user exists
   let owner = (await db.select().from(users).where(eq(users.email, ownerEmail)).limit(1))[0];
   if (!owner) {
-    const pwd = await hashPassword(Math.random().toString(36).slice(2));
     const inserted = await db
       .insert(users)
-      .values({ email: ownerEmail, passwordHash: pwd, isOwner: true, role: 'owner', name: 'Demo Owner' })
+      .values({ email: ownerEmail, passwordHash: 'google-oauth', isOwner: true, role: 'owner', name: 'Demo Owner' })
       // users.email is unique
       .onConflictDoNothing({ target: users.email })
       .returning();

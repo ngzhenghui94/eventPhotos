@@ -34,7 +34,7 @@ export default function HomePage() {
               Create your event, share a friendly code, and let everyone add their favorite moments. You stay in controlbeautiful, secure galleries on any device.
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3">
-              <Link href="/sign-up">
+              <Link href="/api/auth/google">
                 <Button size="lg" className="rounded-full bg-amber-600 hover:bg-amber-700">
                   Create your free event
                   <ArrowRight className="ml-2 h-5 w-5" />
@@ -117,7 +117,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link href="/sign-up">
+            <Link href="/api/auth/google">
               <Button size="lg" className="rounded-full bg-amber-600 hover:bg-amber-700">Create free event</Button>
             </Link>
             <Link href="/pricing">

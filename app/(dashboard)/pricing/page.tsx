@@ -169,7 +169,7 @@ function PricingCard({
         </form>
       ) : (
         <div className="space-y-2">
-          <a href="/sign-up" className="inline-block">
+          <a href="/api/auth/google" className="inline-block">
             <SubmitButton />
           </a>
           <p className="text-xs text-gray-500">Stripe price not configured. Set STRIPE_PRICE_BASE_ID / STRIPE_PRICE_PLUS_ID in your environment.</p>

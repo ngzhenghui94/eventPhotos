@@ -8,7 +8,7 @@ import UpdateToast from '@/components/update-toast';
 
 export default async function EventsPage() {
   const team = await getTeamForUser();
-  if (!team) redirect('/sign-in');
+  if (!team) redirect('/api/auth/google');
 
   const items = await getEventsForTeam(team.id);
 

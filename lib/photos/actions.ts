@@ -13,7 +13,7 @@ import { getUploadLimitForTeam, getPhotoCapForTeam } from '@/lib/plans';
 export async function uploadPhotosAction(formData: FormData) {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   const eventId = parseInt(formData.get('eventId') as string);
@@ -117,7 +117,7 @@ export async function uploadPhotosAction(formData: FormData) {
 export async function deletePhotoAction(formData: FormData) {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   const photoId = parseInt(formData.get('photoId') as string);
@@ -184,7 +184,7 @@ export async function deletePhotoAction(formData: FormData) {
 export async function deletePhotosBulkAction(formData: FormData) {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   const rawEventId = formData.get('eventId');
@@ -279,7 +279,7 @@ export async function createSignedUploadUrlsAction(
 ): Promise<{ uploads: UploadDescriptor[]; maxFileSize: number }> {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   if (!eventId || Number.isNaN(eventId)) {

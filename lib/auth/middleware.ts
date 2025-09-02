@@ -62,7 +62,12 @@ export function withTeam<T>(action: ActionWithTeamFunction<T>) {
   return async (formData: FormData): Promise<T> => {
     const user = await getUser();
     if (!user) {
-      redirect('/sign-in');
+      const priceId = formData.get('priceId') as string | null;
+      if (priceId) {
+        const back = `/api/stripe/start?priceId=${encodeURIComponent(priceId)}`;
+        redirect(`/api/auth/google?redirect=${encodeURIComponent(back)}`);
+      }
+      redirect('/api/auth/google');
     }
 
     const team = await getTeamForUser();

@@ -32,9 +32,9 @@ export function UserMenu() {
   if (!user) {
     return (
       <>
-        <Link href="/sign-in" className="hover:text-gray-900">Sign in</Link>
+        <Link href="/api/auth/google" className="hover:text-gray-900">Sign in</Link>
         <Button asChild className="rounded-full">
-          <Link href="/sign-up">Create free event</Link>
+          <Link href="/api/auth/google">Create free event</Link>
         </Button>
       </>
     );

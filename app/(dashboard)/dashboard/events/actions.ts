@@ -21,7 +21,7 @@ const createEventSchema = z.object({
 export async function createEventAction(formData: FormData) {
   const user = await getUser();
   if (!user) {
-    redirect('/sign-in');
+  redirect('/api/auth/google');
   }
 
   // Get user's team

@@ -53,6 +53,6 @@ export async function GET(req: NextRequest) {
     return Response.redirect(redirectTo, 302);
   } catch (e) {
     console.error('Google OAuth error:', e);
-    return Response.redirect('/sign-in?error=google_oauth_failed', 302);
+  return Response.redirect('/?error=google_oauth_failed', 302);
   }
 }

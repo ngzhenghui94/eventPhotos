@@ -104,7 +104,7 @@ export default async function EventPage({ params }: EventPageProps) {
     const eventId = Number(formData.get('eventId'));
     const confirmText = String(formData.get('confirmText') ?? '').trim();
     const u = await getUser();
-    if (!u) return redirect('/sign-in');
+  if (!u) return redirect('/api/auth/google');
 
     const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
@@ -150,7 +150,7 @@ export default async function EventPage({ params }: EventPageProps) {
     'use server';
     const eventId = Number(formData.get('eventId'));
     const u = await getUser();
-    if (!u) return redirect('/sign-in');
+  if (!u) return redirect('/api/auth/google');
     const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
     const isCreator = existing.createdBy === u.id;

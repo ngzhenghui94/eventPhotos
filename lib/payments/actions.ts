@@ -7,6 +7,10 @@ import { updateTeamSubscription } from '@/lib/db/queries';
 
 export const checkoutAction = withTeam(async (formData, team) => {
   const priceId = formData.get('priceId') as string;
+  if (!team) {
+    // Should be handled by withTeam, but keep a safe fallback path
+    return;
+  }
   await createCheckoutSession({ team: team, priceId });
 });
 
