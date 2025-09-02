@@ -1,6 +1,6 @@
 import { db } from './drizzle';
 import { users, teams, teamMembers, events } from './schema';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 export const DEMO_ACCESS_CODE = 'DEMO';
 
@@ -17,17 +17,30 @@ export async function ensureDemoEvent(ownerEmail: string) {
     owner = inserted[0] || (await db.select().from(users).where(eq(users.email, ownerEmail)).limit(1))[0]!;
   }
 
-  // 2) Ensure a demo team
+  // 2) Ensure a demo team (idempotent)
   let team = (await db.select().from(teams).where(eq(teams.name, 'memoriesVault Demo')).limit(1))[0];
   if (!team) {
-    [team] = await db.insert(teams).values({ name: 'memoriesVault Demo', planName: 'Base' }).returning();
+    try {
+      const inserted = await db
+        .insert(teams)
+        .values({ name: 'memoriesVault Demo', planName: 'Base' })
+        .returning();
+      team = inserted[0]!;
+    } catch (e: any) {
+      // If unique violation from partial unique index, fetch existing
+      if (e && e.code === '23505') {
+        team = (await db.select().from(teams).where(eq(teams.name, 'memoriesVault Demo')).limit(1))[0]!;
+      } else {
+        throw e;
+      }
+    }
   }
 
-  // 3) Ensure membership as owner
+  // 3) Ensure membership as owner (scoped to the demo team)
   const membership = await db
     .select()
     .from(teamMembers)
-    .where(eq(teamMembers.userId, owner.id))
+    .where(and(eq(teamMembers.userId, owner.id), eq(teamMembers.teamId, team.id)))
     .limit(1);
   if (membership.length === 0) {
     await db.insert(teamMembers).values({ teamId: team.id, userId: owner.id, role: 'owner' });

@@ -1,4 +1,4 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
 import { users, teams, teamMembers, ActivityType } from '@/lib/db/schema';
@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const origin = req.headers.get('x-forwarded-origin') || req.headers.get('origin') || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
-    const { access_token } = await exchangeCodeForTokens({ code, origin });
+  const origin = req.headers.get('x-forwarded-origin') || req.headers.get('origin') || `${req.nextUrl.protocol}//${req.nextUrl.host}`;
+  const { access_token } = await exchangeCodeForTokens({ code, origin });
     const profile = await fetchGoogleUserInfo(access_token);
     const email = profile.email?.toLowerCase();
     if (!email) return Response.json({ error: 'Google did not provide an email' }, { status: 400 });
@@ -49,10 +49,21 @@ export async function GET(req: NextRequest) {
       await logActivity(teamId, existing.id, ActivityType.SIGN_IN);
     }
 
-    const redirectTo = redirect || '/dashboard';
-    return Response.redirect(redirectTo, 302);
+    // Resolve and sanitize redirect: only allow same-origin destinations
+    const finalUrl = (() => {
+      try {
+        const dest = new URL(redirect || '/dashboard', req.url);
+        const reqUrl = new URL(req.url);
+        if (dest.origin !== reqUrl.origin) return new URL('/dashboard', req.url);
+        // Keep path/search/hash only
+        return new URL(dest.pathname + dest.search + dest.hash, req.url);
+      } catch {
+        return new URL('/dashboard', req.url);
+      }
+    })();
+    return NextResponse.redirect(finalUrl);
   } catch (e) {
     console.error('Google OAuth error:', e);
-  return Response.redirect('/?error=google_oauth_failed', 302);
+    return NextResponse.redirect(new URL('/?error=google_oauth_failed', req.url));
   }
 }
