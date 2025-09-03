@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull } from 'drizzle-orm';
+import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { db } from './drizzle';
 import { activityLogs, teamMembers, teams, users, events, photos, ActivityType } from './schema';
 
@@ -161,6 +161,49 @@ export async function getEventsForTeam(teamId: number) {
     .leftJoin(users, eq(events.createdBy, users.id))
     .where(eq(events.teamId, teamId))
     .orderBy(desc(events.createdAt));
+}
+
+export async function getEventsWithPhotoCountForTeam(teamId: number) {
+  const eventsData = await db
+    .select({
+      id: events.id,
+      eventCode: events.eventCode,
+      name: events.name,
+      description: events.description,
+      date: events.date,
+      location: events.location,
+      isPublic: events.isPublic,
+      allowGuestUploads: events.allowGuestUploads,
+      requireApproval: events.requireApproval,
+      createdAt: events.createdAt,
+      ownerName: users.name,
+      ownerId: events.createdBy
+    })
+    .from(events)
+    .leftJoin(users, eq(events.createdBy, users.id))
+    .where(eq(events.teamId, teamId))
+    .orderBy(desc(events.createdAt));
+
+  if (eventsData.length === 0) {
+    return [];
+  }
+
+  // Get photo counts for all events
+  const photoCounts = await db
+    .select({
+      eventId: photos.eventId,
+      photoCount: sql<number>`count(*)`.as('photoCount')
+    })
+    .from(photos)
+    .where(inArray(photos.eventId, eventsData.map(e => e.id)))
+    .groupBy(photos.eventId);
+
+  const photoCountMap = new Map(photoCounts.map(pc => [pc.eventId, pc.photoCount]));
+
+  return eventsData.map(event => ({
+    ...event,
+    photoCount: photoCountMap.get(event.id) || 0
+  }));
 }
 
 export async function getEventById(eventId: number) {

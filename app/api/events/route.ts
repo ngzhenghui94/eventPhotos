@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { events, ActivityType } from '@/lib/db/schema';
-import { getUser, getTeamForUser, getEventsForTeam } from '@/lib/db/queries';
+import { getUser, getTeamForUser, getEventsWithPhotoCountForTeam } from '@/lib/db/queries';
 import { logActivity } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 
@@ -17,7 +17,7 @@ export async function GET() {
       return Response.json({ error: 'No team found' }, { status: 404 });
     }
 
-    const teamEvents = await getEventsForTeam(team.id);
+    const teamEvents = await getEventsWithPhotoCountForTeam(team.id);
     return Response.json(teamEvents);
   } catch (error) {
     console.error('Error fetching events:', error);

@@ -49,8 +49,7 @@ export default function DashboardLayout({
   }, []);
 
   const baseItems = [
-    ...(normalizePlanName(planName) === 'pro' || normalizePlanName(planName) === 'business' ? [{ href: '/dashboard', icon: Users, label: 'Team' }] : []),
-    { href: '/dashboard/events', icon: Calendar, label: 'Events' },
+    { href: '/dashboard', icon: Calendar, label: 'Events' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' }
