@@ -66,7 +66,21 @@ export async function GET(
       });
     };
 
-    return await Promise.race([processRequest(), timeoutPromise]);
+    // Ensure Promise.race always returns a Response
+    try {
+      const result = await Promise.race([processRequest(), timeoutPromise]);
+      // If result is not a Response, throw
+      if (!(result instanceof Response)) {
+        return Response.json({ error: 'Internal error: invalid response type' }, { status: 500 });
+      }
+      return result;
+    } catch (err) {
+      // If timeoutPromise rejects, handle as timeout
+      if (err instanceof Error && err.message === 'Request timeout') {
+        return Response.json({ error: 'Request timed out. Please try again.' }, { status: 408 });
+      }
+      return Response.json({ error: 'Internal error: ' + (err instanceof Error ? err.message : String(err)) }, { status: 500 });
+    }
   } catch (error) {
     console.error('Error fetching event photos:', error);
 
