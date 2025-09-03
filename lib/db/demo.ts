@@ -1,10 +1,13 @@
 import { db } from './drizzle';
 import { users, teams, teamMembers, events } from './schema';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 export const DEMO_ACCESS_CODE = 'DEMO';
 
 export async function ensureDemoEvent(ownerEmail: string) {
+  // Serialize demo setup to avoid race conditions
+  await db.execute(sql`SELECT pg_advisory_lock(hashtext('memoriesvault_demo_setup'))`);
+  try {
   // 1) Ensure owner user exists
   let owner = (await db.select().from(users).where(eq(users.email, ownerEmail)).limit(1))[0];
   if (!owner) {
@@ -51,28 +54,38 @@ export async function ensureDemoEvent(ownerEmail: string) {
     await db.select().from(events).where(eq(events.accessCode, DEMO_ACCESS_CODE)).limit(1)
   )[0];
   if (!event) {
-    const inserted = await db
-      .insert(events)
-      .values({
+    try {
+      const inserted = await db
+        .insert(events)
+        .values({
   name: 'memoriesVault Demo Event',
-        description: 'Public demo event for uploads and gallery preview.',
-        date: new Date(),
-        location: 'Online',
+          description: 'Public demo event for uploads and gallery preview.',
+          date: new Date(),
+          location: 'Online',
   eventCode: 'DEMO1234',
-        accessCode: DEMO_ACCESS_CODE,
-        teamId: team.id,
-        createdBy: owner.id,
-        isPublic: true,
-        allowGuestUploads: true,
-        requireApproval: false,
-      })
-      // access_code is unique; avoid throwing on races
-      .onConflictDoNothing({ target: events.accessCode })
-      .returning();
-    event = inserted[0] || (await db.select().from(events).where(eq(events.accessCode, DEMO_ACCESS_CODE)).limit(1))[0]!;
+          accessCode: DEMO_ACCESS_CODE,
+          teamId: team.id,
+          createdBy: owner.id,
+          isPublic: true,
+          allowGuestUploads: true,
+          requireApproval: false,
+        })
+        .returning();
+      event = inserted[0]!;
+    } catch (e: any) {
+      // Unique violation (if unique index exists) -> fetch existing; otherwise rethrow
+      if (e && e.code === '23505') {
+        event = (await db.select().from(events).where(eq(events.accessCode, DEMO_ACCESS_CODE)).limit(1))[0]!;
+      } else {
+        throw e;
+      }
+    }
   }
 
-  return { owner, team, event };
+    return { owner, team, event };
+  } finally {
+    await db.execute(sql`SELECT pg_advisory_unlock(hashtext('memoriesvault_demo_setup'))`);
+  }
 }
 
 export async function getDemoEvent(ownerEmail: string) {
