@@ -88,10 +88,8 @@ function EventCard({ event }: { event: EventWithPhotoCount }) {
       <CardHeader className="pb-3">
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors">
-              <span className="block truncate">
-                {event.name}
-              </span>
+            <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
+              {event.name}
             </CardTitle>
             <p className="text-sm text-gray-500 mt-1">
               Created {formatTime(event.createdAt)}
@@ -141,13 +139,9 @@ function EventCard({ event }: { event: EventWithPhotoCount }) {
           {/* Description */}
           {event.description && (
             <div className="text-sm text-gray-600 flex-1">
-              <span className="block overflow-hidden" style={{ 
-                display: '-webkit-box', 
-                WebkitLineClamp: 2, 
-                WebkitBoxOrient: 'vertical' 
-              }}>
+              <p className="line-clamp-2">
                 {event.description}
-              </span>
+              </p>
             </div>
           )}
 
