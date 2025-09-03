@@ -120,15 +120,17 @@ function DemoGalleryContent() {
     }
   };
 
+  // Only load demo once per mount, and photos only after demo loads
   useEffect(() => {
-    loadDemo();
+    let cancelled = false;
+    (async () => {
+      const demoData = await loadDemo();
+      if (!cancelled && demoData?.id) {
+        await loadPhotos(demoData.id);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
-
-  useEffect(() => {
-    if (demo?.id && photosState === 'idle') {
-      loadPhotos(demo.id);
-    }
-  }, [demo?.id, photosState]);
 
   const handleRetry = async () => {
     if (demoState === 'error') {
@@ -149,6 +151,11 @@ function DemoGalleryContent() {
 
   const handleFileUpload = async (files: FileList) => {
     if (!demo || files.length === 0) return;
+    if (files.length > 5) {
+      (window as any).__EP_TOAST?.error?.('Upload limit', { description: 'You can only upload up to 5 photos at a time.' });
+      return;
+    }
+    if (!window.confirm(`Upload ${files.length} photo${files.length > 1 ? 's' : ''}?`)) return;
     setUploading(true);
     try {
       let successCount = 0;
@@ -448,7 +455,7 @@ function DemoGalleryContent() {
                       {uploading ? 'Uploading…' : 'Select Files'}
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 text-center">Max size 10MB. Supported: JPG, PNG, GIF, WebP. Demo uploads are capped at 5 per IP/hour.</p>
+                  <p className="text-xs text-gray-500 text-center">Max size 10MB. Supported: JPG, PNG, GIF, WebP. Demo uploads are capped at 5 per upload and 5 per IP/hour.</p>
                 </div>
               )}
             </div>

@@ -40,9 +40,14 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       await deletePhotoAction(formData);
       toast.success('Photo deleted');
     } catch (error: unknown) {
-      console.error('Error deleting photo:', error);
-      const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
-      toast.error(`Failed to delete photo: ${message}`);
+      // Suppress toast for NEXT_REDIRECT errors
+      if (error && typeof error === 'object' && 'digest' in error && (error as any).digest === 'NEXT_REDIRECT') {
+        // Do nothing, this is a navigation redirect
+      } else {
+        console.error('Error deleting photo:', error);
+        const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
+        toast.error(`Failed to delete photo: ${message}`);
+      }
     } finally {
       setIsDeleting(null);
       setConfirmingId(null);
