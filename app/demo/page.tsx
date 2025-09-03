@@ -39,6 +39,7 @@ function DemoGalleryContent() {
   const [uploaderName, setUploaderName] = useState('');
   const [uploaderEmail, setUploaderEmail] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DemoPhoto[]>([]);
   const [photosState, setPhotosState] = useState<LoadingState>('idle');
@@ -149,19 +150,38 @@ function DemoGalleryContent() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const handleFileUpload = async (files: FileList) => {
-    if (!demo || files.length === 0) return;
-    if (files.length > 5) {
-      (window as any).__EP_TOAST?.error?.('Upload limit', { description: 'You can only upload up to 5 photos at a time.' });
-      return;
+  // Handle file selection and validation
+  const handleFileUpload = (files: FileList | File[]) => {
+    if (!files || files.length === 0) return;
+    let newFiles = Array.from(files);
+    // Filter out files over 10MB
+    const tooLarge = newFiles.filter(f => f.size > 10 * 1024 * 1024);
+    if (tooLarge.length > 0) {
+      (window as any).__EP_TOAST?.error?.('File too large', { description: `${tooLarge.map(f => f.name).join(', ')} exceed 10MB.` });
+      newFiles = newFiles.filter(f => f.size <= 10 * 1024 * 1024);
     }
-    if (!window.confirm(`Upload ${files.length} photo${files.length > 1 ? 's' : ''}?`)) return;
+    // Cap to 5 files total
+    const combined = [...selectedFiles, ...newFiles].slice(0, 5);
+    if (combined.length > 5) {
+      (window as any).__EP_TOAST?.error?.('Upload limit', { description: 'You can only upload up to 5 photos at a time.' });
+    }
+    setSelectedFiles(combined);
+  };
+
+  // Remove a file from selectedFiles
+  const handleRemoveFile = (idx: number) => {
+    setSelectedFiles(files => files.filter((_, i) => i !== idx));
+  };
+
+  // Submit selected files
+  const handleSubmitUpload = async () => {
+    if (!demo || selectedFiles.length === 0) return;
     setUploading(true);
     try {
       let successCount = 0;
       const failures: { name: string; message: string }[] = [];
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
+      for (let i = 0; i < selectedFiles.length; i++) {
+        const file = selectedFiles[i];
         const form = new FormData();
         form.append('file', file);
         form.append('eventId', String(demo.id));
@@ -204,6 +224,7 @@ function DemoGalleryContent() {
       setShowUploadModal(false);
       setUploaderName('');
       setUploaderEmail('');
+      setSelectedFiles([]);
     } catch (e) {
       (window as any).__EP_TOAST?.error?.('Upload error', { description: 'Please try again.' });
     } finally {
@@ -429,7 +450,7 @@ function DemoGalleryContent() {
           <div className="bg-white rounded-lg max-w-md w-full">
             <div className="flex justify-between items-center p-6 border-b">
               <h2 className="text-xl font-semibold text-gray-900">Upload Photos</h2>
-              <Button variant="ghost" size="sm" onClick={() => setShowUploadModal(false)} className="h-8 w-8 p-0">
+              <Button variant="ghost" size="sm" onClick={() => { setShowUploadModal(false); setSelectedFiles([]); }} className="h-8 w-8 p-0">
                 <X className="h-4 w-4" />
               </Button>
             </div>
@@ -447,15 +468,85 @@ function DemoGalleryContent() {
                     <label htmlFor="uploaderEmail" className="block text-sm font-medium text-gray-700">Your Email (optional)</label>
                     <input id="uploaderEmail" type="email" value={uploaderEmail} onChange={(e) => setUploaderEmail(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" placeholder="Enter your email" />
                   </div>
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                    onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+                    onDrop={e => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (e.dataTransfer.files) handleFileUpload(e.dataTransfer.files);
+                    }}
+                  >
                     <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-600 mb-4">Drag and drop photos here, or click to select files</p>
-                    <input ref={fileInputRef} type="file" multiple accept="image/*" className="hidden" onChange={(e) => e.target.files && handleFileUpload(e.target.files)} />
-                    <Button onClick={() => fileInputRef.current?.click()} variant="outline" disabled={uploading} className="rounded-full">
+                    <input
+                      id="demo-upload-input"
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      style={{ display: 'block', margin: '0 auto 8px auto' }} // visible for debugging
+                      onChange={e => {
+                        if (e.target.files) {
+                          handleFileUpload(e.target.files);
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={uploading || selectedFiles.length >= 5}
+                      className="rounded-full cursor-pointer"
+                      tabIndex={0}
+                      onClick={() => fileInputRef.current?.click()}
+                    >
                       {uploading ? 'Uploading…' : 'Select Files'}
                     </Button>
+                    {/* Drag and drop handler removed; now handled by parent div */}
                   </div>
-                  <p className="text-xs text-gray-500 text-center">Max size 10MB. Supported: JPG, PNG, GIF, WebP. Demo uploads are capped at 5 per upload and 5 per IP/hour.</p>
+                  {/* Selected files list */}
+                  {selectedFiles.length > 0 && (
+                    <div className="mt-4">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Selected Photos ({selectedFiles.length}/5):</div>
+                      <ul className="grid grid-cols-2 gap-3">
+                        {selectedFiles.map((file, idx) => {
+                          const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+                          useEffect(() => {
+                            const reader = new FileReader();
+                            reader.onload = e => setThumbUrl(e.target?.result as string);
+                            reader.readAsDataURL(file);
+                          }, [file]);
+                          return (
+                            <li key={file.name + file.size + idx} className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
+                              {thumbUrl ? (
+                                <img src={thumbUrl} alt={file.name} className="w-full h-32 object-cover rounded" />
+                              ) : (
+                                <div className="w-full h-32 flex items-center justify-center bg-slate-200 animate-pulse rounded">
+                                  <Upload className="h-8 w-8 text-gray-400" />
+                                </div>
+                              )}
+                              <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                <span className="truncate max-w-[90px]">{file.name}</span>
+                                <span className="ml-2">{formatFileSize(file.size)}</span>
+                              </div>
+                              <Button variant="ghost" size="sm" className="absolute top-2 right-2" onClick={() => handleRemoveFile(idx)} disabled={uploading}>
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </div>
+                  )}
+                  <Button
+                    onClick={handleSubmitUpload}
+                    disabled={uploading || selectedFiles.length === 0}
+                    className="w-full mt-4 rounded-full"
+                  >
+                    {uploading ? 'Uploading…' : `Upload ${selectedFiles.length} Photo${selectedFiles.length !== 1 ? 's' : ''}`}
+                  </Button>
+                  <p className="text-xs text-gray-500 text-center mt-2">Max size 10MB. Supported: JPG, PNG, GIF, WebP. Demo uploads are capped at 5 per upload and 5 per IP/hour.</p>
                 </div>
               )}
             </div>
