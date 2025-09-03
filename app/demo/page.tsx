@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink } from 'lucide-react';
+import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
 import { brand } from '@/lib/brand';
@@ -29,17 +29,20 @@ type DemoPhoto = {
   uploadedByUser?: { name?: string | null } | null;
 };
 
-export default function DemoGallery() {
+type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+
+function DemoGalleryContent() {
   const [selectedPhoto, setSelectedPhoto] = useState<DemoPhoto | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [demo, setDemo] = useState<DemoMeta | null>(null);
-  const [loadingDemo, setLoadingDemo] = useState(true);
+  const [demoState, setDemoState] = useState<LoadingState>('idle');
   const [uploaderName, setUploaderName] = useState('');
   const [uploaderEmail, setUploaderEmail] = useState('');
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [photos, setPhotos] = useState<DemoPhoto[]>([]);
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [photosState, setPhotosState] = useState<LoadingState>('idle');
+  const [retryCount, setRetryCount] = useState(0);
 
   const guestUrl = useMemo(() => {
     if (!demo) return '';
@@ -50,27 +53,54 @@ export default function DemoGallery() {
     }
   }, [demo]);
 
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const res = await fetch('/api/demo/event', { cache: 'no-store' });
-        if (res.ok) {
-          const data: DemoMeta = await res.json();
-          if (active) setDemo(data);
-        }
-      } finally {
-        if (active) setLoadingDemo(false);
-      }
-    })();
-    return () => { active = false; };
-  }, []);
+  const loadDemo = async (isRetry = false) => {
+    if (isRetry) setRetryCount(prev => prev + 1);
+    setDemoState('loading');
 
-  const loadPhotos = async (eventId: number) => {
-    setLoadingPhotos(true);
     try {
-      const res = await fetch(`/api/events/${eventId}`, { cache: 'no-store' });
-      if (!res.ok) return;
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 32000); // slightly above API 30s
+
+      const res = await fetch('/api/demo/event', {
+        cache: 'no-store',
+        signal: controller.signal
+      });
+
+  clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
+      const data: DemoMeta = await res.json();
+      setDemo(data);
+      setDemoState('success');
+      return data;
+  } catch (error) {
+      console.error('Failed to load demo:', error);
+      setDemoState('error');
+      return null;
+    }
+  };
+
+  const loadPhotos = async (eventId: number, isRetry = false) => {
+    setPhotosState('loading');
+
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 32000); // slightly above API 30s
+
+      const res = await fetch(`/api/events/${eventId}`, {
+        cache: 'no-store',
+        signal: controller.signal
+      });
+
+  clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+      }
+
       const data = await res.json();
       const mapped: DemoPhoto[] = (data.photos || []).map((p: any) => ({
         id: p.id,
@@ -81,17 +111,33 @@ export default function DemoGallery() {
         guestName: p.guestName ?? null,
         uploadedByUser: p.uploadedByUser ?? null,
       }));
+
       setPhotos(mapped);
-    } finally {
-      setLoadingPhotos(false);
+      setPhotosState('success');
+    } catch (error) {
+      console.error('Failed to load photos:', error);
+      setPhotosState('error');
     }
   };
 
   useEffect(() => {
-    if (demo?.id) {
+    loadDemo();
+  }, []);
+
+  useEffect(() => {
+    if (demo?.id && photosState === 'idle') {
       loadPhotos(demo.id);
     }
-  }, [demo?.id]);
+  }, [demo?.id, photosState]);
+
+  const handleRetry = async () => {
+    if (demoState === 'error') {
+      await loadDemo(true);
+    }
+    if (demo?.id && photosState === 'error') {
+      await loadPhotos(demo.id, true);
+    }
+  };
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   const formatFileSize = (bytes: number) => {
@@ -114,26 +160,40 @@ export default function DemoGallery() {
         form.append('eventId', String(demo.id));
         if (uploaderName) form.append('uploaderName', uploaderName);
         if (uploaderEmail) form.append('uploaderEmail', uploaderEmail);
-        const res = await fetch('/api/photos', { method: 'POST', body: form });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          const msg = data?.error || `Failed to upload ${file.name}`;
-          failures.push({ name: file.name, message: msg });
-          if (res.status === 429) break;
-        } else {
-          successCount += 1;
+
+        try {
+          const res = await fetch('/api/photos', { method: 'POST', body: form });
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            const msg = data?.error || `Failed to upload ${file.name}`;
+            failures.push({ name: file.name, message: msg });
+            if (res.status === 429) break; // Rate limited
+          } else {
+            successCount += 1;
+          }
+        } catch (error) {
+          failures.push({ name: file.name, message: 'Network error' });
         }
       }
+
       if (successCount > 0) {
-        (window as any).__EP_TOAST?.success?.('Upload complete', { description: `${successCount} photo${successCount > 1 ? 's' : ''} uploaded.` });
+        (window as any).__EP_TOAST?.success?.('Upload complete', {
+          description: `${successCount} photo${successCount > 1 ? 's' : ''} uploaded.`
+        });
+        // Refresh photos after successful upload
+        if (demo?.id) {
+          await loadPhotos(demo.id);
+        }
       }
+
       if (failures.length > 0) {
         const first = failures[0];
         const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : '';
-        (window as any).__EP_TOAST?.error?.('Some uploads failed', { description: `${first.name}: ${first.message}${more}` });
+        (window as any).__EP_TOAST?.error?.('Some uploads failed', {
+          description: `${first.name}: ${first.message}${more}`
+        });
       }
-  // Refresh the grid to show new uploads
-  await loadPhotos(demo.id);
+
       setShowUploadModal(false);
       setUploaderName('');
       setUploaderEmail('');
@@ -159,12 +219,54 @@ export default function DemoGallery() {
     }
   };
 
+  // Loading state for demo
+  if (demoState === 'loading' && !demo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading demo event...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (demoState === 'error' && !demo) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-slate-900 mb-2">Failed to Load Demo</h2>
+          <p className="text-slate-600 mb-6">
+            We couldn't load the demo event. This might be due to a temporary server issue.
+          </p>
+          <div className="space-y-3">
+            <Button onClick={handleRetry} className="w-full">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Try Again
+            </Button>
+            <Button variant="outline" onClick={() => window.history.back()} className="w-full">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
+            </Button>
+          </div>
+          {retryCount > 0 && (
+            <p className="text-xs text-slate-500 mt-4">
+              Retry attempts: {retryCount}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
       {/* Decorative backdrop */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl" />
-  <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl" />
       </div>
 
       {/* Header / Hero */}
@@ -175,6 +277,12 @@ export default function DemoGallery() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <span className="inline-flex items-center rounded-full bg-slate-900 text-white px-3 py-1 text-xs tracking-wide">Demo Gallery</span>
+            {(demoState === 'error' || photosState === 'error') && (
+              <Button variant="outline" size="sm" onClick={handleRetry} className="ml-auto">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Retry
+              </Button>
+            )}
           </div>
 
           <div className="relative overflow-hidden rounded-3xl shadow-sm bg-white/70 ring-1 ring-slate-200/60">
@@ -193,6 +301,16 @@ export default function DemoGallery() {
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><MapPin className="h-4 w-4" /> {demo.location}</span>
                   )}
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><Camera className="h-4 w-4" /> {photos.length} photos</span>
+                  {photosState === 'loading' && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1">
+                      <RefreshCw className="h-4 w-4 animate-spin" /> Loading photos...
+                    </span>
+                  )}
+                  {photosState === 'error' && (
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 text-red-700 px-3 py-1">
+                      <AlertCircle className="h-4 w-4" /> Failed to load photos
+                    </span>
+                  )}
                 </div>
 
                 <div className="mt-6 space-y-3">
@@ -250,11 +368,21 @@ export default function DemoGallery() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="rounded-3xl bg-white/70 ring-1 ring-slate-200/60 p-4 sm:p-6">
           {/* Photo Grid */}
-          {loadingPhotos ? (
+          {photosState === 'loading' && photos.length === 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {Array.from({ length: 10 }).map((_, i) => (
                 <div key={i} className="aspect-square rounded-xl bg-slate-200/60 animate-pulse" />
               ))}
+            </div>
+          ) : photosState === 'error' && photos.length === 0 ? (
+            <div className="text-center py-12">
+              <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Failed to Load Photos</h3>
+              <p className="text-slate-600 mb-6">We couldn't load the photos for this demo event.</p>
+              <Button onClick={handleRetry}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -367,6 +495,17 @@ export default function DemoGallery() {
   );
 }
 
-async function handleFileUpload(files: FileList) {
-  // This function body will be replaced at runtime by the component's closure context.
+export default function DemoGallery() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
+          <p className="text-slate-600">Loading demo...</p>
+        </div>
+      </div>
+    }>
+      <DemoGalleryContent />
+    </Suspense>
+  );
 }
