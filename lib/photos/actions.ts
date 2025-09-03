@@ -157,6 +157,13 @@ export async function deletePhotoAction(formData: FormData) {
     if (photo.filePath.startsWith('s3:')) {
       const key = photo.filePath.replace(/^s3:/, '');
       await deleteFromS3(key);
+      // Also remove generated thumbnails
+      try {
+        const sm = deriveThumbKey(key, 'sm');
+        const md = deriveThumbKey(key, 'md');
+        await deleteFromS3(sm).catch(() => {});
+        await deleteFromS3(md).catch(() => {});
+      } catch {}
     } else {
       const fs = require('fs').promises;
       const filePath = join(process.cwd(), 'public', photo.filePath);
