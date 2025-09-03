@@ -1,22 +1,28 @@
-export type PlanName = 'free' | 'base' | 'plus';
+export type PlanName = 'free' | 'starter' | 'hobby' | 'pro' | 'business';
 
 export function normalizePlanName(name?: string | null): PlanName {
   if (!name) return 'free';
   const n = name.toLowerCase();
-  if (n.includes('plus')) return 'plus';
-  if (n.includes('base')) return 'base';
+  if (n.includes('business')) return 'business';
+  if (n.includes('pro')) return 'pro';
+  if (n.includes('hobby')) return 'hobby';
+  if (n.includes('starter')) return 'starter';
   return 'free';
 }
 
 export function uploadLimitBytes(plan: PlanName): number {
   switch (plan) {
-    case 'plus':
+    case 'business':
+      return 100 * 1024 * 1024; // 100MB
+    case 'pro':
       return 50 * 1024 * 1024; // 50MB
-    case 'base':
+    case 'hobby':
       return 25 * 1024 * 1024; // 25MB
+    case 'starter':
+      return 10 * 1024 * 1024; // 10MB
     case 'free':
     default:
-      return 10 * 1024 * 1024; // 10MB
+      return 5 * 1024 * 1024; // 5MB
   }
 }
 
@@ -32,9 +38,13 @@ export function eventLimit(plan: PlanName): number | null {
   switch (plan) {
     case 'free':
       return 1;
-    case 'base':
+    case 'starter':
+      return 2;
+    case 'hobby':
       return 5;
-    case 'plus':
+    case 'pro':
+      return 20;
+    case 'business':
     default:
       return null; // unlimited
   }
@@ -51,12 +61,25 @@ export function photoCapPerEvent(plan: PlanName): number {
   switch (plan) {
     case 'free':
       return 20;
-    case 'base':
+    case 'starter':
       return 50;
-    case 'plus':
-    default:
+    case 'hobby':
       return 100;
+    case 'pro':
+      return 500;
+    case 'business':
+    default:
+      return 1000;
   }
+function teamsEnabled(plan: PlanName): boolean {
+  switch (plan) {
+    case 'pro':
+    case 'business':
+      return true;
+    default:
+      return false;
+  }
+}
 }
 
 export function getPhotoCapForTeam(planName?: string | null): number {

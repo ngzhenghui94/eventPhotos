@@ -5,17 +5,17 @@ import sharp from 'sharp';
 // derive thumb key locally to avoid module hot-reload issues
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
-const REGION = clean(process.env.AWS_REGION || 'us-east-1')!;
-const ACCESS_KEY_ID = clean(process.env.AWS_ACCESS_KEY_ID);
-const SECRET_ACCESS_KEY = clean(process.env.AWS_SECRET_ACCESS_KEY);
-const SESSION_TOKEN = clean(process.env.AWS_SESSION_TOKEN);
-const BUCKET_NAME = clean(process.env.AWS_S3_BUCKET);
+const REGION = clean(process.env.HETZNER_S3_REGION || 'eu-central-1')!;
+const ACCESS_KEY_ID = clean(process.env.HETZNER_S3_ACCESS_KEY);
+const SECRET_ACCESS_KEY = clean(process.env.HETZNER_S3_SECRET_KEY);
+const ENDPOINT = clean(process.env.HETZNER_S3_ENDPOINT);
+const BUCKET_NAME = clean(process.env.HETZNER_S3_BUCKET);
 
 const s3 = new S3Client({
   region: REGION,
-  credentials: SESSION_TOKEN
-    ? { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY!, sessionToken: SESSION_TOKEN }
-    : { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
+  endpoint: ENDPOINT,
+  forcePathStyle: true,
+  credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
 });
 
 export async function GET(

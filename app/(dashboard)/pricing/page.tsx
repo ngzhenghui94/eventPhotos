@@ -12,14 +12,18 @@ export const revalidate = 3600;
 export default async function PricingPage() {
   // Fetch Stripe products/prices dynamically to resolve real price IDs
   // Requires STRIPE_SECRET_KEY to be set, but no per-price envs needed.
-  let baseStripeId: string | undefined;
-  let plusStripeId: string | undefined;
-  let baseUnitAmount = 800;
-  let plusUnitAmount = 1200;
-  let baseInterval = 'month';
-  let plusInterval = 'month';
-  let baseTrialDays = 0;
-  let plusTrialDays = 0;
+  let starterStripeId: string | undefined;
+  let hobbyStripeId: string | undefined;
+  let proStripeId: string | undefined;
+  let businessStripeId: string | undefined;
+  let starterUnitAmount = 1000;
+  let hobbyUnitAmount = 2900;
+  let proUnitAmount = 10000;
+  let businessUnitAmount = 25000;
+  let starterInterval = 'month';
+  let hobbyInterval = 'month';
+  let proInterval = 'month';
+  let businessInterval = 'month';
 
   try {
     const [products, prices] = await Promise.all([
@@ -27,21 +31,31 @@ export default async function PricingPage() {
       getStripePrices()
     ]);
 
-    const byName = (n: string) => products.find(p => p.name.toLowerCase() === n);
-    const baseProduct = byName('base');
-    const plusProduct = byName('plus');
+  const byName = (n: string) => products.find(p => p.name.toLowerCase() === n);
+  const starterProduct = byName('starter');
+  const hobbyProduct = byName('hobby');
+  const proProduct = byName('profession');
+  const businessProduct = byName('business');
 
-    const priceForProduct = (productId?: string) => prices.find(pr => pr.productId === productId);
-    const basePrice = priceForProduct(baseProduct?.id);
-    const plusPrice = priceForProduct(plusProduct?.id);
+  const priceForProduct = (productId?: string) => prices.find(pr => pr.productId === productId);
+  const starterPrice = priceForProduct(starterProduct?.id);
+  const hobbyPrice = priceForProduct(hobbyProduct?.id);
+  const proPrice = priceForProduct(proProduct?.id);
+  const businessPrice = priceForProduct(businessProduct?.id);
 
-  baseStripeId = basePrice?.id || (baseProduct?.defaultPriceId ?? undefined);
-  plusStripeId = plusPrice?.id || (plusProduct?.defaultPriceId ?? undefined);
+  starterStripeId = starterPrice?.id || (starterProduct?.defaultPriceId ?? undefined);
+  hobbyStripeId = hobbyPrice?.id || (hobbyProduct?.defaultPriceId ?? undefined);
+  proStripeId = proPrice?.id || (proProduct?.defaultPriceId ?? undefined);
+  businessStripeId = businessPrice?.id || (businessProduct?.defaultPriceId ?? undefined);
 
-    if (basePrice?.unitAmount) baseUnitAmount = basePrice.unitAmount;
-    if (plusPrice?.unitAmount) plusUnitAmount = plusPrice.unitAmount;
-    if (basePrice?.interval) baseInterval = basePrice.interval;
-    if (plusPrice?.interval) plusInterval = plusPrice.interval;
+  if (starterPrice?.unitAmount) starterUnitAmount = starterPrice.unitAmount;
+  if (hobbyPrice?.unitAmount) hobbyUnitAmount = hobbyPrice.unitAmount;
+  if (proPrice?.unitAmount) proUnitAmount = proPrice.unitAmount;
+  if (businessPrice?.unitAmount) businessUnitAmount = businessPrice.unitAmount;
+  if (starterPrice?.interval) starterInterval = starterPrice.interval;
+  if (hobbyPrice?.interval) hobbyInterval = hobbyPrice.interval;
+  if (proPrice?.interval) proInterval = proPrice.interval;
+  if (businessPrice?.interval) businessInterval = businessPrice.interval;
   // Trials disabled
   } catch (e) {
     // Keep static values; buttons will degrade to sign-up if IDs aren't resolved
@@ -66,7 +80,7 @@ export default async function PricingPage() {
           Share and collect photos from your events with guests
         </p>
       </div>
-      <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <div className="grid md:grid-cols-5 gap-8 max-w-7xl mx-auto">
         <PricingCard
           name={'Free'}
           price={0}
@@ -75,44 +89,77 @@ export default async function PricingPage() {
           features={[
             '1 Event',
             '20 photos per event',
-            '10MB per upload',
+            '5MB per upload',
             'Guest Photo Sharing',
             'Basic Photo Gallery',
           ]}
-          // Use a server action to set the team to Free without Stripe
           free
         />
         <PricingCard
-          name={'Base'}
-          price={baseUnitAmount}
-          interval={baseInterval}
+          name={'Starter'}
+          price={starterUnitAmount}
+          interval={starterInterval}
           trialDays={0}
           features={[
-            'Up to 5 Events',
+            '2 Events',
             '50 photos per event',
+            '10MB per upload',
+            'Guest Photo Sharing',
+            'Basic Photo Gallery',
+            'Email Support',
+          ]}
+          priceId={starterStripeId}
+        />
+        <PricingCard
+          name={'Hobby'}
+          price={hobbyUnitAmount}
+          interval={hobbyInterval}
+          trialDays={0}
+          features={[
+            '5 Events',
+            '100 photos per event',
             '25MB per upload',
             'Guest Photo Sharing',
             'Basic Photo Gallery',
             'Email Support',
           ]}
-          priceId={baseStripeId}
+          priceId={hobbyStripeId}
         />
         <PricingCard
-          name={'Plus'}
-          price={plusUnitAmount}
-          interval={plusInterval}
+          name={'Pro'}
+          price={proUnitAmount}
+          interval={proInterval}
           trialDays={0}
           features={[
-            'Unlimited Events',
-            '100 photos per event',
+            '20 Events',
+            '500 photos per event',
             '50MB per upload',
             'Guest Photo Sharing',
             'Advanced Photo Gallery',
             'Photo Download & Export',
             'Custom Event Branding',
+            'Teams Enabled',
             '24/7 Support + Priority',
           ]}
-          priceId={plusStripeId}
+          priceId={proStripeId}
+        />
+        <PricingCard
+          name={'Business'}
+          price={businessUnitAmount}
+          interval={businessInterval}
+          trialDays={0}
+          features={[
+            'Unlimited Events',
+            '1000 photos per event',
+            '100MB per upload',
+            'Guest Photo Sharing',
+            'Advanced Photo Gallery',
+            'Photo Download & Export',
+            'Custom Event Branding',
+            'Teams Enabled',
+            'Dedicated Support',
+          ]}
+          priceId={businessStripeId}
         />
       </div>
     </main>

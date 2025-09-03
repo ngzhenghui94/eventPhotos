@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Users, Settings, Shield, Activity, Menu, Calendar, ShieldCheck, LogOut } from 'lucide-react';
+// Removed server-only import
+import { normalizePlanName } from '@/lib/plans';
 import { signOut } from '@/app/(login)/actions';
 import { UserMenu } from '@/components/user-menu';
 import { brand } from '@/lib/brand';
@@ -34,8 +36,20 @@ export default function DashboardLayout({
     }).catch(() => {});
   }, []);
 
+  const [planName, setPlanName] = useState<string>('free');
+
+  useEffect(() => {
+    // Fetch current user and team plan from API route
+    fetch('/api/user').then(async (res) => {
+      const u = await res.json();
+      if (u && u.team && u.team.planName) {
+        setPlanName(u.team.planName);
+      }
+    }).catch(() => {});
+  }, []);
+
   const baseItems = [
-    { href: '/dashboard', icon: Users, label: 'Team' },
+    ...(normalizePlanName(planName) === 'pro' || normalizePlanName(planName) === 'business' ? [{ href: '/dashboard', icon: Users, label: 'Team' }] : []),
     { href: '/dashboard/events', icon: Calendar, label: 'Events' },
     { href: '/dashboard/general', icon: Settings, label: 'General' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
