@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,42 @@ import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkI
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
 import { brand } from '@/lib/brand';
+
+// Thumbnail child component to avoid hook-in-map error
+interface SelectedPhotoThumbProps {
+  file: File;
+  idx: number;
+  formatFileSize: (size: number) => string;
+  handleRemoveFile: (idx: number) => void;
+  uploading: boolean;
+}
+
+function SelectedPhotoThumb({ file, idx, formatFileSize, handleRemoveFile, uploading }: SelectedPhotoThumbProps) {
+  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const reader = new FileReader();
+    reader.onload = e => setThumbUrl((e.target as FileReader)?.result as string);
+    reader.readAsDataURL(file);
+  }, [file]);
+  return (
+    <li className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
+      {thumbUrl ? (
+        <img src={thumbUrl} alt={file.name} className="w-full h-32 object-cover rounded" />
+      ) : (
+        <div className="w-full h-32 flex items-center justify-center bg-slate-200 animate-pulse rounded">
+          <Upload className="h-8 w-8 text-gray-400" />
+        </div>
+      )}
+      <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center bg-black/60 text-white text-xs px-2 py-1 rounded">
+        <span className="truncate max-w-[90px]">{file.name}</span>
+        <span className="ml-2">{formatFileSize(file.size)}</span>
+      </div>
+      <Button variant="ghost" size="sm" className="absolute top-2 right-2" onClick={() => handleRemoveFile(idx)} disabled={uploading}>
+        <X className="h-4 w-4" />
+      </Button>
+    </li>
+  );
+}
 
 type DemoMeta = {
   id: number;
@@ -354,12 +390,12 @@ function DemoGalleryContent() {
                       <div className="min-w-0">
                         <div className="text-xs text-slate-500">Guest link</div>
                         <div className="mt-1 flex items-center gap-2">
-                          <Link className="text-amber-600 hover:underline break-all flex items-center gap-1" href={demo.guestPath}><LinkIcon className="h-4 w-4" /> {guestUrl || demo.guestPath}</Link>
-                          <Button type="button" variant="outline" size="sm" onClick={copyGuestLink} className="h-7 px-3">
+                          <Link className="text-amber-600 hover:underline text-sm flex items-center gap-1 truncate max-w-[200px]" href={demo.guestPath} title={guestUrl || demo.guestPath}><LinkIcon className="h-3.5 w-3.5 flex-shrink-0" /> {guestUrl ? new URL(guestUrl).pathname : demo.guestPath}</Link>
+                          <Button type="button" variant="outline" size="sm" onClick={copyGuestLink} className="h-7 px-3 flex-shrink-0">
                             <Copy className="h-3.5 w-3.5" />
                             Copy
                           </Button>
-                          <Link href={demo.guestPath} target="_blank" className="inline-flex items-center text-slate-600 hover:text-slate-900 text-sm">
+                          <Link href={demo.guestPath} target="_blank" className="inline-flex items-center text-slate-600 hover:text-slate-900 text-sm flex-shrink-0">
                             <ExternalLink className="h-4 w-4" />
                           </Link>
                         </div>
@@ -469,7 +505,7 @@ function DemoGalleryContent() {
                     <input id="uploaderEmail" type="email" value={uploaderEmail} onChange={(e) => setUploaderEmail(e.target.value)} className="mt-1 w-full border rounded-md px-3 py-2" placeholder="Enter your email" />
                   </div>
                   <div
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center"
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors"
                     onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
                     onDrop={e => {
                       e.preventDefault();
@@ -477,15 +513,15 @@ function DemoGalleryContent() {
                       if (e.dataTransfer.files) handleFileUpload(e.dataTransfer.files);
                     }}
                   >
-                    <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-4">Drag and drop photos here, or click to select files</p>
+                    <Upload className="h-10 w-10 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-3 font-medium">Drop photos here or</p>
                     <input
                       id="demo-upload-input"
                       ref={fileInputRef}
                       type="file"
                       multiple
                       accept="image/*"
-                      style={{ display: 'block', margin: '0 auto 8px auto' }} // visible for debugging
+                      style={{ display: 'none' }}
                       onChange={e => {
                         if (e.target.files) {
                           handleFileUpload(e.target.files);
@@ -495,13 +531,13 @@ function DemoGalleryContent() {
                     />
                     <Button
                       type="button"
-                      variant="outline"
+                      variant="default"
                       disabled={uploading || selectedFiles.length >= 5}
-                      className="rounded-full cursor-pointer"
+                      className="rounded-lg px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white"
                       tabIndex={0}
                       onClick={() => fileInputRef.current?.click()}
                     >
-                      {uploading ? 'Uploading…' : 'Select Files'}
+                      {uploading ? 'Uploading…' : 'Browse Files'}
                     </Button>
                     {/* Drag and drop handler removed; now handled by parent div */}
                   </div>
@@ -510,35 +546,20 @@ function DemoGalleryContent() {
                     <div className="mt-4">
                       <div className="text-sm font-medium text-gray-700 mb-2">Selected Photos ({selectedFiles.length}/5):</div>
                       <ul className="grid grid-cols-2 gap-3">
-                        {selectedFiles.map((file, idx) => {
-                          const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-                          useEffect(() => {
-                            const reader = new FileReader();
-                            reader.onload = e => setThumbUrl(e.target?.result as string);
-                            reader.readAsDataURL(file);
-                          }, [file]);
-                          return (
-                            <li key={file.name + file.size + idx} className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
-                              {thumbUrl ? (
-                                <img src={thumbUrl} alt={file.name} className="w-full h-32 object-cover rounded" />
-                              ) : (
-                                <div className="w-full h-32 flex items-center justify-center bg-slate-200 animate-pulse rounded">
-                                  <Upload className="h-8 w-8 text-gray-400" />
-                                </div>
-                              )}
-                              <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center bg-black/60 text-white text-xs px-2 py-1 rounded">
-                                <span className="truncate max-w-[90px]">{file.name}</span>
-                                <span className="ml-2">{formatFileSize(file.size)}</span>
-                              </div>
-                              <Button variant="ghost" size="sm" className="absolute top-2 right-2" onClick={() => handleRemoveFile(idx)} disabled={uploading}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </li>
-                          );
-                        })}
+                        {selectedFiles.map((file, idx) => (
+                          <SelectedPhotoThumb
+                            key={file.name + file.size + idx}
+                            file={file}
+                            idx={idx}
+                            formatFileSize={formatFileSize}
+                            handleRemoveFile={handleRemoveFile}
+                            uploading={uploading}
+                          />
+                        ))}
                       </ul>
                     </div>
                   )}
+
                   <Button
                     onClick={handleSubmitUpload}
                     disabled={uploading || selectedFiles.length === 0}
