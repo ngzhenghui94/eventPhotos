@@ -153,10 +153,10 @@ export function PhotoUpload({ eventId, teamPlanName }: PhotoUploadProps) {
             </p>
             <p className="text-sm text-gray-500">
               Supports JPG, PNG, GIF up to {(() => {
-                if (maxBytes) return Math.round(maxBytes / (1024 * 1024));
-                if (teamPlanName?.toLowerCase().includes('plus')) return 50;
-                if (teamPlanName?.toLowerCase().includes('base')) return 25;
-                return 10;
+                const bytes = maxBytes ?? getUploadLimitForTeam(teamPlanName);
+                // If Starter plan, always show 20MB
+                if ((teamPlanName?.toLowerCase() ?? '') === 'starter') return 20;
+                return Math.round(bytes / (1024 * 1024));
               })()}MB each
             </p>
           </div>

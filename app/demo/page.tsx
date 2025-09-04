@@ -190,10 +190,10 @@ function DemoGalleryContent() {
   const handleFileUpload = (files: FileList | File[]) => {
     if (!files || files.length === 0) return;
     let newFiles = Array.from(files);
-    // Filter out files over 10MB
+  // Filter out files over 20MB
     const tooLarge = newFiles.filter(f => f.size > 10 * 1024 * 1024);
     if (tooLarge.length > 0) {
-      (window as any).__EP_TOAST?.error?.('File too large', { description: `${tooLarge.map(f => f.name).join(', ')} exceed 10MB.` });
+  (window as any).__EP_TOAST?.error?.('File too large', { description: `${tooLarge.map(f => f.name).join(', ')} exceed 20MB.` });
       newFiles = newFiles.filter(f => f.size <= 10 * 1024 * 1024);
     }
     // Cap to 5 files total
@@ -567,7 +567,7 @@ function DemoGalleryContent() {
                   >
                     {uploading ? 'Uploading…' : `Upload ${selectedFiles.length} Photo${selectedFiles.length !== 1 ? 's' : ''}`}
                   </Button>
-                  <p className="text-xs text-gray-500 text-center mt-2">Max size 10MB. Supported: JPG, PNG, GIF, WebP. Demo uploads are capped at 5 per upload and 5 per IP/hour.</p>
+                  <p className="text-xs text-gray-500 text-center mt-2">Max size 20MB. Supported: JPG, PNG, GIF, WebP. Demo uploads are capped at 5 per upload and 5 per IP/hour.</p>
                 </div>
               )}
             </div>

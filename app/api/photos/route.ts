@@ -42,9 +42,9 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Only image files are allowed' }, { status: 400 });
     }
 
-    // Check file size (10MB limit)
+  // Check file size (20MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      return Response.json({ error: 'File size must be less than 10MB' }, { status: 400 });
+  return Response.json({ error: 'File size must be less than 20MB' }, { status: 400 });
     }
 
   const user = await getUser();

@@ -87,8 +87,8 @@ export default async function PricingPage() {
           interval={'month'}
           trialDays={0}
           features={[
-            '1 Event',
-            '20 photos per event',
+              '1 Event',
+              '20MB per upload',
             '5MB per upload',
             'Guest Photo Sharing',
             'Basic Photo Gallery',
@@ -101,9 +101,9 @@ export default async function PricingPage() {
           interval={starterInterval}
           trialDays={0}
           features={[
-            '2 Events',
-            '50 photos per event',
-            '10MB per upload',
+              '1 Event',
+              '50 photos per event',
+              '20MB per upload',
             'Guest Photo Sharing',
             'Basic Photo Gallery',
             'Email Support',

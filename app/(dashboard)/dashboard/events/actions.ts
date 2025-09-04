@@ -24,14 +24,33 @@ export async function createEventAction(formData: FormData) {
   redirect('/api/auth/google');
   }
 
-  // Get user's team
+  // Get user's team and plan
   const userTeam = await db.query.teamMembers.findFirst({
     where: eq(teamMembers.userId, user.id),
+    with: { team: { columns: { id: true, planName: true } } },
     columns: { teamId: true }
   });
 
-  if (!userTeam) {
+  if (!userTeam || !userTeam.team) {
     throw new Error('User is not part of a team');
+  }
+
+  // Get current event count for team
+  const currentEvents = await db.query.events.findMany({
+    where: eq(events.teamId, userTeam.teamId),
+    columns: { id: true }
+  });
+  const currentCount = currentEvents.length;
+
+  // Enforce event creation limit based on plan
+  // Import canCreateAnotherEvent from lib/plans
+  // (Assume import is already present or add if missing)
+  // @ts-ignore
+  const { canCreateAnotherEvent } = await import('@/lib/plans');
+  const planName = userTeam.team.planName;
+  if (!canCreateAnotherEvent(planName, currentCount)) {
+    // Redirect to new event page with error param for toast
+    redirect(`/dashboard/events/new?error=${encodeURIComponent('Event creation limit reached for your plan. Upgrade to create more events.')}`);
   }
 
   const data = {
@@ -52,7 +71,7 @@ export async function createEventAction(formData: FormData) {
   // Generate unique codes
   const eventCode = generateEventCode(); // 8 chars
   const accessCode = generateAccessCode(); // 6 chars
-  
+
   const [newEvent] = await db
     .insert(events)
     .values({
@@ -69,7 +88,7 @@ export async function createEventAction(formData: FormData) {
       allowGuestUploads: result.data.allowGuestUploads !== false, // Default to true
       requireApproval: result.data.requireApproval || false,
     })
-  .returning({ id: events.id, eventCode: events.eventCode })
+    .returning({ id: events.id, eventCode: events.eventCode })
     .catch((error) => {
       console.error('Error creating event:', error);
       throw new Error('Failed to create event. Please try again.');

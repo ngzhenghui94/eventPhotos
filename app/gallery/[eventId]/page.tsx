@@ -347,7 +347,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
                 </Button>
               </div>
               <p className="text-xs text-gray-500 text-center">
-                Maximum file size: 10MB. Supported formats: JPG, PNG, GIF, WebP
+                Maximum file size: 20MB. Supported formats: JPG, PNG, GIF, WebP
               </p>
             </div>
           </div>
