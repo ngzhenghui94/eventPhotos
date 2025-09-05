@@ -59,7 +59,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] w-full">
+    <div className="flex flex-col min-h-[100dvh] w-full bg-gradient-to-br from-amber-50 via-white to-blue-50">
       <div className="flex flex-1 overflow-hidden h-full max-w-7xl mx-auto w-full">
         <aside
           className={`w-64 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${

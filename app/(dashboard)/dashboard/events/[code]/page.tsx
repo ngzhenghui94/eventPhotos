@@ -178,59 +178,77 @@ export default async function EventPage({ params }: EventPageProps) {
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Event Stats - compact */}
-            <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="bg-orange-100 rounded-full p-1">
-                  <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+            <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-6 py-6 flex flex-col gap-2">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="bg-orange-100 rounded-full p-2">
+                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
                 </span>
-                <span className="font-semibold text-orange-800 text-lg">Event Stats</span>
+                <span className="font-bold text-2xl text-orange-900">Event Stats</span>
+                <span className="ml-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-base font-semibold">
+                  {((event as any)?.team?.planName || 'Free').charAt(0).toUpperCase() + ((event as any)?.team?.planName || 'Free').slice(1)}
+                </span>
               </div>
-              <span className="ml-2 px-2 py-1 rounded bg-orange-50 text-orange-600 text-xs font-bold border border-orange-200">{((event as any)?.team?.planName || 'Free').charAt(0).toUpperCase() + ((event as any)?.team?.planName || 'Free').slice(1)}</span>
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
-              <div>Owner:</div>
-              <div className="font-medium">{event?.createdBy?.name || 'Unknown'}</div>
-              <div>Date:</div>
-              <div className="font-medium">{eventDate?.toLocaleDateString?.()}</div>
-              <div>Total Photos:</div>
-              <div className="font-medium">{photoCount}</div>
-              <div>Approved:</div>
-              <div className="font-medium">{approvedCount}</div>
-              <div>Photo Cap:</div>
-              <div className="font-medium">{planPhotoCap}</div>
-              <div>Upload Limit:</div>
-              <div className="font-medium">{toMB(planUploadLimit)}</div>
-            </div>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-2 rounded bg-gray-100 overflow-hidden">
-                <div className="h-2 bg-orange-500" style={{ width: `${usedPct}%` }} />
+              <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-orange-700">Host</span>
+                  <span className="font-medium">{event?.createdBy?.name || 'Unknown'}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-orange-700">Date</span>
+                  <span className="font-medium">{eventDate?.toLocaleDateString?.()}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-orange-700">Upload Limit</span>
+                  <span className="font-medium">{toMB(planUploadLimit)}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-orange-700">Total Photos</span>
+                  <span className="font-medium">{photoCount}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-orange-700">Approved Photos</span>
+                  <span className="font-medium">{approvedCount}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-orange-700">Photo Cap</span>
+                  <span className="font-medium">{planPhotoCap}</span>
+                </div>
               </div>
-              <span className="text-xs text-gray-700 font-medium">{photoCount} / {planPhotoCap}</span>
-            </div>
+              <div className="flex items-center gap-2 mt-4">
+                <div className="flex-1 h-2 rounded bg-gray-100 overflow-hidden">
+                  <div className="h-2 bg-orange-500" style={{ width: `${usedPct}%` }} />
+                </div>
+                <span className="text-xs text-gray-700 font-medium">{photoCount} / {planPhotoCap} used</span>
+              </div>
             </div>
             {/* Event Settings - moved beside stats */}
             {/* Redesigned Event Settings card */}
-            <div className="rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-orange-50 shadow-sm px-4 py-3 flex flex-col gap-2">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="bg-green-100 rounded-full p-1">
-                    <Calendar className="w-5 h-5 text-green-600" />
-                  </span>
-                  <span className="font-semibold text-green-800 text-lg">Event Settings</span>
+            <div className="rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2">
+              <div className="flex items-center gap-3 mb-2">
+                <span className="bg-green-100 rounded-full p-2">
+                  <Calendar className="w-6 h-6 text-green-600" />
+                </span>
+                <span className="font-bold text-2xl text-green-900">Event Settings</span>
+              </div>
+              <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-green-700">Access Code</span>
+                  <span className="font-mono font-medium">{event?.accessCode}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-green-700">Public Event</span>
+                  <span className="font-medium">{event?.isPublic ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-green-700">Guest Uploads</span>
+                  <span className="font-medium">{event?.allowGuestUploads ? 'Enabled' : 'Disabled'}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <span className="font-semibold text-green-700">Approval Required</span>
+                  <span className="font-medium">{event?.requireApproval ? 'Yes' : 'No'}</span>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
-                <div>Access Code:</div>
-                <div className="font-mono font-medium">{event?.accessCode}</div>
-                <div>Public Event:</div>
-                <div className="font-medium">{event?.isPublic ? 'Yes' : 'No'}</div>
-                <div>Guest Uploads:</div>
-                <div className="font-medium">{event?.allowGuestUploads ? 'Enabled' : 'Disabled'}</div>
-                <div>Approval Required:</div>
-                <div className="font-medium">{event?.requireApproval ? 'Yes' : 'No'}</div>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
+              <div className="flex items-center gap-2 mt-4">
                 <Link href={`/events/${eventCode}`} target="_blank">
                   <Button size="sm" className="px-3 py-1.5 text-sm">View Guest Page</Button>
                 </Link>

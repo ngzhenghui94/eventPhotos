@@ -8,9 +8,9 @@ import { JoinByCode } from '../../components/join-by-code';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
+  <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
       {/* Hero Section with animated gradient background */}
-      <section className="py-16 sm:py-24 relative overflow-hidden">
+  <section className="py-16 sm:py-24 relative overflow-hidden">
         <div className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-br from-orange-200 via-amber-100 to-blue-200 opacity-60"></div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-10 sm:gap-16 items-center fade-in-up">
           <div className="lg:col-span-6 mb-10 lg:mb-0">
@@ -54,12 +54,12 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works Section with glassmorphism cards and fade-in animation */}
-      <section className="py-16 sm:py-24 bg-white fade-in-up">
+  {/* How it works Section with glassmorphism cards and fade-in animation */}
+  <section className="py-16 sm:py-24 fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-12">How {brand.productName} works</h2>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
+            <div className="glass-card p-7 shadow-xl hover:shadow-2xl transition-shadow border border-amber-100/40 backdrop-blur-md bg-white/70 hover:bg-white/90 hover:border-amber-300/60">
               <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Calendar className="h-6 w-6"/></div>
               <h3 className="mt-5 font-semibold text-lg">Create an event</h3>
               <p className="mt-2 text-sm text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
@@ -84,10 +84,10 @@ export default function HomePage() {
       </section>
 
       {/* Feature highlights Section with fade-in animation */}
-      <section className="py-16 sm:py-24 bg-gradient-to-br from-white via-amber-50 to-blue-50 fade-in-up">
+  <section className="py-16 sm:py-24 fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-3">
-            <div className="rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-shadow">
+            <div className="rounded-2xl border bg-white/80 p-8 shadow-xl hover:shadow-2xl transition-shadow border-amber-100/40 backdrop-blur-md hover:bg-white/95 hover:border-amber-300/60">
               <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Shield className="h-6 w-6"/></div>
               <h3 className="mt-5 font-semibold text-lg">Private & secure</h3>
               <p className="mt-2 text-sm text-gray-600">Each event has its own private gallery secured by access codes. Optional approval before anything goes live.</p>
@@ -145,6 +145,7 @@ export default function HomePage() {
           }
         }
       `}</style>
+      {/* Removed stray 'Dashboard' text above the footer */}
     </main>
   );
 }

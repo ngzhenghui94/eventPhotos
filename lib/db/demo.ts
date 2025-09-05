@@ -36,18 +36,17 @@ export async function ensureDemoEvent(ownerEmail: string) {
   const existing = await getExistingDemo();
   if (existing) return existing;
 
-  // 2) If not found, attempt to create under a short try-lock loop
+  // 2) If not found, attempt to create under a try-lock loop with longer timeout
   const start = Date.now();
   const LOCK_KEY_SQL = sql`hashtext('memoriesvault_demo_setup')`;
+  const LOCK_TIMEOUT_MS = 10000; // 10 seconds
 
   while (true) {
-    // Try to acquire lock without blocking
     const res: any = await db.execute(sql`SELECT pg_try_advisory_lock(${LOCK_KEY_SQL}) AS got`);
     const got = res?.rows?.[0]?.got ?? res?.rows?.[0]?.pg_try_advisory_lock ?? false;
 
     if (got) {
       try {
-        // Re-check in case another worker created it just before we got the lock
         const again = await getExistingDemo();
         if (again) return again;
 
@@ -117,23 +116,25 @@ export async function ensureDemoEvent(ownerEmail: string) {
           }
         }
 
-  const result = { owner, team, event };
-  setCached(result);
-  return result;
+        const result = { owner, team, event };
+        setCached(result);
+        return result;
       } finally {
         await db.execute(sql`SELECT pg_advisory_unlock(${LOCK_KEY_SQL})`);
       }
     }
 
-    // Didn't get the lock; backoff and try again, but cap total wait to 5s
-    if (Date.now() - start > 5000) {
+    // Didn't get the lock; backoff and try again, but cap total wait to LOCK_TIMEOUT_MS
+    if (Date.now() - start > LOCK_TIMEOUT_MS) {
       // Best-effort: if someone else created it, return that; otherwise, error
       const eventual = await getExistingDemo();
       if (eventual) {
         setCached(eventual);
         return eventual;
       }
-      throw new Error('demo_setup_lock_timeout');
+      // Instead of throwing, log and return null for unrecoverable error
+      console.error('Demo setup lock timeout: could not acquire lock and no demo event exists');
+      return null;
     }
     await new Promise((r) => setTimeout(r, 150));
   }
@@ -141,7 +142,12 @@ export async function ensureDemoEvent(ownerEmail: string) {
 
 export async function getDemoEvent(ownerEmail: string) {
   try {
-    const { owner, team, event } = await ensureDemoEvent(ownerEmail);
+    const demo = await ensureDemoEvent(ownerEmail);
+    if (!demo) {
+      // Could not get or create demo event
+      throw new Error('Could not get or create demo event');
+    }
+    const { owner, team, event } = demo;
     const result = {
       id: event.id,
       name: event.name,
