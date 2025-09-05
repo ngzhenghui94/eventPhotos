@@ -62,36 +62,37 @@ export default function DashboardLayout({
     <div className="flex flex-col min-h-[100dvh] w-full bg-gradient-to-br from-amber-50 via-white to-blue-50">
       <div className="flex flex-1 overflow-hidden h-full max-w-7xl mx-auto w-full">
         <aside
-          className={`w-64 bg-white lg:bg-gray-50 border-r border-gray-200 lg:block ${
+          className={`w-64 border-r border-gray-200 lg:block ${
             isSidebarOpen ? 'block' : 'hidden'
           } lg:relative absolute inset-y-0 left-0 z-40 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
             isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
         >
-          <nav className="h-full overflow-y-auto p-4 flex flex-col">
-            {navItems.map((item) => (
-              <Link key={item.href} href={item.href} passHref>
-                <Button
-                  variant={pathname === item.href ? 'secondary' : 'ghost'}
-                  className={`shadow-none my-1 w-full justify-start ${
-                    pathname === item.href ? 'bg-gray-100' : ''
-                  }`}
-                  onClick={() => setIsSidebarOpen(false)}
-                >
-                  <item.icon className="h-4 w-4" />
-                  {item.label}
-                </Button>
-              </Link>
-            ))}
-            <div className="mt-auto pt-3 border-t border-gray-200">
-              <Button
-                variant="ghost"
-                className="shadow-none my-1 w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50"
+          <nav className="h-full overflow-y-auto p-4 flex flex-col bg-transparent">
+            <div className="text-[11px] uppercase tracking-wide text-gray-500 px-2 mb-2">Menu</div>
+            <ul className="space-y-1.5">
+              {navItems.map((item) => {
+                const active = pathname === item.href;
+                return (
+                  <li key={item.href}>
+                    <Link href={item.href} onClick={() => setIsSidebarOpen(false)} className={`group flex items-center gap-2 px-3 py-2 rounded-md transition-colors border border-transparent hover:border-gray-200 hover:bg-black/5 ${active ? 'text-gray-900 font-medium border-gray-200 bg-black/5' : 'text-gray-700'}`}>
+                      <item.icon className={`h-4 w-4 ${active ? 'text-gray-900' : 'text-gray-500 group-hover:text-gray-700'}`} />
+                      <span>{item.label}</span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+
+            <div className="mt-auto pt-4">
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-md text-red-600 hover:text-red-700 hover:bg-red/5 transition-colors"
                 onClick={handleSignOut}
+                type="button"
               >
                 <LogOut className="h-4 w-4" />
-                Sign out
-              </Button>
+                <span>Sign out</span>
+              </button>
             </div>
           </nav>
         </aside>
