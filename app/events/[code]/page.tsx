@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Upload, Camera, Lock } from 'lucide-react';
 import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
-import { notFound } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { Input } from '@/components/ui/input';
@@ -16,7 +16,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const event = await getEventByEventCode(code.toUpperCase());
   
   if (!event) {
-    notFound();
+    redirect('/events/not-found');
   }
 
   const cookieStore = await cookies();

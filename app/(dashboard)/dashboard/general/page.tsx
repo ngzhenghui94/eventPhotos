@@ -1,7 +1,3 @@
-// ...existing code...
-// ...existing code...
-// ...existing code...
-// ...existing code...
 'use client';
 
 import { useActionState } from 'react';
@@ -16,7 +12,6 @@ import useSWR from 'swr';
 import { Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
-const dashboardFetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type ActionState = {
   name?: string;
@@ -66,7 +61,8 @@ function AccountForm({
   );
 }
 
-function AccountFormWithData({ state, user }: { state: ActionState; user?: User }) {
+function AccountFormWithData({ state }: { state: ActionState }) {
+  const { data: user } = useSWR<User>('/api/user', fetcher);
   return (
     <AccountForm
       state={state}
@@ -76,68 +72,18 @@ function AccountFormWithData({ state, user }: { state: ActionState; user?: User 
   );
 }
 
-import Link from 'next/link';
-function DashboardInfoCard({ team }: { team: any }) {
-  if (!team) return null;
-  return (
-    <Card className="mb-6">
-      <CardHeader>
-        <CardTitle>Subscription & Team Info</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <div className="text-sm text-gray-500">Current Plan</div>
-            <div className="font-semibold text-lg text-gray-900 mb-2">{team.planName.charAt(0).toUpperCase() + team.planName.slice(1)}</div>
-            <div className="text-sm text-gray-500">Subscription Status</div>
-            <div className="mb-2">{team.subscriptionStatus || 'N/A'}</div>
-            <div className="text-sm text-gray-500">Team Name</div>
-            <div className="mb-2">{team.name}</div>
-            <div className="text-sm text-gray-500">Team Members</div>
-            <div className="mb-2">{team.members}</div>
-            <Link href="/dashboard/upgrade" className="block mt-4">
-              <Button
-                className="w-full bg-gradient-to-r from-orange-400 to-orange-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:from-orange-500 hover:to-orange-700 flex items-center justify-center gap-2 transition-all duration-150"
-                style={{ boxShadow: '0 2px 8px rgba(255,140,0,0.12)' }}
-              >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M12 2l4 7h-8l4-7z"></path><path d="M2 21h20"></path><path d="M12 17v4"></path></svg>
-                Upgrade Plan
-              </Button>
-            </Link>
-          </div>
-          <div>
-            <div className="text-sm text-gray-500">Per-upload Size Limit</div>
-            <div className="mb-2">{team.uploadLimitMB} MB</div>
-            <div className="text-sm text-gray-500">Photo Cap per Event</div>
-            <div className="mb-2">{team.photoCap}</div>
-            <div className="text-sm text-gray-500">Event Limit</div>
-            <div className="mb-2">{team.eventLimit === null ? 'Unlimited' : team.eventLimit}</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function GeneralPage() {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
     {}
   );
-  const { data, error } = useSWR('/api/dashboard-info', dashboardFetcher, {
-    dedupingInterval: 60000,
-    revalidateOnFocus: false,
-  });
-  if (error) return null;
-  if (!data) return null;
-  const { user, team } = data;
 
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         General Settings
       </h1>
-      <DashboardInfoCard team={team} />
+
       <Card>
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
@@ -145,7 +91,7 @@ export default function GeneralPage() {
         <CardContent>
           <form className="space-y-4" action={formAction}>
             <Suspense fallback={<AccountForm state={state} />}>
-              <AccountFormWithData state={state} user={user} />
+              <AccountFormWithData state={state} />
             </Suspense>
             {state.error && (
               <p className="text-red-500 text-sm">{state.error}</p>
