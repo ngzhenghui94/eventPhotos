@@ -124,48 +124,5 @@ export default function NewEventPage() {
       </section>
     </>
   );
-                  <Checkbox id="isPublic" name="isPublic" />
-                  <Label htmlFor="isPublic" className="text-sm font-normal">
-                    Make event publicly discoverable
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="allowGuestUploads" name="allowGuestUploads" defaultChecked />
-                  <Label htmlFor="allowGuestUploads" className="text-sm font-normal">
-                    Allow guests to upload photos
-                  </Label>
-                </div>
-                
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="requireApproval" name="requireApproval" />
-                  <Label htmlFor="requireApproval" className="text-sm font-normal">
-                    Require approval before photos are visible
-                  </Label>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
-                <p className="text-sm text-amber-800">
-                  <strong>Note:</strong> After creating the event, you'll receive a unique access code 
-                  that guests can use to access the event and upload photos.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="flex justify-end space-x-3">
-            <Link href="/dashboard/events">
-              <Button variant="outline" type="button">
-                Cancel
-              </Button>
-            </Link>
-            <Button type="submit">
-              Create Event
-            </Button>
-          </div>
-        </form>
-      </div>
-    </section>
-  );
+// ...existing code above...
 }
