@@ -24,17 +24,34 @@ export async function getUser() {
     return null;
   }
 
-  const user = await db
-    .select()
+  // Get user and their team/plan
+  const result = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      passwordHash: users.passwordHash,
+      role: users.role,
+      isOwner: users.isOwner,
+      planName: users.planName,
+      emailVerifiedAt: users.emailVerifiedAt,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+      deletedAt: users.deletedAt,
+      teamId: teamMembers.teamId,
+      teamName: teams.name
+    })
     .from(users)
+    .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
+    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
     .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
     .limit(1);
 
-  if (user.length === 0) {
+  if (result.length === 0) {
     return null;
   }
 
-  return user[0];
+  return result[0];
 }
 
 export async function logActivity(teamId: number, userId: number | null, action: ActivityType) {

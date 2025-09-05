@@ -18,7 +18,8 @@ export default async function AdminUsersPage() {
       isOwner: users.isOwner,
       createdAt: users.createdAt,
       teamId: teamMembers.teamId,
-      planName: teams.planName,
+      planName: users.planName,
+      teamName: teams.name,
     })
     .from(users)
     .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
@@ -45,6 +46,9 @@ export default async function AdminUsersPage() {
             </CardHeader>
             <CardContent className="text-sm text-gray-600 space-y-2">
               <div>Role: {u.role} • Admin: {u.isOwner ? 'Yes' : 'No'}</div>
+              <div>
+                <span className="font-medium">Team:</span> {u.teamName || 'No team'}
+              </div>
               <div>
                 <span className="font-medium">Plan:</span> {u.planName || 'free'}
                 <form action={`/api/admin/users/${u.id}/plan`} method="post" className="inline ml-2">

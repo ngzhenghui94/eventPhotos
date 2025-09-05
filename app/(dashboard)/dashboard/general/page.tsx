@@ -79,35 +79,35 @@ export default function GeneralPage() {
   );
 
   const { data: user } = useSWR<User>('/api/user', fetcher);
-  const planName = (user && 'team' in user && (user as any).team?.planName) || 'free';
-  const teamName = (user && 'team' in user && (user as any).team?.name) || 'No team';
+  const planName = user?.planName || 'free';
+  const teamName = user?.teamName || 'No team';
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         General Settings
       </h1>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Subscription Information</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <div>
-              <span className="font-medium text-gray-700">Plan:</span>
-              <span className="ml-2 text-orange-600 font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Team:</span>
-              <span className="ml-2">{teamName}</span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-700">Email:</span>
-              <span className="ml-2">{user?.email}</span>
-            </div>
+      <div className="mb-6 rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm p-6 flex items-center justify-between">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="bg-orange-100 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg></span>
+            <span className="text-2xl font-bold text-orange-800">Subscription Information</span>
           </div>
-        </CardContent>
-      </Card>
+          <span className="text-gray-700 mb-2">Your current plan and team details are shown below.</span>
+          <div className="flex flex-col gap-1 mt-2">
+            <span className="font-medium text-gray-700">Plan: <span className="ml-2 text-orange-600 font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)}</span></span>
+            <span className="font-medium text-gray-700">Team: <span className="ml-2">{teamName}</span></span>
+            <span className="font-medium text-gray-700">Email: <span className="ml-2">{user?.email}</span></span>
+          </div>
+        </div>
+        <div className="flex items-center justify-center">
+          <span className="rounded-full bg-blue-100 p-4 shadow-lg flex items-center justify-center" style={{ boxShadow: '0 0 0 4px #fbbf24, 0 2px 8px rgba(0,0,0,0.08)' }}>
+            <span className="rounded-full bg-black flex items-center justify-center" style={{ width: 56, height: 56 }}>
+              <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><polygon points="16,8 24,24 8,24" fill="white"/></svg>
+            </span>
+          </span>
+        </div>
+      </div>
 
       <Card>
         <CardHeader>

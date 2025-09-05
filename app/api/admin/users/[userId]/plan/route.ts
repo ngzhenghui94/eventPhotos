@@ -10,16 +10,10 @@ export async function POST(req: Request, { params }: { params: { userId: string 
   const data = await req.formData();
   const planName = data.get('planName') as string;
 
-  // Find user's team
-  const teamMember = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, userId) });
-  if (!teamMember) {
-    return NextResponse.json({ error: 'User is not part of a team.' }, { status: 400 });
-  }
-
-  // Update team plan
-  await db.update(teams)
+  // Update user's plan
+  await db.update(users)
     .set({ planName })
-    .where(eq(teams.id, teamMember.teamId));
+    .where(eq(users.id, userId));
 
   return NextResponse.json({ success: true, planName });
 }

@@ -36,6 +36,13 @@
       "when": 1756771200000,
       "tag": "0004_email_verification",
       "breakpoints": false
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1757071849990,
+      "tag": "0005_loud_the_hunter",
+      "breakpoints": true
     }
   ]
 }

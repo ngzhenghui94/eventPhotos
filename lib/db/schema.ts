@@ -17,6 +17,7 @@ export const users = pgTable('users', {
   passwordHash: text('password_hash').notNull(),
   role: varchar('role', { length: 20 }).notNull().default('member'),
   isOwner: boolean('is_owner').notNull().default(false),
+  planName: varchar('plan_name', { length: 50 }),
   emailVerifiedAt: timestamp('email_verified_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
