@@ -11,6 +11,8 @@ import Link from 'next/link';
 import { createEventAction } from '../actions';
 import UpdateToast from '@/components/update-toast';
 import useSWR from 'swr';
+import { Suspense } from 'react';
+
 const NewEventPage = () => {
   const { data: dashboardInfo } = useSWR('/api/dashboard-info', (url) => fetch(url).then(res => res.json()), {
     dedupingInterval: 60000,
@@ -23,7 +25,8 @@ const NewEventPage = () => {
   const eventLimitReached = eventLimit !== null && typeof eventLimit === 'number' && eventCount >= eventLimit;
 
   return (
-    <section className="flex-1 p-4 lg:p-8">
+    <Suspense fallback={<div>Loading...</div>}>
+      <section className="flex-1 p-4 lg:p-8">
       <div className="max-w-2xl mx-auto">
         <UpdateToast />
         <div className="flex items-center mb-6">
@@ -149,6 +152,7 @@ const NewEventPage = () => {
         </form>
       </div>
     </section>
+    </Suspense>
   );
 };
 
