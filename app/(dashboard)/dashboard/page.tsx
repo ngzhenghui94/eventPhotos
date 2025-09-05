@@ -63,6 +63,7 @@ function EventsSkeleton() {
       ))}
     </div>
   );
+}
 
 function EventCard({ event }: { event: EventWithPhotoCount }) {
   const formatDate = (date: Date | string) => {
