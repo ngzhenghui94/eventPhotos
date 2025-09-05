@@ -38,7 +38,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       const formData = new FormData();
       formData.append('photoId', photoId.toString());
       await deletePhotoAction(formData);
-      toast.success('Photo deleted');
+      // No toast: redirect will happen if successful
     } catch (error: unknown) {
       // Suppress toast for NEXT_REDIRECT errors
       if (error && typeof error === 'object' && 'digest' in error && (error as any).digest === 'NEXT_REDIRECT') {

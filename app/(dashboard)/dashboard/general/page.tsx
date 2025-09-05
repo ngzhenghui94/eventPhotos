@@ -1,3 +1,7 @@
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
 'use client';
 
 import { useActionState } from 'react';
@@ -12,6 +16,7 @@ import useSWR from 'swr';
 import { Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const dashboardFetcher = (url: string) => fetch(url).then((res) => res.json());
 
 type ActionState = {
   name?: string;
@@ -72,6 +77,42 @@ function AccountFormWithData({ state }: { state: ActionState }) {
   );
 }
 
+function DashboardInfoCard() {
+  const { data, error } = useSWR('/api/dashboard-info', dashboardFetcher);
+  if (error) return null;
+  if (!data || !data.team) return null;
+  const { team } = data;
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Subscription & Team Info</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <div className="text-sm text-gray-500">Current Plan</div>
+            <div className="font-semibold text-lg text-gray-900 mb-2">{team.planName.charAt(0).toUpperCase() + team.planName.slice(1)}</div>
+            <div className="text-sm text-gray-500">Subscription Status</div>
+            <div className="mb-2">{team.subscriptionStatus || 'N/A'}</div>
+            <div className="text-sm text-gray-500">Team Name</div>
+            <div className="mb-2">{team.name}</div>
+            <div className="text-sm text-gray-500">Team Members</div>
+            <div className="mb-2">{team.members}</div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Per-upload Size Limit</div>
+            <div className="mb-2">{team.uploadLimitMB} MB</div>
+            <div className="text-sm text-gray-500">Photo Cap per Event</div>
+            <div className="mb-2">{team.photoCap}</div>
+            <div className="text-sm text-gray-500">Event Limit</div>
+            <div className="mb-2">{team.eventLimit === null ? 'Unlimited' : team.eventLimit}</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function GeneralPage() {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
@@ -83,7 +124,7 @@ export default function GeneralPage() {
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         General Settings
       </h1>
-
+      <DashboardInfoCard />
       <Card>
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
