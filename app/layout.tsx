@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { brand } from '@/lib/brand';
 import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   }
 };
 
-export const viewport = {
+export const viewport: Viewport = {
   maximumScale: 1
 };
 
