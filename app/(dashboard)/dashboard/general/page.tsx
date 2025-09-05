@@ -7,11 +7,27 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import { updateAccount } from '@/app/(login)/actions';
-import { User } from '@/lib/db/schema';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+// Shape returned by GET /api/user (see getUser in lib/db/queries.ts)
+type CurrentUser = {
+  id: number;
+  name: string | null;
+  email: string;
+  passwordHash?: string;
+  role: string;
+  isOwner: boolean;
+  planName: string | null;
+  emailVerifiedAt: string | Date | null;
+  createdAt: string | Date;
+  updatedAt: string | Date;
+  deletedAt: string | Date | null;
+  teamId: number | null;
+  teamName: string | null;
+};
 
 type ActionState = {
   name?: string;
@@ -62,7 +78,7 @@ function AccountForm({
 }
 
 function AccountFormWithData({ state }: { state: ActionState }) {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<CurrentUser>('/api/user', fetcher);
   return (
     <AccountForm
       state={state}
@@ -78,7 +94,7 @@ export default function GeneralPage() {
     {}
   );
 
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<CurrentUser>('/api/user', fetcher);
   const planName = user?.planName || 'free';
   const teamName = user?.teamName || 'No team';
   return (
