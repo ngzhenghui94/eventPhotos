@@ -26,18 +26,12 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.UPDATE_PASSWORD]: Lock,
   [ActivityType.DELETE_ACCOUNT]: UserMinus,
   [ActivityType.UPDATE_ACCOUNT]: Settings,
-  [ActivityType.CREATE_TEAM]: UserPlus,
-  [ActivityType.REMOVE_TEAM_MEMBER]: UserMinus,
-  [ActivityType.INVITE_TEAM_MEMBER]: Mail,
-  [ActivityType.ACCEPT_INVITATION]: CheckCircle,
   [ActivityType.CREATE_EVENT]: Calendar,
   [ActivityType.UPDATE_EVENT]: Edit,
   [ActivityType.DELETE_EVENT]: Trash2,
   [ActivityType.UPLOAD_PHOTO]: Upload,
   [ActivityType.DELETE_PHOTO]: Trash2,
-
   [ActivityType.APPROVE_PHOTO]: CheckCircle,
-
 };
 
 function getRelativeTime(date: Date) {
@@ -68,14 +62,6 @@ function formatAction(action: ActivityType): string {
       return 'You deleted your account';
     case ActivityType.UPDATE_ACCOUNT:
       return 'You updated your account';
-    case ActivityType.CREATE_TEAM:
-      return 'You created a new team';
-    case ActivityType.REMOVE_TEAM_MEMBER:
-      return 'You removed a team member';
-    case ActivityType.INVITE_TEAM_MEMBER:
-      return 'You invited a team member';
-    case ActivityType.ACCEPT_INVITATION:
-      return 'You accepted an invitation';
     case ActivityType.CREATE_EVENT:
       return 'You created a new event';
     case ActivityType.UPDATE_EVENT:
@@ -83,14 +69,9 @@ function formatAction(action: ActivityType): string {
     case ActivityType.DELETE_EVENT:
       return 'You deleted an event';
     case ActivityType.UPLOAD_PHOTO:
-
       return 'You uploaded a photo';
     case ActivityType.DELETE_PHOTO:
       return 'You deleted a photo';
-
-      return 'A photo was uploaded';
-    case ActivityType.DELETE_PHOTO:
-      return 'A photo was deleted';
     case ActivityType.APPROVE_PHOTO:
       return 'A photo was approved';
     default:
@@ -99,7 +80,8 @@ function formatAction(action: ActivityType): string {
 }
 
 export default async function ActivityPage() {
-  const logs = await getActivityLogs();
+  // Pass 0 as eventId to fetch all logs (or refactor as needed)
+  const logs = await getActivityLogs(0, 50);
 
   return (
     <section className="flex-1 p-4 lg:p-8">
