@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { db } from '@/lib/db/drizzle';
 import { events, teamMembers } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
-import { eq } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 
 // Create Event Action
 const createEventSchema = z.object({
@@ -72,29 +72,121 @@ export async function createEventAction(formData: FormData) {
   const eventCode = generateEventCode(); // 8 chars
   const accessCode = generateAccessCode(); // 6 chars
 
-  const [newEvent] = await db
-    .insert(events)
-    .values({
-      name: result.data.name,
-      // Some databases currently enforce NOT NULL; use empty string instead of null
-      description: (result.data.description ?? '').toString(),
-      date: new Date(result.data.date),
-      location: (result.data.location ?? '').toString(),
-      eventCode,
-      accessCode,
-      teamId: userTeam.teamId,
-      createdBy: user.id,
-      isPublic: result.data.isPublic || false,
-      allowGuestUploads: result.data.allowGuestUploads !== false, // Default to true
-      requireApproval: result.data.requireApproval || false,
-    })
-    .returning({ id: events.id, eventCode: events.eventCode })
-    .catch((error) => {
-      console.error('Error creating event:', error);
-      throw new Error('Failed to create event. Please try again.');
-    });
+  // Server-side duplicate submission protection:
+  // If the same user/team recently created an event with the same name, redirect to it.
+  // Acquire a lightweight per-team advisory lock to serialize creation requests
+  const LOCK_KEY_SQL = sql`hashtext(${`create_event_team_${userTeam.teamId}`})`;
+  let gotLock = false;
+  const lockStart = Date.now();
+  try {
+    // Try for up to ~3 seconds to acquire the lock
+    while (!gotLock && Date.now() - lockStart < 3000) {
+      try {
+        const res: any = await db.execute(sql`SELECT pg_try_advisory_lock(${LOCK_KEY_SQL}) AS got`);
+        gotLock = res?.rows?.[0]?.got ?? res?.rows?.[0]?.pg_try_advisory_lock ?? false;
+      } catch (e) {
+        console.error('Lock acquire error:', e);
+      }
+      if (!gotLock) await new Promise((r) => setTimeout(r, 150));
+    }
 
-  redirect(`/dashboard/events/${newEvent.eventCode}`);
+    if (gotLock) {
+      // While holding the lock, check for a recent event with same name/team/creator
+      const recent = await db.query.events.findFirst({
+        where: and(eq(events.teamId, userTeam.teamId), eq(events.name, result.data.name), eq(events.createdBy, user.id)),
+        orderBy: (e, { desc }) => desc(e.createdAt),
+        columns: { id: true, eventCode: true, createdAt: true }
+      });
+      if (recent) {
+        const createdAt = new Date(recent.createdAt).getTime();
+        if (Date.now() - createdAt < 15000) {
+          // Recent match found within 15s — treat as duplicate submission
+          redirect(`/dashboard/events/${recent.eventCode}`);
+          return;
+        }
+      }
+
+      // Safe to insert now while holding the lock
+      const [newEvent] = await db
+        .insert(events)
+        .values({
+          name: result.data.name,
+          description: (result.data.description ?? '').toString(),
+          date: new Date(result.data.date),
+          location: (result.data.location ?? '').toString(),
+          eventCode,
+          accessCode,
+          teamId: userTeam.teamId,
+          createdBy: user.id,
+          isPublic: result.data.isPublic || false,
+          allowGuestUploads: result.data.allowGuestUploads !== false,
+          requireApproval: result.data.requireApproval || false,
+        })
+        .onConflictDoNothing({ target: events.eventCode })
+        .returning({ id: events.id, eventCode: events.eventCode })
+        .catch((error) => {
+          console.error('Error creating event:', error);
+          throw new Error('Failed to create event. Please try again.');
+        });
+      if (!newEvent) {
+        // Conflict occurred or no row returned; attempt to find a recent event matching name/team/creator
+        const existing = await db.query.events.findFirst({
+          where: and(eq(events.teamId, userTeam.teamId), eq(events.name, result.data.name), eq(events.createdBy, user.id)),
+          orderBy: (e, { desc }) => desc(e.createdAt),
+          columns: { eventCode: true }
+        });
+        if (existing) return redirect(`/dashboard/events/${existing.eventCode}`);
+        throw new Error('Failed to create event. Please try again.');
+      }
+
+      redirect(`/dashboard/events/${newEvent.eventCode}`);
+      return;
+    }
+
+    // If we couldn't get the lock, fall back to best-effort creation (client-side should prevent spam)
+    const [newEventFallback] = await db
+      .insert(events)
+      .values({
+        name: result.data.name,
+        description: (result.data.description ?? '').toString(),
+        date: new Date(result.data.date),
+        location: (result.data.location ?? '').toString(),
+        eventCode,
+        accessCode,
+        teamId: userTeam.teamId,
+        createdBy: user.id,
+        isPublic: result.data.isPublic || false,
+        allowGuestUploads: result.data.allowGuestUploads !== false,
+        requireApproval: result.data.requireApproval || false,
+      })
+      .onConflictDoNothing({ target: events.eventCode })
+      .returning({ id: events.id, eventCode: events.eventCode })
+      .catch((error) => {
+        console.error('Fallback create error:', error);
+        throw new Error('Failed to create event. Please try again.');
+      });
+
+    if (!newEventFallback) {
+      const existing = await db.query.events.findFirst({
+        where: and(eq(events.teamId, userTeam.teamId), eq(events.name, result.data.name), eq(events.createdBy, user.id)),
+        orderBy: (e, { desc }) => desc(e.createdAt),
+        columns: { eventCode: true }
+      });
+      if (existing) return redirect(`/dashboard/events/${existing.eventCode}`);
+      throw new Error('Failed to create event. Please try again.');
+    }
+
+    redirect(`/dashboard/events/${newEventFallback.eventCode}`);
+    return;
+  } finally {
+    if (gotLock) {
+      try {
+        await db.execute(sql`SELECT pg_advisory_unlock(${LOCK_KEY_SQL})`);
+      } catch (e) {
+        console.error('Lock release error:', e);
+      }
+    }
+  }
 }
 
 // Helper function to generate unique access codes

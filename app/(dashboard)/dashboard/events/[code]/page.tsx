@@ -21,12 +21,8 @@ import { eq } from 'drizzle-orm';
 import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
 import { generateAccessCode } from '@/lib/events/actions';
 
-interface EventPageProps {
-  params: { code: string };
-}
-
-export default async function EventPage({ params }: EventPageProps) {
-  const { code } = await params;
+export default async function Page({ params }: { params: { code: string } }) {
+  const { code } = params;
   const raw = (code || '').toString();
   const upper = raw.toUpperCase();
   const isNumericId = /^[0-9]+$/.test(raw);
