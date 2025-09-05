@@ -89,31 +89,25 @@ export async function ensureDemoEvent(ownerEmail: string) {
         // Create event
         let event = (await db.select().from(events).where(eq(events.accessCode, DEMO_ACCESS_CODE)).limit(1))[0];
         if (!event) {
-          try {
-            const inserted = await db
-              .insert(events)
-              .values({
-                name: 'memoriesVault Demo Event',
-                description: 'Public demo event for uploads and gallery preview.',
-                date: new Date(),
-                location: 'Online',
-                eventCode: 'DEMO1234',
-                accessCode: DEMO_ACCESS_CODE,
-                teamId: team.id,
-                createdBy: owner.id,
-                isPublic: true,
-                allowGuestUploads: true,
-                requireApproval: false,
-              })
-              .returning();
-            event = inserted[0]!;
-          } catch (e: any) {
-            if (e && e.code === '23505') {
-              event = (await db.select().from(events).where(eq(events.accessCode, DEMO_ACCESS_CODE)).limit(1))[0]!;
-            } else {
-              throw e;
-            }
-          }
+          // Use upsert logic to avoid duplicate creation
+          const inserted = await db
+            .insert(events)
+            .values({
+              name: 'memoriesVault Demo Event',
+              description: 'Public demo event for uploads and gallery preview.',
+              date: new Date(),
+              location: 'Online',
+              eventCode: 'DEMO1234',
+              accessCode: DEMO_ACCESS_CODE,
+              teamId: team.id,
+              createdBy: owner.id,
+              isPublic: true,
+              allowGuestUploads: true,
+              requireApproval: false,
+            })
+            .onConflictDoNothing({ target: events.accessCode })
+            .returning();
+          event = inserted[0] || (await db.select().from(events).where(eq(events.accessCode, DEMO_ACCESS_CODE)).limit(1))[0]!;
         }
 
         const result = { owner, team, event };
