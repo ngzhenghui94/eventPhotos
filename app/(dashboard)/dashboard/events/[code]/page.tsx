@@ -143,7 +143,8 @@ export default async function EventPage({ params }: EventPageProps) {
     <section className="flex-1 p-4 lg:p-8">
       <UpdateToast />
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center mb-6">
+        {/* NavBar - ensure it is above sidebar and visible */}
+        <div className="relative z-50 flex items-center mb-6 bg-white">
           <Link href="/dashboard/events">
             <Button variant="ghost" size="sm" className="mr-4">
               <ArrowLeft className="h-4 w-4 mr-1" />
@@ -157,8 +158,35 @@ export default async function EventPage({ params }: EventPageProps) {
           </div>
         </div>
         <div className="max-w-6xl mx-auto space-y-6">
-          {/* Event Stats - merged and centered */}
-          <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-4 py-3 flex flex-col gap-2">
+          {/* Event Details - shifted up */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Event Details</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-lg text-gray-900">{event?.name || 'Untitled Event'}</span>
+                  {event?.location && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50 text-blue-700 text-sm font-medium">
+                      <MapPin className="w-4 h-4 text-blue-400" />
+                      {event.location}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-2">
+                  {event?.description ? (
+                    <p className="text-gray-700 text-base leading-relaxed">{event.description}</p>
+                  ) : (
+                    <p className="text-gray-400 italic">No description provided</p>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Event Stats - compact */}
+            <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-4 py-3 flex flex-col gap-2">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
                 <span className="bg-orange-100 rounded-full p-1">
@@ -188,20 +216,108 @@ export default async function EventPage({ params }: EventPageProps) {
               </div>
               <span className="text-xs text-gray-700 font-medium">{photoCount} / {planPhotoCap}</span>
             </div>
+            </div>
+            {/* Event Settings - moved beside stats */}
+            <div>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Event Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Access Code</span>
+                      <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                        {event?.accessCode}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Public Event</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${event?.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {event?.isPublic ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Guest Uploads</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${event?.allowGuestUploads ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {event?.allowGuestUploads ? 'Enabled' : 'Disabled'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Approval Required</span>
+                      <span className={`text-xs px-2 py-1 rounded-full ${event?.requireApproval ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
+                        {event?.requireApproval ? 'Yes' : 'No'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="pt-4 border-t">
+                    <Link href={`/events/${eventCode}`} target="_blank">
+                      <Button size="sm" className="px-3 py-1.5 text-sm">
+                        View Guest Page
+                      </Button>
+                    </Link>
+                  </div>
+                  {isEventOwner && !event?.isPublic && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm font-medium mb-2">Access Code</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{event?.accessCode}</span>
+                        <form action={regenerateAccessCode}>
+                          <input type="hidden" name="eventId" value={String(eventId)} />
+                          <Button size="sm" variant="outline">Regenerate</Button>
+                        </form>
+                      </div>
+                      <p className="text-xs text-gray-500">Share this 6-character code with guests to access a private event.</p>
+                    </div>
+                  )}
+                  <div className="pt-4 border-t">
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium">Guest QR Code</p>
+                      <EventQr code={eventCode} size={160} compact />
+                    </div>
+                  </div>
+                  {isEventOwner && (
+                    <div className="pt-4 border-t">
+                      <p className="text-sm font-medium mb-2">Edit Event</p>
+                      <form action={saveEvent} className="space-y-3">
+                        <input type="hidden" name="eventId" value={String(eventId)} />
+                        <div className="space-y-1.5">
+                          <Label htmlFor="name">Name</Label>
+                          <Input id="name" name="name" defaultValue={event?.name} required maxLength={200} />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="isPublic">Public</Label>
+                            <p className="text-xs text-gray-500">Visible to anyone with the link</p>
+                          </div>
+                          <input id="isPublic" name="isPublic" type="checkbox" defaultChecked={!!event?.isPublic} className="h-4 w-4" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="allowGuestUploads">Guest uploads</Label>
+                            <p className="text-xs text-gray-500">Allow guests to upload photos</p>
+                          </div>
+                          <input id="allowGuestUploads" name="allowGuestUploads" type="checkbox" defaultChecked={!!event?.allowGuestUploads} className="h-4 w-4" />
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <Label htmlFor="requireApproval">Require approval</Label>
+                            <p className="text-xs text-gray-500">New uploads need approval</p>
+                          </div>
+                          <input id="requireApproval" name="requireApproval" type="checkbox" defaultChecked={!!event?.requireApproval} className="h-4 w-4" />
+                        </div>
+                        <div className="flex justify-end pt-2">
+                          <Button type="submit" size="sm" variant="default">Save Event Settings</Button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
           {/* Event Details */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {event?.description ? (
-                <p className="text-gray-700">{event?.description}</p>
-              ) : (
-                <p className="text-gray-500 italic">No description provided</p>
-              )}
-            </CardContent>
-          </Card>
+          {/* Event Details - shifted up (removed from here) */}
           {/* Photo Upload */}
           <PhotoUpload eventId={eventId} teamPlanName={(event as any)?.team?.planName ?? null} />
           {/* Photo Approval */}
@@ -226,99 +342,7 @@ export default async function EventPage({ params }: EventPageProps) {
               />
             </CardContent>
           </Card>
-          {/* Event Settings */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Event Settings</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Access Code</span>
-                  <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                    {event?.accessCode}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Public Event</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${event?.isPublic ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {event?.isPublic ? 'Yes' : 'No'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Guest Uploads</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${event?.allowGuestUploads ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {event?.allowGuestUploads ? 'Enabled' : 'Disabled'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Approval Required</span>
-                  <span className={`text-xs px-2 py-1 rounded-full ${event?.requireApproval ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}`}>
-                    {event?.requireApproval ? 'Yes' : 'No'}
-                  </span>
-                </div>
-              </div>
-              <div className="pt-4 border-t">
-                <Link href={`/events/${eventCode}`} target="_blank">
-                  <Button size="sm" className="px-3 py-1.5 text-sm">
-                    View Guest Page
-                  </Button>
-                </Link>
-              </div>
-              {isEventOwner && !event?.isPublic && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium mb-2">Access Code</p>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">{event?.accessCode}</span>
-                    <form action={regenerateAccessCode}>
-                      <input type="hidden" name="eventId" value={String(eventId)} />
-                      <Button size="sm" variant="outline">Regenerate</Button>
-                    </form>
-                  </div>
-                  <p className="text-xs text-gray-500">Share this 6-character code with guests to access a private event.</p>
-                </div>
-              )}
-              <div className="pt-4 border-t">
-                <div className="space-y-3">
-                  <p className="text-sm font-medium">Guest QR Code</p>
-                  <EventQr code={eventCode} size={160} compact />
-                </div>
-              </div>
-              {isEventOwner && (
-                <div className="pt-4 border-t">
-                  <p className="text-sm font-medium mb-2">Edit Event</p>
-                  <form action={saveEvent} className="space-y-3">
-                    <input type="hidden" name="eventId" value={String(eventId)} />
-                    <div className="space-y-1.5">
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" name="name" defaultValue={event?.name} required maxLength={200} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="isPublic">Public</Label>
-                        <p className="text-xs text-gray-500">Visible to anyone with the link</p>
-                      </div>
-                      <input id="isPublic" name="isPublic" type="checkbox" defaultChecked={!!event?.isPublic} className="h-4 w-4" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="allowGuestUploads">Guest uploads</Label>
-                        <p className="text-xs text-gray-500">Allow guests to upload photos</p>
-                      </div>
-                      <input id="allowGuestUploads" name="allowGuestUploads" type="checkbox" defaultChecked={!!event?.allowGuestUploads} className="h-4 w-4" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="requireApproval">Require approval</Label>
-                        <p className="text-xs text-gray-500">New uploads need approval</p>
-                      </div>
-                      <input id="requireApproval" name="requireApproval" type="checkbox" defaultChecked={!!event?.requireApproval} className="h-4 w-4" />
-                    </div>
-                  </form>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+
           {/* Danger Zone */}
           {isEventOwner && (
             <div className="pt-6 mt-2 border-t">
@@ -338,6 +362,7 @@ export default async function EventPage({ params }: EventPageProps) {
               </form>
             </div>
           )}
+
         </div>
       </div>
     </section>
