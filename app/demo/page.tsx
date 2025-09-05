@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
+import { UserMenu } from '@/components/user-menu';
 import { brand } from '@/lib/brand';
 
 // Thumbnail child component to avoid hook-in-map error
@@ -630,6 +631,8 @@ export default function DemoGallery() {
           <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
             <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
             <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
+            <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
+            <UserMenu />
           </nav>
         </div>
       </header>

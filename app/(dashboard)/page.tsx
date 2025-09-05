@@ -4,31 +4,11 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
-import { UserMenu } from '@/components/user-menu';
 
 
 export default function HomePage() {
   return (
     <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-transparent">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 shadow-lg">
-                <img src="/favicon.ico" alt="Logo" className="h-8 w-8" />
-              </span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">memories<span className="text-amber-600">Vault</span></span>
-            </Link>
-          </div>
-          <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
-            <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
-            <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
-            <UserMenu />
-          </nav>
-        </div>
-      </header>
-
       {/* Hero Section with animated gradient background */}
       <section className="py-16 sm:py-24 relative overflow-hidden">
         <div className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-br from-orange-200 via-amber-100 to-blue-200 opacity-60"></div>

@@ -12,7 +12,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
-import { Home, LogOut } from 'lucide-react';
+import { LogOut, User as UserIcon } from 'lucide-react';
 import type { User } from '@/lib/db/schema';
 import useSWR, { mutate } from 'swr';
 
@@ -55,9 +55,9 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="flex flex-col gap-1">
         <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard" className="flex w-full items-center">
-            <Home className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
+          <Link href="/dashboard/general" className="flex w-full items-center">
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>Edit Profile</span>
           </Link>
         </DropdownMenuItem>
         <form action={handleSignOut} className="w-full">
