@@ -78,11 +78,36 @@ export default function GeneralPage() {
     {}
   );
 
+  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const planName = (user && 'team' in user && (user as any).team?.planName) || 'free';
+  const teamName = (user && 'team' in user && (user as any).team?.name) || 'No team';
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         General Settings
       </h1>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Subscription Information</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <div>
+              <span className="font-medium text-gray-700">Plan:</span>
+              <span className="ml-2 text-orange-600 font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Team:</span>
+              <span className="ml-2">{teamName}</span>
+            </div>
+            <div>
+              <span className="font-medium text-gray-700">Email:</span>
+              <span className="ml-2">{user?.email}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -90,9 +115,7 @@ export default function GeneralPage() {
         </CardHeader>
         <CardContent>
           <form className="space-y-4" action={formAction}>
-            <Suspense fallback={<AccountForm state={state} />}>
-              <AccountFormWithData state={state} />
-            </Suspense>
+            <AccountFormWithData state={state} />
             {state.error && (
               <p className="text-red-500 text-sm">{state.error}</p>
             )}
