@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,9 @@ import UpdateToast from '@/components/update-toast';
 export default function NewEventPage() {
   return (
     <>
-      <UpdateToast />
+      <React.Suspense fallback={null}>
+        <UpdateToast />
+      </React.Suspense>
       <section className="flex-1 p-4 lg:p-8">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center mb-6">
