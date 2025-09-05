@@ -20,7 +20,7 @@ const NewEventPage = () => {
   });
   const { data: events } = useSWR('/api/events', (url) => fetch(url).then(res => res.json()));
 
-  const eventLimit = dashboardInfo?.team?.eventLimit;
+  const eventLimit = dashboardInfo?.eventLimit;
   const eventCount = events?.length ?? 0;
   const eventLimitReached = eventLimit !== null && typeof eventLimit === 'number' && eventCount >= eventLimit;
 

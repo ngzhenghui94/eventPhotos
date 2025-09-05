@@ -10,7 +10,6 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signOut } from '@/app/(login)/actions';
 import { useRouter } from 'next/navigation';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import type { User } from '@/lib/db/schema';
@@ -24,7 +23,7 @@ export function UserMenu() {
   const router = useRouter();
 
   async function handleSignOut() {
-    await signOut();
+    await fetch('/api/auth/signout', { method: 'POST' });
     mutate('/api/user');
     router.push('/');
   }

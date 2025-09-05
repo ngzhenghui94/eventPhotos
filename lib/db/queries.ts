@@ -1,6 +1,112 @@
+// Update user's subscription plan and status
+export async function updateUserSubscription({ userId, planName, subscriptionStatus, stripeCustomerId, stripeSubscriptionId, subscriptionStart, subscriptionEnd }: {
+  userId: number,
+  planName: string,
+  subscriptionStatus: string,
+  stripeCustomerId?: string,
+  stripeSubscriptionId?: string,
+  subscriptionStart?: Date | null,
+  subscriptionEnd?: Date | null
+}) {
+  await db.update(users)
+    .set({
+      planName,
+      subscriptionStatus,
+      stripeCustomerId,
+      stripeSubscriptionId,
+      subscriptionStart,
+      subscriptionEnd,
+      updatedAt: new Date()
+    })
+    .where(eq(users.id, userId));
+// ...existing code...
+}
+// Helper to log activity
+export async function logActivity({ userId, action, ipAddress, detail }: { userId: number, action: string, ipAddress?: string, detail?: string }) {
+  await db.insert(activityLogs).values({
+    userId,
+    action,
+    ipAddress: ipAddress || null,
+    detail: detail || null,
+  });
+}
+// Fetch recent activity logs for an event
+export async function getActivityLogs(eventId: number, limit: number = 50) {
+  // Fetch recent logs for all users, optionally filter by userId if needed
+  const rows = await db
+    .select({
+      id: activityLogs.id,
+      userId: activityLogs.userId,
+      action: activityLogs.action,
+      detail: activityLogs.detail,
+      timestamp: activityLogs.timestamp,
+      ipAddress: activityLogs.ipAddress,
+    })
+    .from(activityLogs)
+    .orderBy(desc(activityLogs.timestamp))
+    .limit(limit);
+  return rows;
+}
+// Fetch photo by id
+export async function getPhotoById(photoId: number) {
+  const photo = await db.select().from(photos).where(eq(photos.id, photoId)).limit(1);
+  return photo[0] || null;
+}
+// Checks if a user can access an event by id and optional access code
+export async function canUserAccessEvent(eventId: number, userId?: number, code?: string | null) {
+  // Fetch event
+  const event = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+  if (!event[0]) return false;
+  // Public event or correct access code
+  if (event[0].isPublic || (code && code === event[0].accessCode)) return true;
+  // Owner access
+  if (userId && userId === event[0].createdBy) return true;
+  return false;
+}
+
+// Fetch event by id
+export async function getEventById(eventId: number) {
+  const event = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+  return event[0] || null;
+}
+export async function getPhotosForEvent(eventId: number) {
+  const rows = await db
+    .select({
+      id: photos.id,
+      filename: photos.filename,
+      filePath: photos.filePath,
+      originalFilename: photos.originalFilename,
+      mimeType: photos.mimeType,
+      fileSize: photos.fileSize,
+      eventId: photos.eventId,
+      uploadedAt: photos.uploadedAt,
+      isApproved: photos.isApproved,
+      uploadedById: photos.uploadedBy,
+      guestName: photos.guestName,
+      guestEmail: photos.guestEmail,
+    })
+    .from(photos)
+    .where(eq(photos.eventId, eventId))
+    .orderBy(desc(photos.uploadedAt));
+
+  return rows.map((r) => ({
+    id: r.id,
+    filename: r.filename,
+    filePath: r.filePath,
+    originalFilename: r.originalFilename,
+    mimeType: r.mimeType,
+    fileSize: r.fileSize,
+    eventId: r.eventId,
+    uploadedAt: r.uploadedAt,
+    isApproved: r.isApproved,
+    uploadedBy: r.uploadedById,
+    guestName: r.guestName,
+    guestEmail: r.guestEmail,
+  }));
+}
 import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users, events, photos, ActivityType } from './schema';
+import { activityLogs, users, events, photos, ActivityType } from './schema';
 
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
@@ -24,7 +130,7 @@ export async function getUser() {
     return null;
   }
 
-  // Get user and their team/plan
+  // Get user
   const result = await db
     .select({
       id: users.id,
@@ -37,13 +143,9 @@ export async function getUser() {
       emailVerifiedAt: users.emailVerifiedAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
-      deletedAt: users.deletedAt,
-      teamId: teamMembers.teamId,
-      teamName: teams.name
+      deletedAt: users.deletedAt
     })
     .from(users)
-    .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
     .where(and(eq(users.id, sessionData.user.id), isNull(users.deletedAt)))
     .limit(1);
 
@@ -54,309 +156,8 @@ export async function getUser() {
   return result[0];
 }
 
-export async function logActivity(teamId: number, userId: number | null, action: ActivityType) {
-  await db.insert(activityLogs).values({
-    teamId,
-    userId,
-    action,
-    timestamp: new Date(),
-  });
-}
 
-export async function getTeamByStripeCustomerId(customerId: string) {
-  const result = await db
-    .select()
-    .from(teams)
-    .where(eq(teams.stripeCustomerId, customerId))
-    .limit(1);
-
-  return result.length > 0 ? result[0] : null;
-}
-
-export async function updateTeamSubscription(
-  teamId: number,
-  subscriptionData: {
-    stripeSubscriptionId: string | null;
-    stripeProductId: string | null;
-    planName: string | null;
-    subscriptionStatus: string;
-  }
-) {
-  await db
-    .update(teams)
-    .set({
-      ...subscriptionData,
-      updatedAt: new Date()
-    })
-    .where(eq(teams.id, teamId));
-}
-
-export async function getUserWithTeam(userId: number) {
-  const result = await db
-    .select({
-      user: users,
-      teamId: teamMembers.teamId
-    })
-    .from(users)
-    .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  return result[0];
-}
-
-export async function getActivityLogs() {
-  const user = await getUser();
-  if (!user) {
-    throw new Error('User not authenticated');
-  }
-
-  return await db
-    .select({
-      id: activityLogs.id,
-      action: activityLogs.action,
-      timestamp: activityLogs.timestamp,
-      ipAddress: activityLogs.ipAddress,
-      userName: users.name
-    })
-    .from(activityLogs)
-    .leftJoin(users, eq(activityLogs.userId, users.id))
-    .where(eq(activityLogs.userId, user.id))
-    .orderBy(desc(activityLogs.timestamp))
-    .limit(10);
-}
-
-export async function getTeamForUser() {
-  const user = await getUser();
-  if (!user) {
-    return null;
-  }
-
-  const result = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    with: {
-      team: {
-        with: {
-          teamMembers: {
-            with: {
-              user: {
-                columns: {
-                  id: true,
-                  name: true,
-                  email: true
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  });
-
-  return result?.team || null;
-}
-
-
-// Event-related queries
-export async function getEventsForTeam(teamId: number) {
-  return await db
-    .select({
-      id: events.id,
-  eventCode: events.eventCode,
-      name: events.name,
-      description: events.description,
-      date: events.date,
-      location: events.location,
-      isPublic: events.isPublic,
-      allowGuestUploads: events.allowGuestUploads,
-      requireApproval: events.requireApproval,
-      createdAt: events.createdAt,
-      ownerName: users.name,
-      ownerId: events.createdBy
-    })
-    .from(events)
-    .leftJoin(users, eq(events.createdBy, users.id))
-    .where(eq(events.teamId, teamId))
-    .orderBy(desc(events.createdAt));
-}
-
-export async function getEventsWithPhotoCountForTeam(teamId: number) {
-  const eventsData = await db
-    .select({
-      id: events.id,
-      eventCode: events.eventCode,
-      name: events.name,
-      description: events.description,
-      date: events.date,
-      location: events.location,
-      isPublic: events.isPublic,
-      allowGuestUploads: events.allowGuestUploads,
-      requireApproval: events.requireApproval,
-      createdAt: events.createdAt,
-      ownerName: users.name,
-      ownerId: events.createdBy
-    })
-    .from(events)
-    .leftJoin(users, eq(events.createdBy, users.id))
-    .where(eq(events.teamId, teamId))
-    .orderBy(desc(events.createdAt));
-
-  if (eventsData.length === 0) {
-    return [];
-  }
-
-  // Get photo counts for all events
-  const photoCounts = await db
-    .select({
-      eventId: photos.eventId,
-      photoCount: sql<number>`count(*)`.as('photoCount')
-    })
-    .from(photos)
-    .where(inArray(photos.eventId, eventsData.map(e => e.id)))
-    .groupBy(photos.eventId);
-
-  const photoCountMap = new Map(photoCounts.map(pc => [pc.eventId, pc.photoCount]));
-
-  return eventsData.map(event => ({
-    ...event,
-    photoCount: photoCountMap.get(event.id) || 0
-  }));
-}
-
-export async function getEventById(eventId: number) {
-  const result = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: {
-      createdBy: {
-        columns: { id: true, name: true, email: true }
-      },
-      team: {
-        columns: {
-          id: true,
-          name: true,
-          planName: true,
-        }
-      }
-    }
-  });
-
-  return result;
-}
-
-export async function getPhotosForEvent(eventId: number) {
-  const rows = await db
-    .select({
-      id: photos.id,
-      filename: photos.filename,
-      filePath: photos.filePath,
-      originalFilename: photos.originalFilename,
-      mimeType: photos.mimeType,
-      fileSize: photos.fileSize,
-      eventId: photos.eventId,
-      uploadedAt: photos.uploadedAt,
-      isApproved: photos.isApproved,
-      uploadedById: photos.uploadedBy,
-      guestName: photos.guestName,
-      guestEmail: photos.guestEmail,
-      userId: users.id,
-      userName: users.name,
-      userEmail: users.email,
-    })
-    .from(photos)
-    .leftJoin(users, eq(photos.uploadedBy, users.id))
-    .where(eq(photos.eventId, eventId))
-    .orderBy(desc(photos.uploadedAt));
-
-  return rows.map((r) => ({
-    id: r.id,
-    filename: r.filename,
-    filePath: r.filePath,
-    originalFilename: r.originalFilename,
-    mimeType: r.mimeType,
-    fileSize: r.fileSize,
-    eventId: r.eventId,
-    uploadedAt: r.uploadedAt,
-    isApproved: r.isApproved,
-    uploadedBy: r.uploadedById,
-    uploadedByUser: r.userId ? { id: r.userId, name: r.userName, email: r.userEmail! } : null,
-    guestName: r.guestName,
-    guestEmail: r.guestEmail,
-  }));
-}
-
-export async function getPhotoById(photoId: number) {
-  const result = await db.query.photos.findFirst({
-    where: eq(photos.id, photoId),
-    with: {
-      event: {
-        with: {
-          createdBy: { columns: { id: true, name: true, email: true } },
-          team: {
-            columns: {
-              id: true,
-              name: true
-            }
-          }
-        }
-      }
-    }
-  });
-
-  return result;
-}
-
-// Check if user can access event (owner, team member, or public event)
-export async function canUserAccessEvent(eventId: number, userId?: number, accessCode?: string | null) {
-  const event = await getEventById(eventId);
-  if (!event) return false;
-
-  // Public events can be accessed by anyone
-  if (event.isPublic) return true;
-
-  // If a valid access code is provided, allow access
-  if (accessCode && accessCode.toUpperCase() === event.accessCode.toUpperCase()) return true;
-
-  // Must be authenticated for private events
-  if (!userId) return false;
-
-  // Owner can always access
-  if (event.createdBy?.id === userId) return true;
-
-  // Team members can access
-  const userTeam = await getUserWithTeam(userId);
-  if (userTeam && userTeam.teamId === event.teamId) return true;
-
-  return false;
-}
-
-// Check if user can upload photos to event
-export async function canUserUploadToEvent(
-  eventId: number,
-  userId?: number,
-  accessCode?: string | null
-) {
-  const event = await getEventById(eventId);
-  if (!event) return false;
-
-  // Owner can always upload
-  if (userId && event.createdBy?.id === userId) return true;
-
-  // Team members can upload
-  if (userId) {
-    const userTeam = await getUserWithTeam(userId);
-    if (userTeam && userTeam.teamId === event.teamId) return true;
-  }
-
-  // Guest uploads allowed when enabled:
-  // - Public events: anyone can upload when allowGuestUploads is true
-  // - Private events: require a matching access code
-  if (event.allowGuestUploads) {
-    if (event.isPublic) return true;
-    if (accessCode && accessCode.toUpperCase() === event.accessCode.toUpperCase()) return true;
-  }
-
-  return false;
-}
+// ...existing code...
 
 export async function getEventByAccessCode(code: string) {
   return await db.query.events.findFirst({

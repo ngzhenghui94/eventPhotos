@@ -1,6 +1,6 @@
 import { requireSuperAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
-import { events, users, teams } from '@/lib/db/schema';
+import { events, users } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,15 +17,13 @@ export default async function AdminEventsPage() {
   eventCode: events.eventCode,
       accessCode: events.accessCode,
       isPublic: events.isPublic,
-      teamName: teams.name,
-      teamId: teams.id,
+  // Teams feature removed: no teamName, teamId
       ownerId: users.id,
       ownerName: users.name,
       ownerEmail: users.email
     })
     .from(events)
-    .leftJoin(users, eq(events.createdBy, users.id))
-    .leftJoin(teams, eq(events.teamId, teams.id))
+  .leftJoin(users, eq(events.createdBy, users.id))
     .orderBy(desc(events.createdAt));
 
   return (
@@ -48,7 +46,7 @@ export default async function AdminEventsPage() {
             <CardContent className="text-sm text-gray-600">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                 <div>Owner: {e.ownerName} ({e.ownerEmail})</div>
-                <div>Team: {e.teamName}</div>
+                {/* Teams feature removed: no team info shown */}
                 <div>Access: {e.isPublic ? 'Public' : 'Private'} • Event Code: {e.eventCode} • Access Code: {e.accessCode} • <Link className="text-blue-600" href={`/events/${e.eventCode}`}>Guest link</Link></div>
               </div>
             </CardContent>

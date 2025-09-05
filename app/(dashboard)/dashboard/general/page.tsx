@@ -1,12 +1,11 @@
 'use client';
 
-import { useActionState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import { updateAccount } from '@/app/(login)/actions';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
@@ -25,12 +24,12 @@ type CurrentUser = {
   createdAt: string | Date;
   updatedAt: string | Date;
   deletedAt: string | Date | null;
-  teamId: number | null;
-  teamName: string | null;
+
 };
 
 type ActionState = {
   name?: string;
+  email?: string;
   error?: string;
   success?: string;
 };
@@ -39,12 +38,16 @@ type AccountFormProps = {
   state: ActionState;
   nameValue?: string;
   emailValue?: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isPending: boolean;
 };
 
 function AccountForm({
   state,
   nameValue = '',
-  emailValue = ''
+  emailValue = '',
+  onChange,
+  isPending
 }: AccountFormProps) {
   return (
     <>
@@ -56,8 +59,10 @@ function AccountForm({
           id="name"
           name="name"
           placeholder="Enter your name"
-          defaultValue={state.name || nameValue}
+          value={state.name || nameValue}
+          onChange={onChange}
           required
+          disabled={isPending}
         />
       </div>
       <div>
@@ -69,8 +74,10 @@ function AccountForm({
           name="email"
           type="email"
           placeholder="Enter your email"
-          defaultValue={emailValue}
+          value={emailValue}
+          onChange={onChange}
           required
+          disabled={isPending}
         />
       </div>
     </>
@@ -78,25 +85,58 @@ function AccountForm({
 }
 
 function AccountFormWithData({ state }: { state: ActionState }) {
-  const { data: user } = useSWR<CurrentUser>('/api/user', fetcher);
-  return (
-    <AccountForm
-      state={state}
-      nameValue={user?.name ?? ''}
-      emailValue={user?.email ?? ''}
-    />
-  );
+  return null; // Not used in refactored version
 }
 
 export default function GeneralPage() {
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
-    updateAccount,
-    {}
-  );
-
   const { data: user } = useSWR<CurrentUser>('/api/user', fetcher);
   const planName = user?.planName || 'free';
-  const teamName = user?.teamName || 'No team';
+  // Subscription expiry progress bar logic
+  const subscriptionStart = user?.subscriptionStart ? new Date(user.subscriptionStart) : null;
+  const subscriptionEnd = user?.subscriptionEnd ? new Date(user.subscriptionEnd) : null;
+  let progress = 0;
+  let daysLeft = null;
+  let totalDays = null;
+  if (subscriptionStart && subscriptionEnd) {
+    const now = new Date();
+    totalDays = Math.round((subscriptionEnd.getTime() - subscriptionStart.getTime()) / (1000 * 60 * 60 * 24));
+    daysLeft = Math.max(0, Math.round((subscriptionEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+    progress = totalDays > 0 ? Math.min(100, Math.round(((totalDays - daysLeft) / totalDays) * 100)) : 0;
+  }
+  const [state, setState] = React.useState<ActionState>({ name: user?.name ?? '', email: user?.email ?? '' });
+  const [isPending, setIsPending] = React.useState(false);
+
+  React.useEffect(() => {
+    setState((prev) => ({ ...prev, name: user?.name ?? '', email: user?.email ?? '' }));
+  }, [user]);
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const { name, value } = e.target;
+    setState((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsPending(true);
+    setState((prev) => ({ ...prev, error: undefined, success: undefined }));
+    try {
+      const res = await fetch('/api/user/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: state.name, email: state.email })
+      });
+      const result = await res.json();
+      if (result.error) {
+        setState((prev) => ({ ...prev, error: result.error }));
+      } else {
+        setState((prev) => ({ ...prev, success: result.success, name: result.name }));
+      }
+    } catch (err) {
+      setState((prev) => ({ ...prev, error: 'Failed to update account.' }));
+    }
+    setIsPending(false);
+  }
+
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
@@ -109,11 +149,31 @@ export default function GeneralPage() {
             <span className="bg-orange-100 rounded-full p-2"><svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg></span>
             <span className="text-2xl font-bold text-orange-800">Subscription Information</span>
           </div>
-          <span className="text-gray-700 mb-2">Your current plan and team details are shown below.</span>
+          <span className="text-gray-700 mb-2">Your current plan details are shown below.</span>
           <div className="flex flex-col gap-1 mt-2">
             <span className="font-medium text-gray-700">Plan: <span className="ml-2 text-orange-600 font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)}</span></span>
-            <span className="font-medium text-gray-700">Team: <span className="ml-2">{teamName}</span></span>
             <span className="font-medium text-gray-700">Email: <span className="ml-2">{user?.email}</span></span>
+            {subscriptionEnd && (
+              <span className="font-medium text-gray-700">Expires: <span className="ml-2">{subscriptionEnd.toLocaleDateString()}</span></span>
+            )}
+            {subscriptionStart && subscriptionEnd && (
+              <div className="mt-2">
+                <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <span>Start: {subscriptionStart.toLocaleDateString()}</span>
+                  <span>End: {subscriptionEnd.toLocaleDateString()}</span>
+                </div>
+                <div className="w-full h-3 bg-orange-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-3 bg-orange-500 rounded-full"
+                    style={{ width: `${progress}%`, transition: 'width 0.5s' }}
+                  />
+                </div>
+                <div className="flex justify-between text-xs mt-1">
+                  <span>{daysLeft} days left</span>
+                  <span>{progress}% used</span>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center justify-center">
@@ -130,8 +190,14 @@ export default function GeneralPage() {
           <CardTitle>Account Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" action={formAction}>
-            <AccountFormWithData state={state} />
+          <form className="space-y-4" onSubmit={handleSubmit}>
+            <AccountForm
+              state={state}
+              nameValue={user?.name ?? ''}
+              emailValue={user?.email ?? ''}
+              onChange={handleChange}
+              isPending={isPending}
+            />
             {state.error && (
               <p className="text-red-500 text-sm">{state.error}</p>
             )}

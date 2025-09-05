@@ -21,25 +21,10 @@ export default async function AdminTeamsPage() {
     .from(teams)
     .orderBy(desc(teams.updatedAt));
 
-  return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">All Teams</h1>
-      <div className="space-y-3">
-        {all.map((t) => (
-          <Card key={t.id}>
-            <CardHeader>
-              <CardTitle className="text-base">{t.name}</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-600">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div>Plan: {t.planName || '—'}</div>
-                <div>Status: {t.subscriptionStatus || '—'}</div>
-                <div>Stripe Sub: {t.stripeSubscriptionId || '—'}</div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    return (
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">Teams feature removed</h1>
+        <div className="text-gray-600">This page is no longer available.</div>
       </div>
-    </div>
-  );
+    );
 }

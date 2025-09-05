@@ -1,6 +1,6 @@
 
 import { db } from '@/lib/db/drizzle';
-import { teams, teamMembers, users } from '@/lib/db/schema';
+import { users } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 

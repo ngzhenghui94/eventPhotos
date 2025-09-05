@@ -26,13 +26,7 @@ export function uploadLimitBytes(plan: PlanName): number {
   }
 }
 
-export function getTeamPlanName(planName?: string | null): PlanName {
-  return normalizePlanName(planName);
-}
-
-export function getUploadLimitForTeam(planName?: string | null): number {
-  return uploadLimitBytes(getTeamPlanName(planName));
-}
+// Teams feature removed. Use planName directly for limits and caps.
 
 export function eventLimit(plan: PlanName): number | null {
   switch (plan) {
@@ -50,38 +44,4 @@ export function eventLimit(plan: PlanName): number | null {
   }
 }
 
-export function canCreateAnotherEvent(planName?: string | null, currentCount: number = 0) {
-  const plan = getTeamPlanName(planName);
-  const limit = eventLimit(plan);
-  if (limit === null) return true;
-  return currentCount < limit;
-}
-
-export function photoCapPerEvent(plan: PlanName): number {
-  switch (plan) {
-    case 'free':
-      return 20;
-    case 'starter':
-      return 50;
-    case 'hobby':
-      return 100;
-    case 'pro':
-      return 500;
-    case 'business':
-    default:
-      return 1000;
-  }
-function teamsEnabled(plan: PlanName): boolean {
-  switch (plan) {
-    case 'pro':
-    case 'business':
-      return true;
-    default:
-      return false;
-  }
-}
-}
-
-export function getPhotoCapForTeam(planName?: string | null): number {
-  return photoCapPerEvent(getTeamPlanName(planName));
-}
+// ...existing code...

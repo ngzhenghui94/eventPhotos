@@ -129,7 +129,7 @@ export default async function PricingPage() {
               'Guest Photo Sharing',
               'Advanced Photo Gallery',
               'Photo Download & Export',
-              'Teams Enabled',
+              // 'Teams Enabled' removed
             ]}
             priceId={proStripeId}
           />

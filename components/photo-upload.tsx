@@ -7,15 +7,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { createSignedUploadUrlsAction, finalizeUploadedPhotosAction } from '@/lib/photos/actions';
-import { getTeamForUser } from '@/lib/db/queries';
-import { getUploadLimitForTeam } from '@/lib/plans';
+import { uploadLimitBytes } from '@/lib/plans';
 
 interface PhotoUploadProps {
   eventId: number;
-  teamPlanName?: string | null;
+  planName?: string | null;
 }
 
-export function PhotoUpload({ eventId, teamPlanName }: PhotoUploadProps) {
+export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -153,9 +152,9 @@ export function PhotoUpload({ eventId, teamPlanName }: PhotoUploadProps) {
             </p>
             <p className="text-sm text-gray-500">
               Supports JPG, PNG, GIF up to {(() => {
-                const bytes = maxBytes ?? getUploadLimitForTeam(teamPlanName);
+                const bytes = maxBytes ?? uploadLimitBytes(planName ?? 'free');
                 // If Starter plan, always show 20MB
-                if ((teamPlanName?.toLowerCase() ?? '') === 'starter') return 20;
+                if ((planName?.toLowerCase() ?? '') === 'starter') return 20;
                 return Math.round(bytes / (1024 * 1024));
               })()}MB each
             </p>

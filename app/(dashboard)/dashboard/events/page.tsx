@@ -1,16 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, Plus } from 'lucide-react';
-import { getTeamForUser, getEventsForTeam } from '@/lib/db/queries';
+import { getUserEvents } from '@/lib/db/queries';
+import { db } from '@/lib/db/drizzle';
+import { events } from '@/lib/db/schema';
+import { getUser } from '@/lib/db/queries';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import UpdateToast from '@/components/update-toast';
 
 export default async function EventsPage() {
-  const team = await getTeamForUser();
-  if (!team) redirect('/api/auth/google');
-
-  const items = await getEventsForTeam(team.id);
+  const user = await getUser();
+  const items = await db.query.events.findMany({
+    where: eq(events.createdBy, user.id),
+  });
 
   return (
     <section className="flex-1 p-4 lg:p-8">

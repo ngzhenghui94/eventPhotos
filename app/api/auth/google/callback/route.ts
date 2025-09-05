@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { and, eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers, ActivityType } from '@/lib/db/schema';
+import { users, ActivityType } from '@/lib/db/schema';
 import { exchangeCodeForTokens, fetchGoogleUserInfo, readAndClearOAuthCookies } from '@/lib/auth/google';
 import { setSession } from '@/lib/auth/session';
 import { logActivity } from '@/lib/db/queries';
@@ -34,20 +34,18 @@ export async function GET(req: NextRequest) {
       }).returning();
       existing = created;
 
-      // Create a personal team and membership as owner
-      const [team] = await db.insert(teams).values({ name: `${email}'s Team` }).returning();
-      await db.insert(teamMembers).values({ userId: existing.id, teamId: team.id, role: 'owner' });
-      await logActivity(team.id, existing.id, ActivityType.SIGN_UP);
+
     }
 
-    // Ensure user has at least one team membership
-    const memberships = await db.select().from(teamMembers).where(eq(teamMembers.userId, existing.id)).limit(1);
-    const teamId = memberships?.[0]?.teamId;
 
-    await setSession(existing);
-    if (teamId) {
-      await logActivity(teamId, existing.id, ActivityType.SIGN_IN);
-    }
+  await setSession(existing);
+  // Log sign-in activity
+  await logActivity({
+    userId: existing.id,
+    action: 'SIGN_IN',
+    detail: `User signed in with Google: ${existing.email}`,
+    ipAddress: req.headers.get('x-forwarded-for') || undefined,
+  });
 
     // Resolve and sanitize redirect: only allow same-origin destinations
     const finalUrl = (() => {

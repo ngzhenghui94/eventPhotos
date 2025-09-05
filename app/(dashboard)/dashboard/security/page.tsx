@@ -1,10 +1,9 @@
 'use client';
+import React from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Loader2 } from 'lucide-react';
-import { useActionState } from 'react';
-import { deleteAccount } from '@/app/(login)/actions';
 
 type DeleteState = {
   error?: string;
@@ -12,10 +11,27 @@ type DeleteState = {
 };
 
 export default function SecurityPage() {
-  const [deleteState, deleteAction, isDeletePending] = useActionState<
-    DeleteState,
-    FormData
-  >(deleteAccount, {});
+  const [deleteState, setDeleteState] = React.useState<DeleteState>({});
+  const [isDeletePending, setIsDeletePending] = React.useState(false);
+
+  async function handleDelete(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setIsDeletePending(true);
+    setDeleteState({});
+    try {
+      const res = await fetch('/api/user/delete', { method: 'POST' });
+      const result = await res.json();
+      if (result.error) {
+        setDeleteState({ error: result.error });
+      } else {
+        setDeleteState({ success: result.success });
+        // Optionally redirect or sign out here
+      }
+    } catch {
+      setDeleteState({ error: 'Failed to delete account.' });
+    }
+    setIsDeletePending(false);
+  }
 
   return (
     <section className="flex-1 p-4 lg:p-8">
@@ -45,7 +61,7 @@ export default function SecurityPage() {
           {deleteState?.error && (
             <p className="text-red-500 text-sm mb-2">{deleteState.error}</p>
           )}
-          <form action={deleteAction} className="space-y-4">
+          <form onSubmit={handleDelete} className="space-y-4">
             <Button
               type="submit"
               variant="destructive"
@@ -64,7 +80,7 @@ export default function SecurityPage() {
                 </>
               )}
             </Button>
-          </form>
+        </form>
         </CardContent>
       </Card>
     </section>

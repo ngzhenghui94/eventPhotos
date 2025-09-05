@@ -1,18 +1,11 @@
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { events, teamMembers, ActivityType, teams } from '@/lib/db/schema';
+import { events, ActivityType } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { eq, sql } from 'drizzle-orm';
-import { canCreateAnotherEvent, getTeamPlanName } from '@/lib/plans';
+// import { canCreateAnotherEvent, getTeamPlanName } from '@/lib/plans'; // Teams feature removed
 
-// Helper to get user's team ID
-async function getUserTeamId(userId: number) {
-  const result = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, userId),
-    columns: { teamId: true }
-  });
-  return result?.teamId || null;
-}
+// Teams feature removed
 
 // Create Event Action
 const createEventSchema = z.object({
@@ -28,47 +21,22 @@ const createEventSchema = z.object({
 export const createEvent = validatedActionWithUser(
   createEventSchema,
   async (data, _, user) => {
-    const teamId = await getUserTeamId(user.id);
-    
-    if (!teamId) {
-      return { error: 'User is not part of a team' };
-    }
-
-    // Enforce plan event limits
-    const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
-    const planName = getTeamPlanName(team?.planName ?? null);
-    const result = await db
-      .select({ count: sql<number>`count(*)` })
-      .from(events)
-      .where(eq(events.teamId, teamId));
-    const currentCount = result?.[0]?.count ?? 0;
-    if (!canCreateAnotherEvent(planName, currentCount)) {
-  let limitText = 'unlimited';
-  if (planName === 'free' || planName === 'starter') limitText = '1 event';
-  else if (planName === 'hobby') limitText = '5 events';
-  else if (planName === 'pro') limitText = '20 events';
-      return { error: `Your plan (${planName}) allows ${limitText}. Please upgrade to create more events.` };
-    }
-
-  // Generate codes
-  const eventCode = generateEventCode();
+    // Generate codes
+    const eventCode = generateEventCode();
     const accessCode = generateAccessCode();
-    
     try {
       const [newEvent] = await db.insert(events).values({
         name: data.name,
         description: (data.description ?? '').toString(),
         date: new Date(data.date),
         location: (data.location ?? '').toString(),
-          eventCode,
+        eventCode,
         accessCode,
-        teamId,
         createdBy: user.id,
         isPublic: data.isPublic || false,
         allowGuestUploads: data.allowGuestUploads !== false, // Default to true
         requireApproval: data.requireApproval || false,
       }).returning();
-
       return { success: 'Event created successfully', eventId: newEvent.id };
     } catch (error) {
       console.error('Error creating event:', error);
@@ -142,15 +110,10 @@ const deleteEventSchema = z.object({
 export const deleteEvent = validatedActionWithUser(
   deleteEventSchema,
   async (data, _, user) => {
-    const teamId = await getUserTeamId(user.id);
-    
-    if (!teamId) {
-      return { error: 'User is not part of a team' };
-    }
+  // Teams feature removed
 
     try {
       await db.delete(events).where(eq(events.id, data.eventId));
-
       return { success: 'Event deleted successfully' };
     } catch (error) {
       console.error('Error deleting event:', error);

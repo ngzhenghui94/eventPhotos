@@ -2,29 +2,22 @@
 
 import { redirect } from 'next/navigation';
 import { createCheckoutSession, createCustomerPortalSession } from './stripe';
-import { withTeam } from '@/lib/auth/middleware';
-import { updateTeamSubscription } from '@/lib/db/queries';
+// import removed: withTeam
+// import removed: updateTeamSubscription
 
-export const checkoutAction = withTeam(async (formData, team) => {
+
+export const checkoutAction = async (formData: FormData) => {
   const priceId = formData.get('priceId') as string;
-  if (!team) {
-    // Should be handled by withTeam, but keep a safe fallback path
-    return;
-  }
-  await createCheckoutSession({ team: team, priceId });
-});
+  // TODO: Replace team logic with user or event context as needed
+  await createCheckoutSession({ priceId });
+};
 
-export const customerPortalAction = withTeam(async (_, team) => {
-  const portalSession = await createCustomerPortalSession(team);
-  redirect(portalSession.url);
-});
+export const customerPortalAction = async () => {
+  // TODO: Replace team logic with user or event context as needed
+  await createCustomerPortalSession();
+};
 
-export const chooseFreePlanAction = withTeam(async (_, team) => {
-  await updateTeamSubscription(team.id, {
-    stripeSubscriptionId: null,
-    stripeProductId: null,
-    planName: 'Free',
-    subscriptionStatus: 'free',
-  });
+export const chooseFreePlanAction = async () => {
+  // TODO: Replace team logic with user or event context as needed
   redirect('/dashboard');
-});
+};

@@ -1,6 +1,6 @@
 import { requireSuperAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
-import { invitations, users, teams } from '@/lib/db/schema';
+import { invitations, users } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,13 +15,12 @@ export default async function AdminInvitationsPage() {
       role: invitations.role,
       status: invitations.status,
       invitedAt: invitations.invitedAt,
-      teamName: teams.name,
+  // Teams feature removed: no teamName
       invitedByName: users.name,
       invitedByEmail: users.email
     })
     .from(invitations)
-    .leftJoin(users, eq(invitations.invitedBy, users.id))
-    .leftJoin(teams, eq(invitations.teamId, teams.id))
+  .leftJoin(users, eq(invitations.invitedBy, users.id))
     .orderBy(desc(invitations.invitedAt))
     .limit(200);
 
@@ -50,7 +49,7 @@ export default async function AdminInvitationsPage() {
             </CardHeader>
             <CardContent className="text-sm text-gray-600">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                <div>Team: {inv.teamName}</div>
+                {/* Teams feature removed: no team info shown */}
                 <div>Invited By: {inv.invitedByName} ({inv.invitedByEmail})</div>
                 <div>At: {new Date(inv.invitedAt as any).toLocaleString()}</div>
               </div>

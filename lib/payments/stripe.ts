@@ -1,34 +1,23 @@
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
-import { Team } from '@/lib/db/schema';
+// import removed: Team
 import {
-  getTeamByStripeCustomerId,
   getUser,
-  updateTeamSubscription
+  updateUserSubscription
 } from '@/lib/db/queries';
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 export const stripe: Stripe | null = STRIPE_SECRET ? new Stripe(STRIPE_SECRET) : null;
 
-export async function createCheckoutSession({
-  team,
-  priceId
-}: {
-  team: Team | null;
-  priceId: string;
-}) {
+export async function createCheckoutSession({ priceId }: { priceId: string }) {
   const user = await getUser();
-
-  if (!team || !user) {
+  if (!user) {
     const back = `/api/stripe/start?priceId=${encodeURIComponent(priceId)}`;
     redirect(`/api/auth/google?redirect=${encodeURIComponent(back)}`);
   }
-
   if (!stripe) {
-    // Stripe not configured; route user to pricing page
     redirect('/pricing');
   }
-
   const session = await stripe.checkout.sessions.create({
     payment_method_types: ['card'],
     line_items: [
@@ -40,115 +29,50 @@ export async function createCheckoutSession({
     mode: 'subscription',
     success_url: `${process.env.BASE_URL}/api/stripe/checkout?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${process.env.BASE_URL}/pricing`,
-    customer: team.stripeCustomerId || undefined,
     client_reference_id: user.id.toString(),
-  allow_promotion_codes: true
+    allow_promotion_codes: true
   });
-
   redirect(session.url!);
 }
 
-export async function createCustomerPortalSession(team: Team) {
+export async function createCustomerPortalSession() {
   if (!stripe) {
     redirect('/pricing');
   }
-  if (!team.stripeCustomerId || !team.stripeProductId) {
-    redirect('/pricing');
-  }
-
-  let configuration: Stripe.BillingPortal.Configuration;
-  const configurations = await stripe.billingPortal.configurations.list();
-
-  if (configurations.data.length > 0) {
-    configuration = configurations.data[0];
-  } else {
-    const product = await stripe.products.retrieve(team.stripeProductId);
-    if (!product.active) {
-      throw new Error("Team's product is not active in Stripe");
-    }
-
-    const prices = await stripe.prices.list({
-      product: product.id,
-      active: true
-    });
-    if (prices.data.length === 0) {
-      throw new Error("No active prices found for the team's product");
-    }
-
-    configuration = await stripe.billingPortal.configurations.create({
-      business_profile: {
-        headline: 'Manage your subscription'
-      },
-      features: {
-        subscription_update: {
-          enabled: true,
-          default_allowed_updates: ['price', 'quantity', 'promotion_code'],
-          proration_behavior: 'create_prorations',
-          products: [
-            {
-              product: product.id,
-              prices: prices.data.map((price) => price.id)
-            }
-          ]
-        },
-        subscription_cancel: {
-          enabled: true,
-          mode: 'at_period_end',
-          cancellation_reason: {
-            enabled: true,
-            options: [
-              'too_expensive',
-              'missing_features',
-              'switched_service',
-              'unused',
-              'other'
-            ]
-          }
-        },
-        payment_method_update: {
-          enabled: true
-        }
-      }
-    });
-  }
-
-  return stripe.billingPortal.sessions.create({
-    customer: team.stripeCustomerId,
-    return_url: `${process.env.BASE_URL}/dashboard`,
-    configuration: configuration.id
-  });
+  // TODO: Implement user-based Stripe customer lookup
+  // For now, redirect to dashboard
+  redirect('/dashboard');
 }
 
-export async function handleSubscriptionChange(
-  subscription: Stripe.Subscription
-) {
+export async function handleSubscriptionChange(subscription: Stripe.Subscription) {
   const customerId = subscription.customer as string;
-  const subscriptionId = subscription.id;
   const status = subscription.status;
-
-  const team = await getTeamByStripeCustomerId(customerId);
-
-  if (!team) {
-    console.error('Team not found for Stripe customer:', customerId);
-    return;
-  }
-
+  // Find user by Stripe customer ID
+  // This requires storing Stripe customer ID on user record at checkout
+  const user = await findUserByStripeCustomerId(customerId);
+  if (!user) return;
+  const planNickname = subscription.items.data[0]?.price.nickname;
   if (status === 'active' || status === 'trialing') {
-    const plan = subscription.items.data[0]?.plan;
-    await updateTeamSubscription(team.id, {
-      stripeSubscriptionId: subscriptionId,
-      stripeProductId: plan?.product as string,
-      planName: (plan?.product as Stripe.Product).name,
-      subscriptionStatus: status
+    await updateUserSubscription({
+      userId: user.id,
+      planName: planNickname || 'Unknown',
+      subscriptionStatus: 'paid'
     });
   } else if (status === 'canceled' || status === 'unpaid') {
-    await updateTeamSubscription(team.id, {
-      stripeSubscriptionId: null,
-      stripeProductId: null,
-      planName: null,
-      subscriptionStatus: status
+    await updateUserSubscription({
+      userId: user.id,
+      planName: 'Free',
+      subscriptionStatus: 'free'
     });
   }
+}
+// Helper to find user by Stripe customer ID
+import { db } from '@/lib/db/drizzle';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+async function findUserByStripeCustomerId(stripeCustomerId: string) {
+  const result = await db.select().from(users).where(eq(users.stripeCustomerId, stripeCustomerId)).limit(1);
+  return result[0] || null;
 }
 
 export async function getStripePrices() {

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers } from '@/lib/db/schema';
+import { users } from '@/lib/db/schema';
 import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
@@ -67,32 +67,40 @@ export async function GET(request: NextRequest) {
       throw new Error('User not found in database.');
     }
 
-    const userTeam = await db
-      .select({
-        teamId: teamMembers.teamId,
-      })
-      .from(teamMembers)
-      .where(eq(teamMembers.userId, user[0].id))
-      .limit(1);
-
-    if (userTeam.length === 0) {
-      throw new Error('User is not associated with any team.');
+    // Determine plan name from Stripe price or product
+    let planName = plan.nickname;
+    // Try to get product name if nickname is missing and product is not deleted
+    if (!planName && plan.product && typeof plan.product !== 'string' && 'name' in plan.product) {
+      planName = (plan.product as Stripe.Product).name;
     }
-
-    await db
-      .update(teams)
+    // Fallback: map priceId to plan name if needed
+    const priceIdToPlan: Record<string, string> = {
+      // TODO: Fill in with your actual Stripe price IDs from Stripe dashboard
+      'price_starter_id': 'Starter',
+      'price_hobby_id': 'Hobby',
+      'price_pro_id': 'Pro',
+      'price_business_id': 'Business',
+    };
+    if (!planName && plan.id && priceIdToPlan[plan.id]) {
+      planName = priceIdToPlan[plan.id];
+    }
+    if (!planName) {
+      planName = 'Unknown';
+    }
+    await db.update(users)
       .set({
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
-        stripeProductId: productId,
-        planName: (plan.product as Stripe.Product).name,
-        subscriptionStatus: subscription.status,
-        updatedAt: new Date(),
+        subscriptionStatus: 'paid',
+        subscriptionStart: new Date(subscription.start_date * 1000),
+        subscriptionEnd: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
+        planName,
+        updatedAt: new Date()
       })
-      .where(eq(teams.id, userTeam[0].teamId));
+      .where(eq(users.id, Number(userId)));
 
-    await setSession(user[0]);
-    return NextResponse.redirect(new URL('/dashboard', request.url));
+  // Redirect to dashboard/general after successful checkout
+  return NextResponse.redirect(new URL('/dashboard/general', request.url));
   } catch (error) {
     console.error('Error handling successful checkout:', error);
     return NextResponse.redirect(new URL('/error', request.url));

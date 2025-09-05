@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
+import { getUser } from '@/lib/db/queries';
 import { createCheckoutSession } from '@/lib/payments/stripe';
 
 export async function GET(req: NextRequest) {
@@ -15,13 +15,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`/api/auth/google?redirect=${encodeURIComponent(back)}`, req.url));
   }
 
-  const team = await getTeamForUser();
-  if (!team) {
-    return NextResponse.redirect(new URL('/pricing', req.url));
-  }
-
-  // Delegate to shared Stripe helper, which will redirect to session URL
-  await createCheckoutSession({ team, priceId });
-  // createCheckoutSession will redirect; this is a fallback
+  // Teams feature removed; Stripe checkout is not available
   return NextResponse.redirect(new URL('/pricing', req.url));
 }

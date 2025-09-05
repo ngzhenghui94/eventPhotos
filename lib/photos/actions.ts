@@ -2,411 +2,225 @@
 
 import { join } from 'path';
 import { db } from '@/lib/db/drizzle';
-import { photos, events, teamMembers } from '@/lib/db/schema';
+import { photos, events } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { and, eq, inArray, sql } from 'drizzle-orm';
-import { redirect } from 'next/navigation';
 import { uploadToS3, generatePhotoKey, deleteFromS3, getSignedUploadUrl, deriveThumbKey } from '@/lib/s3';
-import { getTeamForUser } from '@/lib/db/queries';
-import { getUploadLimitForTeam, getPhotoCapForTeam } from '@/lib/plans';
+import { uploadLimitBytes } from '@/lib/plans';
 
 export async function uploadPhotosAction(formData: FormData) {
   const user = await getUser();
-  if (!user) {
-  redirect('/api/auth/google');
-  }
+  if (!user) throw new Error('Unauthorized');
 
-  const eventId = parseInt(formData.get('eventId') as string);
-  const files = formData.getAll('photos') as File[];
+    const eventId = parseInt(formData.get('eventId') as string);
+    const files = formData.getAll('photos') as File[];
+    if (!eventId || isNaN(eventId)) throw new Error('Invalid event ID');
 
-  if (!eventId || isNaN(eventId)) {
-    throw new Error('Invalid event ID');
-  }
+    const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
+    if (!event) throw new Error('Event not found');
+    if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
+    if (files.length === 0) throw new Error('No files selected');
 
-  // Verify event exists and user has access
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: { team: true, createdBy: true }
-  });
+    const MAX_FILE_SIZE = uploadLimitBytes('free');
+    const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
+    const currentCount = currentCountRes?.[0]?.count ?? 0;
+    let remaining = Number.MAX_SAFE_INTEGER;
 
-  if (!event) {
-    throw new Error('Event not found');
-  }
-
-  // Check if user is part of the team that owns this event
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
-
-  if (!userTeam || userTeam.teamId !== event.teamId) {
-    throw new Error('You do not have permission to upload photos to this event');
-  }
-
-  if (files.length === 0) {
-    throw new Error('No files selected');
-  }
-
-  const uploadedPhotos = [];
-
-  // Determine plan-specific max size from the event's team
-  const MAX_FILE_SIZE = getUploadLimitForTeam(event.team?.planName);
-
-  // Enforce per-event photo cap by plan
-  const cap = getPhotoCapForTeam(event.team?.planName);
-  const currentCountRes = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(photos)
-    .where(eq(photos.eventId, eventId));
-  const currentCount = currentCountRes?.[0]?.count ?? 0;
-  let remaining = Math.max(0, cap - currentCount);
-  if (remaining <= 0) {
-    throw new Error('Event has reached the photo limit for your plan.');
-  }
-
-  // Only process up to remaining files
-  for (const file of files.slice(0, remaining)) {
-    if (file.size === 0) continue;
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      continue; // Skip non-image files
-    }
-
-  // Validate file size per plan
-  if (file.size > MAX_FILE_SIZE) {
-      continue; // Skip files larger than 10MB
-    }
-
-    try {
-      // Convert file to buffer and upload to S3
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const key = generatePhotoKey(eventId, file.name);
-      await uploadToS3(key, buffer, file.type);
-
-      // Save to database
-      const [photoRecord] = await db.insert(photos).values({
-        filename: key.split('/').pop() || file.name,
-        originalFilename: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-        filePath: `s3:${key}`,
-        eventId,
-        // Attribute dashboard uploads to the event owner for display ("By XXX")
-        uploadedBy: event.createdBy?.id ?? user.id,
-        guestName: null,
-        guestEmail: null,
-        isApproved: !event.requireApproval, // Auto-approve if not required
-      }).returning();
-
-      uploadedPhotos.push(photoRecord);
-    } catch (error) {
-      console.error('Error uploading file:', error);
-      // Continue with other files
-    }
-  }
-
-  if (uploadedPhotos.length === 0) {
-    throw new Error('No photos were uploaded successfully');
-  }
-
-  redirect(`/dashboard/events/${event.eventCode}`);
-}
-
-export async function deletePhotoAction(formData: FormData) {
-  const user = await getUser();
-  if (!user) {
-  redirect('/api/auth/google');
-  }
-
-  const photoId = parseInt(formData.get('photoId') as string);
-  if (!photoId || isNaN(photoId)) {
-    throw new Error('Invalid photo ID');
-  }
-
-  // Get photo with event and team info
-  const photo = await db.query.photos.findFirst({
-    where: eq(photos.id, photoId),
-    with: {
-      event: {
-        with: { team: true }
+    const uploadedPhotos = [];
+    for (const file of files.slice(0, remaining)) {
+      if (file.size === 0) continue;
+      if (!file.type.startsWith('image/')) continue;
+      if (file.size > MAX_FILE_SIZE) continue;
+      try {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const key = generatePhotoKey(eventId, file.name);
+        await uploadToS3(key, buffer, file.type);
+        const [photoRecord] = await db.insert(photos).values({
+          filename: key.split('/').pop() || file.name,
+          originalFilename: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          filePath: `s3:${key}`,
+          eventId,
+          uploadedBy: user.id,
+          guestName: null,
+          guestEmail: null,
+          isApproved: !event.requireApproval,
+        }).returning();
+        uploadedPhotos.push(photoRecord);
+        // Log activity for photo upload
+        const { logActivity } = await import('@/lib/db/queries');
+        await logActivity({
+          userId: user.id,
+          action: 'UPLOAD_PHOTO',
+          detail: `Uploaded photo '${file.name}' to event ${eventId}`,
+        });
+      } catch (error) {
+        console.error('Error uploading file:', error);
       }
     }
-  });
-
-  if (!photo) {
-    throw new Error('Photo not found');
+    if (uploadedPhotos.length === 0) throw new Error('No photos were uploaded successfully');
+    return { success: true, count: uploadedPhotos.length };
   }
 
-  // Check if user has permission (uploaded by them or team member)
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
+  export async function deletePhotoAction(formData: FormData) {
+    const user = await getUser();
+    if (!user) throw new Error('Unauthorized');
 
-  const canDelete = photo.uploadedBy === user.id || 
-                   (userTeam && userTeam.teamId === photo.event.teamId);
+    const photoIdRaw = formData.get('photoId');
+    const photoId = typeof photoIdRaw === 'string' ? parseInt(photoIdRaw) : Number(photoIdRaw);
+    if (!photoId || isNaN(photoId)) throw new Error('Invalid photo ID');
 
-  if (!canDelete) {
-    throw new Error('You do not have permission to delete this photo');
-  }
+    const photoRecord = await db.query.photos.findFirst({ where: eq(photos.id, photoId) });
+    if (!photoRecord) throw new Error('Photo not found');
+    if (photoRecord.uploadedBy !== user.id) throw new Error('You do not have permission to delete this photo');
 
-  // Delete object from S3 if stored there, otherwise try filesystem as fallback
-  try {
-    if (photo.filePath.startsWith('s3:')) {
-      const key = photo.filePath.replace(/^s3:/, '');
-      await deleteFromS3(key);
-      // Also remove generated thumbnails
-      try {
-        const sm = deriveThumbKey(key, 'sm');
-        const md = deriveThumbKey(key, 'md');
-        await deleteFromS3(sm).catch(() => {});
-        await deleteFromS3(md).catch(() => {});
-      } catch {}
-    } else {
-      const fs = require('fs').promises;
-      const filePath = join(process.cwd(), 'public', photo.filePath);
-      await fs.unlink(filePath);
-    }
-  } catch (fileError) {
-    console.error('Error deleting media:', fileError);
-    // Continue with database deletion even if media deletion fails
-  }
-
-  try {
-    // Delete from database
-    await db.delete(photos).where(eq(photos.id, photoId));
-  } catch (error) {
-    console.error('Error deleting photo record:', error);
-    throw new Error('Failed to delete photo');
-  }
-
-  // Perform redirect outside of try/catch so the framework can handle it
-  // Use eventCode for the updated dashboard route
-  redirect(`/dashboard/events/${photo.event.eventCode}`);
-}
-
-// Bulk delete photos: expects eventId and a JSON array of photoIds in formData
-export async function deletePhotosBulkAction(formData: FormData) {
-  const user = await getUser();
-  if (!user) {
-  redirect('/api/auth/google');
-  }
-
-  const rawEventId = formData.get('eventId');
-  const rawIds = formData.get('photoIds');
-  const eventId = Number(rawEventId);
-  if (!eventId || Number.isNaN(eventId)) {
-    throw new Error('Invalid event ID');
-  }
-  let photoIds: number[] = [];
-  try {
-    const parsed = typeof rawIds === 'string' ? JSON.parse(rawIds) : [];
-    if (Array.isArray(parsed)) {
-      photoIds = parsed.map((n) => Number(n)).filter((n) => Number.isFinite(n));
-    }
-  } catch {}
-  if (photoIds.length === 0) {
-    throw new Error('No photos selected');
-  }
-
-  // Verify event and user permissions
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: { team: true }
-  });
-  if (!event) throw new Error('Event not found');
-
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
-  const isCreator = event.createdBy === user.id;
-  const sameTeam = userTeam && userTeam.teamId === event.teamId;
-  if (!isCreator && !sameTeam) {
-    throw new Error('You do not have permission to delete photos for this event');
-  }
-
-  // Fetch target photos that belong to this event
-  const target = await db.query.photos.findMany({
-    where: and(eq(photos.eventId, eventId), inArray(photos.id, photoIds)),
-    columns: { id: true, filePath: true }
-  });
-  if (target.length === 0) {
-    return { count: 0 };
-  }
-  const targetIds = target.map((p) => p.id);
-
-  // Delete media from S3 (original + thumbs when applicable)
-  for (const p of target) {
     try {
-      if (p.filePath?.startsWith('s3:')) {
-        const key = p.filePath.replace(/^s3:/, '');
-        await deleteFromS3(key).catch(() => {});
-        const sm = deriveThumbKey(key, 'sm');
-        const md = deriveThumbKey(key, 'md');
-        await deleteFromS3(sm).catch(() => {});
-        await deleteFromS3(md).catch(() => {});
-      } else if (p.filePath) {
+      if (photoRecord.filePath.startsWith('s3:')) {
+        const key = photoRecord.filePath.replace(/^s3:/, '');
+        await deleteFromS3(key);
+        try {
+          const sm = deriveThumbKey(key, 'sm');
+          const md = deriveThumbKey(key, 'md');
+          await deleteFromS3(sm).catch(() => {});
+          await deleteFromS3(md).catch(() => {});
+        } catch {}
+      } else {
         const fs = require('fs').promises;
-        const filePath = join(process.cwd(), 'public', p.filePath);
-        await fs.unlink(filePath).catch(() => {});
+        const filePath = join(process.cwd(), 'public', photoRecord.filePath);
+        await fs.unlink(filePath);
+      }
+    } catch (fileError) {
+      console.error('Error deleting media:', fileError);
+    }
+    try {
+      await db.delete(photos).where(eq(photos.id, photoId));
+    } catch (error) {
+      console.error('Error deleting photo record:', error);
+      throw new Error('Failed to delete photo');
+    }
+    return { success: true };
+  }
+
+  export async function deletePhotosBulkAction(formData: FormData) {
+    const user = await getUser();
+    if (!user) throw new Error('Unauthorized');
+
+    const rawEventId = formData.get('eventId');
+    const rawIds = formData.get('photoIds');
+    const eventId = Number(rawEventId);
+    if (!eventId || Number.isNaN(eventId)) throw new Error('Invalid event ID');
+    let photoIds: number[] = [];
+    try {
+      const parsed = typeof rawIds === 'string' ? JSON.parse(rawIds) : [];
+      if (Array.isArray(parsed)) {
+        photoIds = parsed.map((n) => Number(n)).filter((n) => Number.isFinite(n));
       }
     } catch {}
-  }
+    if (photoIds.length === 0) throw new Error('No photos selected');
 
-  // Delete DB records
-  await db.delete(photos).where(inArray(photos.id, targetIds));
+    const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
+    if (!event) throw new Error('Event not found');
+    if (event.createdBy !== user.id) throw new Error('You do not have permission to delete photos for this event');
 
-  // Revalidate pages
-  try {
-    const { revalidatePath } = await import('next/cache');
-    revalidatePath(`/dashboard/events/${event.eventCode}`);
-    revalidatePath(`/events/${event.eventCode}`);
-  } catch {}
-
-  return { count: targetIds.length };
-}
-
-// New: Direct-to-S3 upload flow to avoid Server Actions 10MB body limit
-
-type FileMeta = { name: string; type: string; size: number };
-type UploadDescriptor = {
-  key: string;
-  url: string;
-  originalFilename: string;
-  mimeType: string;
-  fileSize: number;
-};
-
-export async function createSignedUploadUrlsAction(
-  eventId: number,
-  files: FileMeta[]
-): Promise<{ uploads: UploadDescriptor[]; maxFileSize: number }> {
-  const user = await getUser();
-  if (!user) {
-  redirect('/api/auth/google');
-  }
-
-  if (!eventId || Number.isNaN(eventId)) {
-    throw new Error('Invalid event ID');
-  }
-
-  // Verify event exists and user has access
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: { team: true }
-  });
-  if (!event) throw new Error('Event not found');
-
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
-  if (!userTeam || userTeam.teamId !== event.teamId) {
-    throw new Error('You do not have permission to upload photos to this event');
-  }
-
-  // Plan-specific per-file validation based on the event's team
-  const MAX_FILE_SIZE = getUploadLimitForTeam(event.team?.planName);
-
-  // Determine remaining capacity for this event
-  const cap = getPhotoCapForTeam(event.team?.planName);
-  const currentCountRes = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(photos)
-    .where(eq(photos.eventId, eventId));
-  const currentCount = currentCountRes?.[0]?.count ?? 0;
-  let remaining = Math.max(0, cap - currentCount);
-  if (remaining <= 0) {
-    throw new Error('Event has reached the photo limit for your plan.');
-  }
-
-  const uploads: UploadDescriptor[] = [];
-  for (const f of files) {
-    if (!f || f.size === 0) continue;
-    if (!f.type?.startsWith('image/')) continue;
-    if (f.size > MAX_FILE_SIZE) continue;
-
-    if (remaining <= 0) break;
-    const key = generatePhotoKey(eventId, f.name);
-  const url = await getSignedUploadUrl(key, f.type);
-    uploads.push({
-      key,
-      url,
-      originalFilename: f.name,
-      mimeType: f.type,
-      fileSize: f.size,
+    const target = await db.query.photos.findMany({
+      where: and(eq(photos.eventId, eventId), inArray(photos.id, photoIds)),
+      columns: { id: true, filePath: true }
     });
-    remaining -= 1;
+    if (target.length === 0) return { count: 0 };
+    const targetIds = target.map((p) => p.id);
+
+    for (const p of target) {
+      try {
+        if (p.filePath?.startsWith('s3:')) {
+          const key = p.filePath.replace(/^s3:/, '');
+          await deleteFromS3(key).catch(() => {});
+          const sm = deriveThumbKey(key, 'sm');
+          const md = deriveThumbKey(key, 'md');
+          await deleteFromS3(sm).catch(() => {});
+          await deleteFromS3(md).catch(() => {});
+        } else if (p.filePath) {
+          const fs = require('fs').promises;
+          const filePath = join(process.cwd(), 'public', p.filePath);
+          await fs.unlink(filePath).catch(() => {});
+        }
+      } catch {}
+    }
+
+    await db.delete(photos).where(inArray(photos.id, targetIds));
+    try {
+      const { revalidatePath } = await import('next/cache');
+      revalidatePath(`/dashboard/events/${event.eventCode}`);
+      revalidatePath(`/events/${event.eventCode}`);
+    } catch {}
+    return { count: targetIds.length };
   }
 
-  if (uploads.length === 0) {
-    throw new Error('No valid files to upload');
+  export async function createSignedUploadUrlsAction(
+    eventId: number,
+    files: FileMeta[]
+  ): Promise<{ uploads: UploadDescriptor[]; maxFileSize: number }> {
+    const user = await getUser();
+    if (!user) throw new Error('Unauthorized');
+    if (!eventId || Number.isNaN(eventId)) throw new Error('Invalid event ID');
+    const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
+    if (!event) throw new Error('Event not found');
+    if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
+    const MAX_FILE_SIZE = uploadLimitBytes('free');
+    const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
+    const currentCount = currentCountRes?.[0]?.count ?? 0;
+    const uploads: UploadDescriptor[] = [];
+    for (const f of files) {
+      if (!f || f.size === 0) continue;
+      if (!f.type?.startsWith('image/')) continue;
+      if (f.size > MAX_FILE_SIZE) continue;
+      const key = generatePhotoKey(eventId, f.name);
+      const url = await getSignedUploadUrl(key, f.type);
+      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
+    }
+    if (uploads.length === 0) throw new Error('No valid files to upload');
+    return { uploads, maxFileSize: MAX_FILE_SIZE };
   }
 
-  return { uploads, maxFileSize: MAX_FILE_SIZE };
-}
-
-export async function finalizeUploadedPhotosAction(
-  eventId: number,
-  uploaded: { key: string; originalFilename: string; mimeType: string; fileSize: number }[]
-): Promise<{ count: number }> {
-  const user = await getUser();
-  if (!user) {
-    redirect('/sign-in');
+  export async function finalizeUploadedPhotosAction(
+    eventId: number,
+    uploaded: { key: string; originalFilename: string; mimeType: string; fileSize: number }[]
+  ): Promise<{ count: number }> {
+    const user = await getUser();
+    if (!user) throw new Error('Unauthorized');
+    if (!eventId || Number.isNaN(eventId)) throw new Error('Invalid event ID');
+    const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
+    if (!event) throw new Error('Event not found');
+    const prefix = `events/${eventId}/photos/`;
+    const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
+    const currentCount = currentCountRes?.[0]?.count ?? 0;
+    let remaining = Number.MAX_SAFE_INTEGER;
+    const recordsToInsert = uploaded
+      .filter((u) => u.key.startsWith(prefix))
+      .slice(0, Math.max(0, remaining))
+      .map((u) => ({
+        filename: u.key.split('/').pop() || u.originalFilename,
+        originalFilename: u.originalFilename,
+        mimeType: u.mimeType,
+        fileSize: u.fileSize,
+        filePath: `s3:${u.key}`,
+        eventId,
+        uploadedBy: user.id,
+        guestName: null,
+        guestEmail: null,
+        isApproved: !event.requireApproval,
+      }));
+    if (recordsToInsert.length === 0) throw new Error('No uploaded photos to record');
+    const inserted = await db.insert(photos).values(recordsToInsert).returning();
+    return { count: inserted.length };
   }
 
-  if (!eventId || Number.isNaN(eventId)) {
-    throw new Error('Invalid event ID');
-  }
-
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: { team: true }
-  });
-  if (!event) throw new Error('Event not found');
-
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
-  if (!userTeam || userTeam.teamId !== event.teamId) {
-    throw new Error('You do not have permission to upload photos to this event');
-  }
-
-  // Only accept keys within the event's expected prefix
-  const prefix = `events/${eventId}/photos/`;
-  // Enforce remaining capacity
-  const cap = getPhotoCapForTeam(event.team?.planName);
-  const currentCountRes = await db
-    .select({ count: sql<number>`count(*)` })
-    .from(photos)
-    .where(eq(photos.eventId, eventId));
-  const currentCount = currentCountRes?.[0]?.count ?? 0;
-  let remaining = Math.max(0, cap - currentCount);
-
-  const recordsToInsert = uploaded
-    .filter((u) => u.key.startsWith(prefix))
-    .slice(0, Math.max(0, remaining))
-    .map((u) => ({
-      filename: u.key.split('/').pop() || u.originalFilename,
-      originalFilename: u.originalFilename,
-      mimeType: u.mimeType,
-      fileSize: u.fileSize,
-      filePath: `s3:${u.key}`,
-      eventId,
-      uploadedBy: user.id,
-      guestName: null,
-      guestEmail: null,
-      isApproved: !event.requireApproval,
-    }));
-
-  if (recordsToInsert.length === 0) {
-    throw new Error('No uploaded photos to record');
-  }
-
-  const inserted = await db.insert(photos).values(recordsToInsert).returning();
-  return { count: inserted.length };
-}
+  type FileMeta = { name: string; type: string; size: number };
+  type UploadDescriptor = {
+    key: string;
+    url: string;
+    originalFilename: string;
+    mimeType: string;
+    fileSize: number;
+  };

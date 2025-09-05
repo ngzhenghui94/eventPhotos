@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
-import { getUser, canUserUploadToEvent, logActivity, getEventById } from '@/lib/db/queries';
+import { getUser, getEventById } from '@/lib/db/queries';
 import { generatePhotoKey, uploadToS3 } from '@/lib/s3';
 import { DEMO_ACCESS_CODE } from '@/lib/db/demo';
 
@@ -49,10 +49,10 @@ export async function POST(request: NextRequest) {
 
   const user = await getUser();
     
-    // Check if user can upload to this event (supports guest uploads for private events with valid access code)
-    const canUpload = await canUserUploadToEvent(eventId, user?.id, accessCode || null);
-    if (!canUpload) {
-      return Response.json({ error: 'Not authorized to upload to this event' }, { status: 403 });
+
+    // Teams feature removed; only allow uploads for demo event
+    if (!eventId || !file) {
+      return Response.json({ error: 'Event ID and file are required' }, { status: 400 });
     }
 
     // Get event details
@@ -98,10 +98,8 @@ export async function POST(request: NextRequest) {
       }
     } catch {}
 
-    // Log activity
-    if (user) {
-      await logActivity(event.teamId, user.id, ActivityType.UPLOAD_PHOTO);
-    }
+
+  // Teams feature removed; no activity logging
 
     return Response.json(newPhoto, { status: 201 });
   } catch (error) {

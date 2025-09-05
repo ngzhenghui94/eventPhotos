@@ -1,9 +1,11 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { events, ActivityType } from '@/lib/db/schema';
-import { getUser, getTeamForUser, getEventsWithPhotoCountForTeam } from '@/lib/db/queries';
-import { logActivity } from '@/lib/db/queries';
+import { getUser } from '@/lib/db/queries';
+
 import { eq } from 'drizzle-orm';
+import { photos } from '@/lib/db/schema';
+import { sql, inArray } from 'drizzle-orm';
 
 export async function GET() {
   try {
@@ -12,13 +14,41 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const team = await getTeamForUser();
-    if (!team) {
-      return Response.json({ error: 'No team found' }, { status: 404 });
+    // Fetch events created by the user
+    const userEvents = await db.select().from(events)
+      .where(eq(events.createdBy, user.id));
+
+    // Fetch photo counts for all events in one query
+    const eventIds = userEvents.map(ev => ev.id);
+    let photoCounts: Record<number, number> = {};
+    if (eventIds.length > 0) {
+      const photoRows = await db
+        .select({ eventId: photos.eventId, count: sql<number>`count(*)` })
+        .from(photos)
+        .where(inArray(photos.eventId, eventIds))
+        .groupBy(photos.eventId);
+      photoRows.forEach(row => {
+        photoCounts[row.eventId] = Number(row.count) || 0;
+      });
     }
 
-    const teamEvents = await getEventsWithPhotoCountForTeam(team.id);
-    return Response.json(teamEvents);
+    // Add photoCount and ownerName
+    const result = userEvents.map(ev => ({
+      id: ev.id,
+      eventCode: ev.eventCode,
+      name: ev.name,
+      description: ev.description,
+      date: ev.date,
+      location: ev.location,
+      isPublic: ev.isPublic,
+      allowGuestUploads: ev.allowGuestUploads,
+      requireApproval: ev.requireApproval,
+      createdAt: ev.createdAt,
+      ownerName: user.name,
+      ownerId: user.id,
+      photoCount: photoCounts[ev.id] || 0
+    }));
+    return Response.json(result, { status: 200 });
   } catch (error) {
     console.error('Error fetching events:', error);
     return Response.json({ error: 'Failed to fetch events' }, { status: 500 });
@@ -32,39 +62,8 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const team = await getTeamForUser();
-    if (!team) {
-      return Response.json({ error: 'No team found' }, { status: 404 });
-    }
-
-    const body = await request.json();
-  const { name, description, eventDate, location, isPublic, allowGuestUploads } = body;
-
-    if (!name) {
-      return Response.json({ error: 'Event name is required' }, { status: 400 });
-    }
-
-    // Generate eventCode (8 chars) and accessCode (6 chars)
-    const eventCode = Math.random().toString(36).substring(2, 10).toUpperCase();
-    const accessCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    const [newEvent] = await db.insert(events).values({
-      name,
-      description: (description ?? '').toString(),
-      createdBy: user.id,
-      teamId: team.id,
-      date: eventDate ? new Date(eventDate) : new Date(),
-      location: (location ?? '').toString(),
-      isPublic: !!isPublic,
-      allowGuestUploads: allowGuestUploads !== false, // Default to true
-      eventCode,
-      accessCode,
-    }).returning();
-
-    // Log activity
-    await logActivity(team.id, user.id, ActivityType.CREATE_EVENT);
-
-    return Response.json(newEvent, { status: 201 });
+  // Teams feature removed; event creation is disabled
+  return Response.json({ error: 'Event creation is disabled' }, { status: 403 });
   } catch (error) {
     console.error('Error creating event:', error);
     return Response.json({ error: 'Failed to create event' }, { status: 500 });

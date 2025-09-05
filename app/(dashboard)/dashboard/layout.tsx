@@ -23,7 +23,7 @@ export default function DashboardLayout({
   const [planName, setPlanName] = useState<string>('free');
 
   async function handleSignOut() {
-    await signOut();
+  await fetch('/api/auth/signout', { method: 'POST' });
     router.push('/');
   }
 
@@ -38,11 +38,11 @@ export default function DashboardLayout({
   }, []);
 
   useEffect(() => {
-    // Fetch current user and team plan from API route
+    // Fetch current user plan from API route
     fetch('/api/user').then(async (res) => {
       const u = await res.json();
-      if (u && u.team && u.team.planName) {
-        setPlanName(u.team.planName);
+      if (u && u.planName) {
+        setPlanName(u.planName);
       }
     }).catch(() => {});
   }, []);

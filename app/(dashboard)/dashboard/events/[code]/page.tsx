@@ -11,12 +11,12 @@ import { PhotoApproval } from '@/components/photo-approval';
 import { BulkDownload } from '@/components/bulk-download';
 import { EventQr } from '@/components/event-qr';
 import UpdateToast from '@/components/update-toast';
-import { getPhotoCapForTeam, getUploadLimitForTeam } from '@/lib/plans';
+import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
-import { events as eventsTable, teamMembers, photos as photosTable } from '@/lib/db/schema';
+import { events as eventsTable, photos as photosTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
 import { generateAccessCode } from '@/lib/events/actions';
@@ -26,24 +26,13 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   const raw = (code || '').toString();
   const upper = raw.toUpperCase();
   const isNumericId = /^[0-9]+$/.test(raw);
-  // Need team info; re-query with team relation
+  // Get event
   let event = await getEventByEventCode(upper);
   // Fallback: if user visited /dashboard/events/{id}, redirect to the code route
   if (!event && isNumericId) {
     const byId = await db.query.events.findFirst({ where: eq(eventsTable.id, Number(raw)), columns: { id: true, eventCode: true } });
     if (byId?.eventCode) {
       return redirect(`/dashboard/events/${byId.eventCode}`);
-    }
-  }
-  if (event) {
-    // Ensure team is loaded (getEventByEventCode may not include team)
-    if (!(event as any).team) {
-      const full = await db.query.events.findFirst({
-        where: eq(eventsTable.id, event.id),
-        with: { createdBy: { columns: { id: true, name: true, email: true } }, team: { columns: { id: true, name: true, planName: true } } }
-      });
-      // @ts-ignore
-      event = full as any;
     }
   }
   const user = await getUser();
@@ -59,8 +48,20 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
   const approvedCount = (photos as any[])?.filter((p) => p.isApproved)?.length || 0;
-  const planUploadLimit = getUploadLimitForTeam((event as any).team?.planName ?? null);
-  const planPhotoCap = getPhotoCapForTeam((event as any).team?.planName ?? null);
+  // Use user's planName for limits and caps
+  const planName = normalizePlanName(user?.planName ?? 'free');
+  const planUploadLimit = uploadLimitBytes(planName);
+  function photoCapPerEvent(plan: string) {
+    switch (plan) {
+      case 'free': return 20;
+      case 'starter': return 50;
+      case 'hobby': return 100;
+      case 'pro': return 500;
+      case 'business':
+      default: return 1000;
+    }
+  }
+  const planPhotoCap = photoCapPerEvent(planName);
   const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
   const isEventOwner = user.id === event.createdBy.id || !!user.isOwner;
 
@@ -76,10 +77,8 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     if (!existing) return;
     const u = await getUser();
     if (!u) return;
-    const isCreator = existing.createdBy === u.id;
-    const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
-    const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
-    if (!isCreator && !isTeamOwner) return;
+  const isCreator = existing.createdBy === u.id;
+  if (!isCreator) return;
 
     await db.update(eventsTable)
       .set({
@@ -107,9 +106,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
 
     const isCreator = existing.createdBy === u.id;
-    const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
-    const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
-    if (!isCreator && !isTeamOwner && !u.isOwner) {
+    if (!isCreator && !u.isOwner) {
       return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('You do not have permission to delete this event')}`);
     }
 
@@ -124,9 +121,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
     const isCreator = existing.createdBy === u.id;
-    const membership = await db.query.teamMembers.findFirst({ where: eq(teamMembers.userId, u.id) });
-    const isTeamOwner = (membership?.role ?? '').toLowerCase() === 'owner';
-    if (!isCreator && !isTeamOwner && !u.isOwner) {
+    if (!isCreator && !u.isOwner) {
       return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('You do not have permission to update access code')}`);
     }
     const code = generateAccessCode();
@@ -181,7 +176,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </span>
                 <span className="font-bold text-2xl text-orange-900">Event Stats</span>
                 <span className="ml-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-base font-semibold">
-                  {((event as any)?.team?.planName || 'Free').charAt(0).toUpperCase() + ((event as any)?.team?.planName || 'Free').slice(1)}
+                  {planName.charAt(0).toUpperCase() + planName.slice(1)}
                 </span>
               </div>
               <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
@@ -303,7 +298,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               </span>
               <span className="font-bold text-2xl text-purple-900">Upload Photos</span>
             </div>
-            <PhotoUpload eventId={eventId} teamPlanName={(event as any)?.team?.planName ?? null} />
+            <PhotoUpload eventId={eventId} planName={planName} />
           </div>
           {/* Photo Approval */}
           {event?.requireApproval && (

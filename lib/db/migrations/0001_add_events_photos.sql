@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS "events" (
   "date" timestamp NOT NULL,
   "location" varchar(255),
   "access_code" varchar(50) NOT NULL,
-  "team_id" integer NOT NULL,
+  "event_code" varchar(50) NOT NULL,
   "created_by" integer,
   "is_public" boolean DEFAULT false NOT NULL,
   "allow_guest_uploads" boolean DEFAULT true NOT NULL,
@@ -22,7 +22,7 @@ ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "description" text;
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "date" timestamp NOT NULL;
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "location" varchar(255);
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "access_code" varchar(50) NOT NULL;
-ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "team_id" integer NOT NULL;
+-- Team column removed
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "created_by" integer;
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "is_public" boolean DEFAULT false NOT NULL;
 ALTER TABLE "events" ADD COLUMN IF NOT EXISTS "allow_guest_uploads" boolean DEFAULT true NOT NULL;
@@ -52,9 +52,7 @@ EXCEPTION WHEN duplicate_table THEN NULL; END $$;
 --> statement-breakpoint
 
 -- Foreign keys
-DO $$ BEGIN
-  ALTER TABLE "events" ADD CONSTRAINT "events_team_id_teams_id_fk" FOREIGN KEY ("team_id") REFERENCES "public"."teams"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;
-EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+-- Team foreign key removed
 --> statement-breakpoint
 DO $$ BEGIN
   ALTER TABLE "events" ADD CONSTRAINT "events_created_by_users_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE NO ACTION ON UPDATE NO ACTION;

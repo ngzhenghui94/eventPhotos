@@ -1,6 +1,6 @@
 import { requireSuperAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers } from '@/lib/db/schema';
+import { users } from '@/lib/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 export default async function AdminUsersPage() {
   await requireSuperAdmin();
 
-  // Get users and their team/plan
+  // Get users and their plan
   const all = await db
     .select({
       id: users.id,
@@ -17,13 +17,9 @@ export default async function AdminUsersPage() {
       role: users.role,
       isOwner: users.isOwner,
       createdAt: users.createdAt,
-      teamId: teamMembers.teamId,
       planName: users.planName,
-      teamName: teams.name,
     })
     .from(users)
-    .leftJoin(teamMembers, eq(users.id, teamMembers.userId))
-    .leftJoin(teams, eq(teamMembers.teamId, teams.id))
     .orderBy(desc(users.createdAt))
     .limit(500);
 
@@ -46,9 +42,7 @@ export default async function AdminUsersPage() {
             </CardHeader>
             <CardContent className="text-sm text-gray-600 space-y-2">
               <div>Role: {u.role} • Admin: {u.isOwner ? 'Yes' : 'No'}</div>
-              <div>
-                <span className="font-medium">Team:</span> {u.teamName || 'No team'}
-              </div>
+              {/* Teams feature removed: no team info shown */}
               <div>
                 <span className="font-medium">Plan:</span> {u.planName || 'free'}
                 <form action={`/api/admin/users/${u.id}/plan`} method="post" className="inline ml-2">

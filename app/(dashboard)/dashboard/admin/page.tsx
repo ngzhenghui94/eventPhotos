@@ -4,8 +4,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const items = [
   { href: '/dashboard/admin/events', title: 'Events', desc: 'Create, edit, and delete any event' },
   { href: '/dashboard/admin/photos', title: 'Photos', desc: 'Browse and moderate all photos' },
-  { href: '/dashboard/admin/invitations', title: 'Invitations', desc: 'Manage team invitations' },
-  { href: '/dashboard/admin/teams', title: 'Teams', desc: 'View and manage teams and subscriptions' },
   { href: '/dashboard/admin/users', title: 'Users', desc: 'Manage user accounts and roles' },
 ];
 

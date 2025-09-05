@@ -1,6 +1,6 @@
 import { z } from 'zod';
-import { TeamDataWithMembers, User } from '@/lib/db/schema';
-import { getTeamForUser, getUser } from '@/lib/db/queries';
+import { User } from '@/lib/db/schema';
+import { getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 
 export type ActionState = {
@@ -53,28 +53,6 @@ export function validatedActionWithUser<S extends z.ZodType<any, any>, T>(
   };
 }
 
-type ActionWithTeamFunction<T> = (
-  formData: FormData,
-  team: TeamDataWithMembers
-) => Promise<T>;
+// type ActionWithTeamFunction<T> removed
 
-export function withTeam<T>(action: ActionWithTeamFunction<T>) {
-  return async (formData: FormData): Promise<T> => {
-    const user = await getUser();
-    if (!user) {
-      const priceId = formData.get('priceId') as string | null;
-      if (priceId) {
-        const back = `/api/stripe/start?priceId=${encodeURIComponent(priceId)}`;
-        redirect(`/api/auth/google?redirect=${encodeURIComponent(back)}`);
-      }
-      redirect('/api/auth/google');
-    }
-
-    const team = await getTeamForUser();
-    if (!team) {
-      throw new Error('Team not found');
-    }
-
-    return action(formData, team);
-  };
-}
+// withTeam removed; teams feature no longer supported

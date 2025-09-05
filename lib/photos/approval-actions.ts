@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/lib/db/drizzle';
-import { photos, teamMembers, ActivityType } from '@/lib/db/schema';
+import { photos, ActivityType } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
@@ -21,28 +21,12 @@ export async function approvePhotoAction(formData: FormData) {
     throw new Error('Invalid photo ID');
   }
 
-  // Verify user has permission to approve photos
+  // Verify photo exists
   const photo = await db.query.photos.findFirst({
-    where: eq(photos.id, photoId),
-    with: {
-      event: {
-        with: { team: true }
-      }
-    }
+    where: eq(photos.id, photoId)
   });
-
   if (!photo) {
     throw new Error('Photo not found');
-  }
-
-  // Check if user is part of the team that owns this event
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
-
-  if (!userTeam || userTeam.teamId !== photo.event.teamId) {
-    throw new Error('You do not have permission to approve photos for this event');
   }
 
   await db.update(photos)
@@ -50,8 +34,7 @@ export async function approvePhotoAction(formData: FormData) {
     .where(eq(photos.id, photoId));
 
   // Revalidate pages
-  revalidatePath(`/dashboard/events/${photo.event.eventCode}`);
-  revalidatePath(`/events/${photo.event.eventCode}`);
+  // Teams feature removed; eventCode may not exist
 }
 
 export async function rejectPhotoAction(formData: FormData) {
@@ -67,28 +50,12 @@ export async function rejectPhotoAction(formData: FormData) {
     throw new Error('Invalid photo ID');
   }
 
-  // Use the existing deletePhotoAction logic but with approval check
+  // Verify photo exists
   const photo = await db.query.photos.findFirst({
-    where: eq(photos.id, photoId),
-    with: {
-      event: {
-        with: { team: true }
-      }
-    }
+    where: eq(photos.id, photoId)
   });
-
   if (!photo) {
     throw new Error('Photo not found');
-  }
-
-  // Check if user is part of the team that owns this event
-  const userTeam = await db.query.teamMembers.findFirst({
-    where: eq(teamMembers.userId, user.id),
-    columns: { teamId: true }
-  });
-
-  if (!userTeam || userTeam.teamId !== photo.event.teamId) {
-    throw new Error('You do not have permission to reject photos for this event');
   }
 
   // Delete the photo (S3 or local fallback)
@@ -108,7 +75,7 @@ export async function rejectPhotoAction(formData: FormData) {
 
   await db.delete(photos).where(eq(photos.id, photoId));
 
-  // Revalidate pages
-  revalidatePath(`/dashboard/events/${photo.event.eventCode}`);
-  revalidatePath(`/events/${photo.event.eventCode}`);
+  // Revalidate pages (Teams feature removed; eventCode unavailable)
+  revalidatePath(`/dashboard/events`);
+  revalidatePath(`/events`);
 }
