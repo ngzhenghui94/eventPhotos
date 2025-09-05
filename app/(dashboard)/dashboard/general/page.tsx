@@ -76,6 +76,7 @@ function AccountFormWithData({ state, user }: { state: ActionState; user?: User 
   );
 }
 
+import Link from 'next/link';
 function DashboardInfoCard({ team }: { team: any }) {
   if (!team) return null;
   return (
@@ -94,6 +95,15 @@ function DashboardInfoCard({ team }: { team: any }) {
             <div className="mb-2">{team.name}</div>
             <div className="text-sm text-gray-500">Team Members</div>
             <div className="mb-2">{team.members}</div>
+            <Link href="/dashboard/upgrade" className="block mt-4">
+              <Button
+                className="w-full bg-gradient-to-r from-orange-400 to-orange-600 text-white font-semibold py-2 px-4 rounded-lg shadow hover:from-orange-500 hover:to-orange-700 flex items-center justify-center gap-2 transition-all duration-150"
+                style={{ boxShadow: '0 2px 8px rgba(255,140,0,0.12)' }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1"><path d="M12 2l4 7h-8l4-7z"></path><path d="M2 21h20"></path><path d="M12 17v4"></path></svg>
+                Upgrade Plan
+              </Button>
+            </Link>
           </div>
           <div>
             <div className="text-sm text-gray-500">Per-upload Size Limit</div>
