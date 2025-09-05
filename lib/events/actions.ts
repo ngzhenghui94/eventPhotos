@@ -43,7 +43,10 @@ export const createEvent = validatedActionWithUser(
       .where(eq(events.teamId, teamId));
     const currentCount = result?.[0]?.count ?? 0;
     if (!canCreateAnotherEvent(planName, currentCount)) {
-      const limitText = planName === 'free' ? '1 event' : planName === 'base' ? '5 events' : 'unlimited';
+      let limitText = 'unlimited';
+      if (planName === 'free' || planName === 'starter') limitText = '1 event';
+      else if (planName === 'hobby') limitText = '5 events';
+      else if (planName === 'pro') limitText = '20 events';
       return { error: `Your plan (${planName}) allows ${limitText}. Please upgrade to create more events.` };
     }
 
