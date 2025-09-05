@@ -1,63 +1,70 @@
+"use client";
+import { brand } from '@/lib/brand';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
 import { UserMenu } from '@/components/user-menu';
-import { brand } from '@/lib/brand';
+
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
       {/* Header */}
-      <header className="sticky top-0 z-20 bg-white/80 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 font-semibold text-gray-900">
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-amber-600 text-white text-xs">{brand.productShort.toUpperCase()}</span>
-            <span>{brand.productName}</span>
-          </Link>
-          <nav className="hidden sm:flex items-center gap-6 text-sm text-gray-600">
-            <Link href="/demo" className="hover:text-gray-900">Demo</Link>
-            <Link href="/pricing" className="hover:text-gray-900">Pricing</Link>
+      <header className="sticky top-0 z-30 bg-transparent">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 h-24 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 shadow-lg">
+                <img src="/favicon.ico" alt="Logo" className="h-8 w-8" />
+              </span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">memories<span className="text-amber-600">Vault</span></span>
+            </Link>
+          </div>
+          <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
+            <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
+            <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
             <UserMenu />
           </nav>
         </div>
       </header>
 
-      {/* Hero */}
-      <section className="py-14 sm:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-10 items-center">
-          <div className="lg:col-span-6">
-            <h1 className="text-4xl sm:text-5xl font-bold leading-tight text-gray-900">
+      {/* Hero Section with animated gradient background */}
+      <section className="py-16 sm:py-24 relative overflow-hidden">
+        <div className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-br from-orange-200 via-amber-100 to-blue-200 opacity-60"></div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-10 sm:gap-16 items-center fade-in-up">
+          <div className="lg:col-span-6 mb-10 lg:mb-0">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-tight text-gray-900 mb-6">
               A warmer, simpler way to gather event photos together
             </h1>
-            <p className="mt-4 text-lg text-gray-600">
-              Create your event, share a friendly code, and let everyone add their favorite moments. You stay in controlbeautiful, secure galleries on any device.
+            <p className="mb-8 text-lg sm:text-xl text-gray-700">
+              Create your event, share a friendly code, and let everyone add their favorite moments. You stay in control—beautiful, secure galleries on any device.
             </p>
-            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Link href="/api/auth/google">
-                <Button size="lg" className="rounded-full bg-amber-600 hover:bg-amber-700">
+                <Button size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 shadow-lg text-lg px-6 py-3">
                   Create your free event
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
               <Link href="/demo">
-                <Button size="lg" variant="outline" className="rounded-full">View demo</Button>
+                <Button size="lg" variant="outline" className="rounded-full text-lg px-6 py-3 border-2 border-gray-300">View demo</Button>
               </Link>
             </div>
-            <div className="mt-8">
+            <div className="mb-4">
               <JoinByCode />
             </div>
-            <p className="mt-3 text-xs text-gray-500">Have an event code? Pop it in to jump straight to the guest gallery.</p>
+            <p className="text-xs text-gray-500">Have an event code? Pop it in to jump straight to the guest gallery.</p>
           </div>
           <div className="lg:col-span-6">
-            {/* Product preview grid */}
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            {/* Static Product preview grid */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4 fade-in-up">
               {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} className="relative aspect-square overflow-hidden rounded-lg bg-gray-200">
+                <div key={i} className="relative aspect-square overflow-hidden rounded-xl shadow-lg bg-gray-200 group transition-all duration-500 hover:scale-105 hover:border-amber-400 border-2 border-transparent">
                   <img
                     src={`https://picsum.photos/seed/event-${i}/600/600`}
                     alt="Event photo preview"
-                    className="h-full w-full object-cover"
+                    className="h-full w-full object-cover transition-transform duration-500"
                     loading="lazy"
                   />
                 </div>
@@ -67,67 +74,97 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How it works */}
-      <section className="py-12 sm:py-16 bg-white">
+      {/* How it works Section with glassmorphism cards and fade-in animation */}
+      <section className="py-16 sm:py-24 bg-white fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center">How {brand.productName} works</h2>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border bg-white p-5">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Calendar className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Create an event</h3>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-12">How {brand.productName} works</h2>
+          <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Calendar className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Create an event</h3>
               <p className="mt-2 text-sm text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
             </div>
-            <div className="rounded-xl border bg-white p-5">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><QrCode className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Share your code</h3>
+            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><QrCode className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Share your code</h3>
               <p className="mt-2 text-sm text-gray-600">Guests join via a short code or QR—no app or sign-up required.</p>
             </div>
-            <div className="rounded-xl border bg-white p-5">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Upload className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Guests upload</h3>
+            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Upload className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Guests upload</h3>
               <p className="mt-2 text-sm text-gray-600">Everyone contributes their best shots in real time during the event.</p>
             </div>
-            <div className="rounded-xl border bg-white p-5">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><CheckCircle2 className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Approve & share</h3>
+            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><CheckCircle2 className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Approve & share</h3>
               <p className="mt-2 text-sm text-gray-600">You stay in control. Approve photos and share the gallery instantly.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Feature highlights */}
-      <section className="py-12 sm:py-16 bg-gray-50">
+      {/* Feature highlights Section with fade-in animation */}
+      <section className="py-16 sm:py-24 bg-gradient-to-br from-white via-amber-50 to-blue-50 fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="rounded-2xl border bg-white p-6">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Shield className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Private & secure</h3>
+          <div className="grid gap-8 lg:grid-cols-3">
+            <div className="rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Shield className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Private & secure</h3>
               <p className="mt-2 text-sm text-gray-600">Each event has its own private gallery secured by access codes. Optional approval before anything goes live.</p>
             </div>
-            <div className="rounded-2xl border bg-white p-6">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Users className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Built for guests</h3>
+            <div className="rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Users className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Built for guests</h3>
               <p className="mt-2 text-sm text-gray-600">No accounts needed. Mobile-first upload and viewing that just works for everyone attending.</p>
             </div>
-            <div className="rounded-2xl border bg-white p-6">
-              <div className="h-10 w-10 rounded-lg bg-amber-600 text-white flex items-center justify-center"><ImageIcon className="h-5 w-5"/></div>
-              <h3 className="mt-4 font-semibold">Beautiful galleries</h3>
+            <div className="rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-shadow">
+              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><ImageIcon className="h-6 w-6"/></div>
+              <h3 className="mt-5 font-semibold text-lg">Beautiful galleries</h3>
               <p className="mt-2 text-sm text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
             </div>
           </div>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/api/auth/google">
-              <Button size="lg" className="rounded-full bg-amber-600 hover:bg-amber-700">Create free event</Button>
+              <Button size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 shadow-lg text-lg px-6 py-3">Create free event</Button>
             </Link>
             <Link href="/pricing">
-              <Button size="lg" variant="outline" className="rounded-full">See pricing</Button>
+              <Button size="lg" variant="outline" className="rounded-full text-lg px-6 py-3 border-2 border-gray-300">See pricing</Button>
             </Link>
           </div>
         </div>
       </section>
 
-  {/* Footer is provided globally in root layout */}
+      {/* Footer is provided globally in root layout */}
+      <style jsx>{`
+        .animate-gradient {
+          background: linear-gradient(270deg, #fbbf24, #fef3c7, #93c5fd);
+          background-size: 600% 600%;
+          animation: gradientMove 8s ease-in-out infinite;
+        }
+        @keyframes gradientMove {
+          0% {background-position:0% 50%}
+          50% {background-position:100% 50%}
+          100% {background-position:0% 50%}
+        }
+        .glass-card {
+          background: rgba(255,255,255,0.6);
+          border-radius: 1.25rem;
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+          backdrop-filter: blur(8px);
+          border: 1px solid rgba(255,255,255,0.18);
+        }
+        .fade-in-up {
+          opacity: 0;
+          transform: translateY(30px);
+          animation: fadeInUp 1.2s ease forwards;
+        }
+        @keyframes fadeInUp {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+      `}</style>
     </main>
   );
 }
