@@ -63,7 +63,6 @@ function EventsSkeleton() {
       ))}
     </div>
   );
-}
 
 function EventCard({ event }: { event: EventWithPhotoCount }) {
   const formatDate = (date: Date | string) => {
@@ -288,29 +287,56 @@ function EventsList() {
   );
 }
 
-export default function DashboardPage() {
+
+function DashboardPage() {
   return (
-    <section className="flex-1 p-4 lg:p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">Events Dashboard</h1>
-            <p className="text-gray-600 mt-1">Manage your photo events and galleries</p>
+    <section className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
+      <div className="max-w-7xl mx-auto px-4 lg:px-8">
+        {/* Hero Section */}
+        <div className="relative rounded-xl overflow-hidden mb-10 shadow-lg bg-gradient-to-r from-orange-100 via-white to-blue-100 border border-orange-200 animate-fade-in">
+          <div className="absolute inset-0 pointer-events-none">
+            <svg width="100%" height="100%" viewBox="0 0 600 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="100" cy="60" r="80" fill="#FFEDD5" opacity="0.3" />
+              <circle cx="500" cy="60" r="80" fill="#DBEAFE" opacity="0.3" />
+            </svg>
           </div>
-          <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg">
-            <Link href="/dashboard/events/new" className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
-              New Event
-            </Link>
-          </Button>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between px-8 py-10 gap-6">
+            <div className="flex-1">
+              <h1 className="text-3xl lg:text-4xl font-extrabold text-orange-900 mb-2 flex items-center gap-2">
+                <Camera className="h-8 w-8 text-orange-500 animate-bounce" />
+                Memories Vault
+              </h1>
+              <p className="text-lg text-gray-700 mb-4">Capture, share, and relive your event memories in one beautiful dashboard.</p>
+              <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg text-base px-6 py-3">
+                <Link href="/dashboard/events/new" className="flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Create New Event
+                </Link>
+              </Button>
+            </div>
+            <div className="flex-shrink-0 hidden md:block">
+              <img src="/favicon.ico" alt="Memories Vault" className="w-32 h-32 rounded-full shadow-lg border-4 border-orange-200" />
+            </div>
+          </div>
         </div>
 
-        {/* Events List */}
+        {/* Events List & Stats */}
         <Suspense fallback={<EventsSkeleton />}>
           <EventsList />
         </Suspense>
       </div>
+      <style jsx>{`
+        .animate-fade-in {
+          animation: fadeIn 1s ease;
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </section>
   );
 }
+
+
+export default DashboardPage;
