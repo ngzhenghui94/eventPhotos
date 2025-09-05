@@ -24,7 +24,9 @@ type CurrentUser = {
   createdAt: string | Date;
   updatedAt: string | Date;
   deletedAt: string | Date | null;
-
+  subscriptionStart?: string | Date | null;
+  subscriptionEnd?: string | Date | null;
+  subscriptionStatus?: string | null;
 };
 
 type ActionState = {
@@ -75,9 +77,8 @@ function AccountForm({
           type="email"
           placeholder="Enter your email"
           value={emailValue}
-          onChange={onChange}
-          required
-          disabled={isPending}
+          disabled
+          style={{ backgroundColor: '#f3f4f6', color: '#888', cursor: 'not-allowed' }}
         />
       </div>
     </>
@@ -91,6 +92,51 @@ function AccountFormWithData({ state }: { state: ActionState }) {
 export default function GeneralPage() {
   const { data: user } = useSWR<CurrentUser>('/api/user', fetcher);
   const planName = user?.planName || 'free';
+  const planFeatures: Record<string, string[]> = {
+    Free: [
+      '1 Event',
+      '20MB per upload',
+      '5MB per photo',
+      'Guest Photo Sharing',
+      'Basic Photo Gallery',
+      'Photo Download & Export'
+    ],
+    Starter: [
+      '1 Event',
+      '50 photos per event',
+      '20MB per upload',
+      'Guest Photo Sharing',
+      'Basic Photo Gallery',
+      'Photo Download & Export'
+    ],
+    Hobby: [
+      '5 Events',
+      '100 photos per event',
+      '25MB per upload',
+      'Guest Photo Sharing',
+      'Basic Photo Gallery',
+      'Photo Download & Export'
+    ],
+    Pro: [
+      '20 Events',
+      '500 photos per event',
+      '50MB per upload',
+      'Guest Photo Sharing',
+      'Advanced Photo Gallery',
+      'Photo Download & Export'
+    ],
+    Business: [
+      'Unlimited Events',
+      '1000 photos per event',
+      '100MB per upload',
+      'Guest Photo Sharing',
+      'Advanced Photo Gallery',
+      'Photo Download & Export',
+      'Teams Enabled'
+    ]
+  };
+  const planKey = planName.charAt(0).toUpperCase() + planName.slice(1);
+  const features = planFeatures[planKey] || planFeatures.Free;
   // Subscription expiry progress bar logic
   const subscriptionStart = user?.subscriptionStart ? new Date(user.subscriptionStart) : null;
   const subscriptionEnd = user?.subscriptionEnd ? new Date(user.subscriptionEnd) : null;
@@ -153,10 +199,16 @@ export default function GeneralPage() {
           <div className="flex flex-col gap-1 mt-2">
             <span className="font-medium text-gray-700">Plan: <span className="ml-2 text-orange-600 font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)}</span></span>
             <span className="font-medium text-gray-700">Email: <span className="ml-2">{user?.email}</span></span>
-            {subscriptionEnd && (
-              <span className="font-medium text-gray-700">Expires: <span className="ml-2">{subscriptionEnd.toLocaleDateString()}</span></span>
-            )}
-            {subscriptionStart && subscriptionEnd && (
+            <span className="font-medium text-gray-700 mb-1">Features:</span>
+            <ul className="mb-2 ml-2 list-none">
+              {features.map((feature, idx) => (
+                <li key={idx} className="flex items-center gap-2 text-gray-700 text-sm mb-1">
+                  <span className="inline-block w-2 h-2 rounded-full bg-orange-400" />
+                  {feature}
+                </li>
+              ))}
+            </ul>
+            {planKey !== 'Free' && subscriptionStart && subscriptionEnd && (
               <div className="mt-2">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>Start: {subscriptionStart.toLocaleDateString()}</span>
@@ -173,6 +225,9 @@ export default function GeneralPage() {
                   <span>{progress}% used</span>
                 </div>
               </div>
+            )}
+            {user?.subscriptionStatus && (
+              <span className="font-medium text-gray-700">Status: <span className="ml-2">{user.subscriptionStatus.charAt(0).toUpperCase() + user.subscriptionStatus.slice(1)}</span></span>
             )}
           </div>
         </div>

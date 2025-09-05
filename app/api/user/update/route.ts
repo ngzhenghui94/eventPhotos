@@ -16,7 +16,6 @@ export async function POST(req: NextRequest) {
   if (!name || !email) {
     return Response.json({ error: 'Name and email are required.' }, { status: 400 });
   }
-  import { eq } from 'drizzle-orm';
   await Promise.all([
     db.update(users).set({ name, email }).where(eq(users.id, user.id)),
     logActivity(null, user.id, ActivityType.UPDATE_ACCOUNT)

@@ -87,13 +87,20 @@ export async function GET(request: NextRequest) {
     if (!planName) {
       planName = 'Unknown';
     }
+    const sub = subscription as Stripe.Subscription;
+    let subscriptionEnd = null;
+    if (sub.status === 'active' || sub.status === 'trialing') {
+      subscriptionEnd = (sub as any).current_period_end ? new Date((sub as any).current_period_end * 1000) : null;
+    } else if (sub.ended_at) {
+      subscriptionEnd = new Date(sub.ended_at * 1000);
+    }
     await db.update(users)
       .set({
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
         subscriptionStatus: 'paid',
         subscriptionStart: new Date(subscription.start_date * 1000),
-        subscriptionEnd: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
+        subscriptionEnd,
         planName,
         updatedAt: new Date()
       })
