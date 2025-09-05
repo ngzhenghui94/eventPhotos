@@ -11,9 +11,10 @@ import UpdateToast from '@/components/update-toast';
 
 export default async function EventsPage() {
   const user = await getUser();
-  const items = await db.query.events.findMany({
-    where: eq(events.createdBy, user.id),
-  });
+  let items: import('@/lib/db/schema').Event[] = [];
+  if (user && user.id) {
+    items = await getUserEvents(user.id);
+  }
 
   return (
     <section className="flex-1 p-4 lg:p-8">

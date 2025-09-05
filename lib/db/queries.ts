@@ -140,6 +140,11 @@ export async function getUser() {
       role: users.role,
       isOwner: users.isOwner,
       planName: users.planName,
+      stripeCustomerId: users.stripeCustomerId,
+      stripeSubscriptionId: users.stripeSubscriptionId,
+      subscriptionStatus: users.subscriptionStatus,
+      subscriptionStart: users.subscriptionStart,
+      subscriptionEnd: users.subscriptionEnd,
       emailVerifiedAt: users.emailVerifiedAt,
       createdAt: users.createdAt,
       updatedAt: users.updatedAt,
@@ -158,6 +163,11 @@ export async function getUser() {
 
 
 // ...existing code...
+
+// Fetch all events created by a user
+export async function getUserEvents(userId: number) {
+  return await db.select().from(events).where(eq(events.createdBy, userId));
+}
 
 export async function getEventByAccessCode(code: string) {
   return await db.query.events.findFirst({

@@ -66,17 +66,9 @@ export const updateEvent = validatedActionWithUser(
       return { error: 'Event not found' };
     }
 
-    // Only the event creator or team owners can edit
-    const userTeamId = await getUserTeamId(user.id);
+    // Only the event creator can edit (teams feature removed)
     const isCreator = existing.createdBy === user.id;
-    let isTeamOwner = false;
-    if (userTeamId) {
-      const membership = await db.query.teamMembers.findFirst({
-        where: eq(teamMembers.userId, user.id),
-      });
-      isTeamOwner = membership?.role?.toLowerCase() === 'owner';
-    }
-    if (!isCreator && !isTeamOwner) {
+    if (!isCreator) {
       return { error: 'You do not have permission to edit this event.' };
     }
 

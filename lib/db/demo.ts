@@ -23,7 +23,7 @@ function getCached(ttlMs = 30_000) {
   return null;
 }
 
-function setCached(data: { owner: any; team: any; event: any }) {
+function setCached(data: { owner: any; event: any }) {
   demoCache = { data, at: Date.now() };
 }
 

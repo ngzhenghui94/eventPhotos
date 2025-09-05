@@ -1,5 +1,6 @@
-'use client';
 
+
+"use client";
 import { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/ui/sonner';
@@ -7,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { createSignedUploadUrlsAction, finalizeUploadedPhotosAction } from '@/lib/photos/actions';
-import { uploadLimitBytes } from '@/lib/plans';
+import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
 
 interface PhotoUploadProps {
   eventId: number;
@@ -28,8 +29,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
 
   const handleFileSelect = (files: FileList | null) => {
     if (!files) return;
-    
-  const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
     setSelectedFiles(prev => [...prev, ...imageFiles]);
   };
 
@@ -60,8 +60,8 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
     try {
       // 1) Ask server for presigned PUT URLs
       const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
-  const { uploads, maxFileSize } = await createSignedUploadUrlsAction(eventId, meta);
-  if (!maxBytes) setMaxBytes(maxFileSize);
+      const { uploads, maxFileSize } = await createSignedUploadUrlsAction(eventId, meta);
+      if (!maxBytes) setMaxBytes(maxFileSize);
 
       // 2) Upload directly to S3 using presigned URLs
       const remaining = [...uploads];
@@ -77,14 +77,11 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
           // headers: { 'Content-Type': file.type },
           body: file,
         });
-        if (!res.ok) {
-          let detail = '';
-          try { detail = await res.text(); } catch {}
-          console.error('S3 upload failed', { name: file.name, status: res.status, statusText: res.statusText, detail });
-          failures.push({ name: file.name, status: res.status, detail });
-          continue;
+        if (res.ok) {
+          succeeded.push(u);
+        } else {
+          failures.push({ name: u.originalFilename, status: res.status, detail: await res.text() });
         }
-        succeeded.push(u);
       }
 
       // 3) Finalize in DB
@@ -100,8 +97,8 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
         );
       }
 
-  setSelectedFiles([]);
-  router.refresh();
+      setSelectedFiles([]);
+      router.refresh();
       if (failures.length) {
         const first = failures[0];
         toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
@@ -152,7 +149,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
             </p>
             <p className="text-sm text-gray-500">
               Supports JPG, PNG, GIF up to {(() => {
-                const bytes = maxBytes ?? uploadLimitBytes(planName ?? 'free');
+                const bytes = maxBytes ?? uploadLimitBytes(normalizePlanName(planName));
                 // If Starter plan, always show 20MB
                 if ((planName?.toLowerCase() ?? '') === 'starter') return 20;
                 return Math.round(bytes / (1024 * 1024));
