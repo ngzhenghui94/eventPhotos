@@ -66,8 +66,7 @@ function AccountForm({
   );
 }
 
-function AccountFormWithData({ state }: { state: ActionState }) {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+function AccountFormWithData({ state, user }: { state: ActionState; user?: User }) {
   return (
     <AccountForm
       state={state}
@@ -77,11 +76,8 @@ function AccountFormWithData({ state }: { state: ActionState }) {
   );
 }
 
-function DashboardInfoCard() {
-  const { data, error } = useSWR('/api/dashboard-info', dashboardFetcher);
-  if (error) return null;
-  if (!data || !data.team) return null;
-  const { team } = data;
+function DashboardInfoCard({ team }: { team: any }) {
+  if (!team) return null;
   return (
     <Card className="mb-6">
       <CardHeader>
@@ -118,13 +114,20 @@ export default function GeneralPage() {
     updateAccount,
     {}
   );
+  const { data, error } = useSWR('/api/dashboard-info', dashboardFetcher, {
+    dedupingInterval: 60000,
+    revalidateOnFocus: false,
+  });
+  if (error) return null;
+  if (!data) return null;
+  const { user, team } = data;
 
   return (
     <section className="flex-1 p-4 lg:p-8">
       <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
         General Settings
       </h1>
-      <DashboardInfoCard />
+      <DashboardInfoCard team={team} />
       <Card>
         <CardHeader>
           <CardTitle>Account Information</CardTitle>
@@ -132,7 +135,7 @@ export default function GeneralPage() {
         <CardContent>
           <form className="space-y-4" action={formAction}>
             <Suspense fallback={<AccountForm state={state} />}>
-              <AccountFormWithData state={state} />
+              <AccountFormWithData state={state} user={user} />
             </Suspense>
             {state.error && (
               <p className="text-red-500 text-sm">{state.error}</p>
