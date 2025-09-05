@@ -155,22 +155,25 @@ export default async function EventPage({ params }: EventPageProps) {
         <div className="max-w-6xl mx-auto space-y-6">
           {/* Event Details - shifted up */}
           {/* Redesigned Event Details card */}
-          <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm px-4 py-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <span className="bg-blue-100 rounded-full p-1">
-                  <MapPin className="w-5 h-5 text-blue-600" />
+          <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="bg-blue-100 rounded-full p-2">
+                <MapPin className="w-6 h-6 text-blue-600" />
+              </span>
+              <span className="font-bold text-2xl text-blue-900">{event?.name || 'Untitled Event'}</span>
+              {event?.location && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-base font-semibold ml-2">
+                  <MapPin className="w-5 h-5 text-blue-400" />
+                  {event.location}
                 </span>
-                <span className="font-semibold text-blue-800 text-lg">Event Details</span>
-              </div>
+              )}
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm text-gray-700">
-              <div>Name:</div>
-              <div className="font-medium">{event?.name || 'Untitled Event'}</div>
-              <div>Location:</div>
-              <div className="font-medium">{event?.location || 'Not specified'}</div>
-              <div>Description:</div>
-              <div className="font-medium">{event?.description || <span className="italic text-gray-400">No description provided</span>}</div>
+            <div className="mt-2">
+              {event?.description ? (
+                <p className="text-gray-700 text-lg leading-relaxed">{event.description}</p>
+              ) : (
+                <p className="text-gray-400 italic text-base">No description provided</p>
+              )}
             </div>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
