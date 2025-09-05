@@ -282,29 +282,40 @@ export default async function EventPage({ params }: EventPageProps) {
           {/* Event Details */}
           {/* Event Details - shifted up (removed from here) */}
           {/* Photo Upload */}
-          <PhotoUpload eventId={eventId} teamPlanName={(event as any)?.team?.planName ?? null} />
+          <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2 mb-6">
+            <div className="flex items-center gap-3 mb-2">
+              <span className="bg-purple-100 rounded-full p-2">
+                <Users className="w-6 h-6 text-purple-600" />
+              </span>
+              <span className="font-bold text-2xl text-purple-900">Upload Photos</span>
+            </div>
+            <PhotoUpload eventId={eventId} teamPlanName={(event as any)?.team?.planName ?? null} />
+          </div>
           {/* Photo Approval */}
           {event?.requireApproval && (
             <PhotoApproval photos={photos || []} eventId={eventId} />
           )}
           {/* Photo Gallery */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle className="flex items-center">
-                <Users className="mr-2 h-5 w-5" />
-                Approved Photos ({photos?.filter((p: any) => p.isApproved).length || 0})
-              </CardTitle>
+          <div className="rounded-xl border border-pink-200 bg-gradient-to-r from-pink-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2 mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <span className="bg-pink-100 rounded-full p-2">
+                  <Users className="w-6 h-6 text-pink-600" />
+                </span>
+                <span className="font-bold text-2xl text-pink-900">Approved Photos</span>
+                <span className="ml-2 px-3 py-1 rounded-full bg-pink-50 text-pink-700 text-base font-semibold">
+                  {photos?.filter((p: any) => p.isApproved).length || 0} Approved
+                </span>
+              </div>
               <BulkDownload photos={(photos as any[])?.filter((p) => p.isApproved) || []} />
-            </CardHeader>
-            <CardContent>
-              <PhotoGallery
-                photos={(photos as any[])?.filter((p) => p.isApproved) || []}
-                eventId={eventId}
-                currentUserId={user?.id}
-                canManage={true}
-              />
-            </CardContent>
-          </Card>
+            </div>
+            <PhotoGallery
+              photos={(photos as any[])?.filter((p) => p.isApproved) || []}
+              eventId={eventId}
+              currentUserId={user?.id}
+              canManage={true}
+            />
+          </div>
 
           {/* Danger Zone */}
           {isEventOwner && (
