@@ -62,6 +62,48 @@ export default async function EventPage({ params }: EventPageProps) {
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
   const approvedCount = (photos as any[])?.filter((p) => p.isApproved)?.length || 0;
+  // Analytics: guest activity and contributors
+  const guestUploads = (photos as any[])?.filter((p) => !p.uploadedBy)?.length || 0;
+  const memberUploads = photoCount - guestUploads;
+  const guestPct = photoCount > 0 ? Math.round((guestUploads / photoCount) * 100) : 0;
+  // Top contributors (by user or guest)
+  const contributorMap = new Map<string, number>();
+  for (const p of (photos as any[])) {
+    const key = p.uploadedByUser?.name || p.guestName || 'Guest';
+    contributorMap.set(key, (contributorMap.get(key) || 0) + 1);
+  }
+  const topContributors = Array.from(contributorMap.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([name, count]) => ({ name, count }));
+  // Simple uploads-per-day trend (last 7 days)
+  const end = new Date();
+  end.setHours(0, 0, 0, 0); // midnight today
+  const start = new Date(end);
+  start.setDate(end.getDate() - 6);
+  // Create buckets for each day
+  const dayBuckets: { label: string; count: number }[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    const label = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    dayBuckets.push({ label, count: 0 });
+  }
+  // Fill buckets with photo upload counts
+  for (const p of (photos as any[])) {
+    const d = new Date(p.uploadedAt);
+    d.setHours(0, 0, 0, 0); // compare by day only
+    for (let i = 0; i < 7; i++) {
+      const bucketDate = new Date(start);
+      bucketDate.setDate(start.getDate() + i);
+      bucketDate.setHours(0, 0, 0, 0);
+      if (d.getTime() === bucketDate.getTime()) {
+        dayBuckets[i].count += 1;
+        break;
+      }
+    }
+  }
+  const maxDay = Math.max(1, ...dayBuckets.map((b) => b.count));
   const planUploadLimit = getUploadLimitForTeam((event as any).team?.planName ?? null);
   const planPhotoCap = getPhotoCapForTeam((event as any).team?.planName ?? null);
   const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
@@ -198,6 +240,67 @@ export default async function EventPage({ params }: EventPageProps) {
 
         <div className="grid gap-6 lg:grid-cols-4">
           <div className="lg:col-span-3 space-y-6">
+            {/* Event Analytics */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Event Analytics</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    <div className="text-xs text-gray-500">Total Photos</div>
+                    <div className="text-xl font-semibold">{photoCount}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    <div className="text-xs text-gray-500">Approved</div>
+                    <div className="text-xl font-semibold">{approvedCount}</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    <div className="text-xs text-gray-500">Guest Uploads</div>
+                    <div className="text-xl font-semibold">{guestUploads}</div>
+                    <div className="text-xs text-gray-500">{guestPct}% of total</div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-gray-50">
+                    <div className="text-xs text-gray-500">Members Uploads</div>
+                    <div className="text-xl font-semibold">{memberUploads}</div>
+                  </div>
+                </div>
+
+                {/* 7-day trend */}
+                <div className="mt-6">
+                  <div className="text-sm font-medium mb-2">Uploads (last 7 days)</div>
+                  <div className="flex items-end gap-2 h-24">
+                    {dayBuckets.map((b, i) => (
+                      <div key={i} className="flex flex-col items-center gap-1 w-8">
+                        <div
+                          className="w-full bg-amber-500 rounded-sm"
+                          style={{ height: `${Math.max(4, Math.round((b.count / maxDay) * 100))}%` }}
+                          title={`${b.count} uploads`}
+                        />
+                        <div className="text-[10px] text-gray-500 text-center leading-3">{b.label}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Top contributors */}
+                <div className="mt-6">
+                  <div className="text-sm font-medium mb-2">Top Contributors</div>
+                  {topContributors.length === 0 ? (
+                    <div className="text-sm text-gray-500">No uploads yet</div>
+                  ) : (
+                    <ul className="divide-y divide-gray-100 rounded-lg border border-gray-100 overflow-hidden">
+                      {topContributors.map((c, i) => (
+                        <li key={i} className="flex items-center justify-between px-3 py-2 bg-white">
+                          <span className="text-sm text-gray-700 truncate">{c.name}</span>
+                          <span className="text-sm font-medium">{c.count}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
             {/* Event Details */}
             <Card>
               <CardHeader>
