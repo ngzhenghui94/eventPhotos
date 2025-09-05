@@ -326,16 +326,16 @@ function DemoGalleryContent() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
-      {/* Decorative backdrop */}
+    <div className="relative min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
+      {/* Decorative animated gradient backdrop */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl" />
-        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl" />
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl animate-pulse" />
+        <div className="absolute -bottom-32 -right-32 h-96 w-96 rounded-full bg-amber-200/30 blur-3xl animate-pulse" />
       </div>
 
       {/* Header / Hero */}
       <div className="border-b border-slate-200/60 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex items-center gap-3 mb-6">
             <Button variant="ghost" onClick={() => window.history.back()} className="p-2 hover:bg-slate-100 rounded-full">
               <ArrowLeft className="h-5 w-5" />
@@ -349,22 +349,22 @@ function DemoGalleryContent() {
             )}
           </div>
 
-          <div className="relative overflow-hidden rounded-3xl shadow-sm bg-white/70 ring-1 ring-slate-200/60">
+          <div className="relative overflow-hidden rounded-3xl shadow-lg bg-white/60 ring-1 ring-slate-200/60 backdrop-blur-lg">
             {/* Subtle image/gradient backdrop */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-white" style={heroBg ? { backgroundImage: `${heroBg}`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(30px)', opacity: 0.18 } : {}} />
             <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-0">
-              <div className="col-span-2 p-6 sm:p-10">
-                <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
+              <div className="col-span-2 p-8 sm:p-12">
+                <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight text-gray-900 mb-2">
                   {demo?.name || `${brand.productName} Demo Event`}
                 </h1>
-                <div className="mt-3 flex flex-wrap gap-3 text-sm text-slate-600">
+                <div className="mt-3 flex flex-wrap gap-3 text-sm text-gray-700">
                   {demo?.date && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><Calendar className="h-4 w-4" /> {formatDate(demo.date)}</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1"><Calendar className="h-4 w-4" /> {formatDate(demo.date)}</span>
                   )}
                   {demo?.location && (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><MapPin className="h-4 w-4" /> {demo.location}</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1"><MapPin className="h-4 w-4" /> {demo.location}</span>
                   )}
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1"><Camera className="h-4 w-4" /> {photos.length} photos</span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1"><Camera className="h-4 w-4" /> {photos.length} photos</span>
                   {photosState === 'loading' && (
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 text-amber-700 px-3 py-1">
                       <RefreshCw className="h-4 w-4 animate-spin" /> Loading photos...
@@ -379,30 +379,30 @@ function DemoGalleryContent() {
 
                 <div className="mt-6 space-y-3">
                   {demo?.description && (
-                    <p className="text-slate-700 leading-relaxed">
+                    <p className="text-gray-700 leading-relaxed">
                       {demo.description}
                     </p>
                   )}
-                  <p className="text-xs text-slate-500">Uploads are open on the live demo and rate-limited to 5 per IP/hour.</p>
+                  <p className="text-xs text-gray-500">Uploads are open on the live demo and rate-limited to 5 per IP/hour.</p>
 
                   {demo && (
                     <div className="mt-4 grid gap-3 sm:grid-cols-2 items-start">
                       <div className="min-w-0">
-                        <div className="text-xs text-slate-500">Guest link</div>
+                        <div className="text-xs text-gray-500">Guest link</div>
                         <div className="mt-1 flex items-center gap-2">
                           <Link className="text-amber-600 hover:underline text-sm flex items-center gap-1 truncate max-w-[200px]" href={demo.guestPath} title={guestUrl || demo.guestPath}><LinkIcon className="h-3.5 w-3.5 flex-shrink-0" /> {guestUrl ? new URL(guestUrl).pathname : demo.guestPath}</Link>
                           <Button type="button" variant="outline" size="sm" onClick={copyGuestLink} className="h-7 px-3 flex-shrink-0">
                             <Copy className="h-3.5 w-3.5" />
                             Copy
                           </Button>
-                          <Link href={demo.guestPath} target="_blank" className="inline-flex items-center text-slate-600 hover:text-slate-900 text-sm flex-shrink-0">
+                          <Link href={demo.guestPath} target="_blank" className="inline-flex items-center text-gray-600 hover:text-gray-900 text-sm flex-shrink-0">
                             <ExternalLink className="h-4 w-4" />
                           </Link>
                         </div>
                       </div>
 
                       <div className="sm:text-right">
-                        <Button onClick={() => setShowUploadModal(true)} className="rounded-full px-6">
+                        <Button onClick={() => setShowUploadModal(true)} className="rounded-full px-6 bg-black text-white hover:bg-gray-800">
                           <Upload className="h-4 w-4 mr-2" /> Add Photos
                         </Button>
                       </div>
@@ -411,12 +411,12 @@ function DemoGalleryContent() {
                 </div>
               </div>
 
-              <div className="col-span-1 p-6 sm:p-10 border-t lg:border-l border-slate-200/60 bg-white/40">
+              <div className="col-span-1 p-8 sm:p-12 border-t lg:border-l border-slate-200/60 bg-white/40">
                 {demo && (
                   <div className="mx-auto w-full max-w-[260px]">
-                    <div className="rounded-2xl border border-slate-200/70 bg-white/70 p-4 shadow-sm">
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-md">
                       <EventQr code={demo.guestPath.replace('/events/','')} />
-                      <div className="mt-3 text-center text-xs text-slate-600">
+                      <div className="mt-3 text-center text-xs text-gray-600">
                         Scan to open guest link
                       </div>
                     </div>
@@ -430,7 +430,7 @@ function DemoGalleryContent() {
 
       {/* Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <div className="rounded-3xl bg-white/70 ring-1 ring-slate-200/60 p-4 sm:p-6">
+        <div className="rounded-3xl bg-white/60 ring-1 ring-slate-200/60 backdrop-blur-lg p-4 sm:p-6">
           {/* Photo Grid */}
           {photosState === 'loading' && photos.length === 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -441,8 +441,8 @@ function DemoGalleryContent() {
           ) : photosState === 'error' && photos.length === 0 ? (
             <div className="text-center py-12">
               <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Failed to Load Photos</h3>
-              <p className="text-slate-600 mb-6">We couldn't load the photos for this demo event.</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Photos</h3>
+              <p className="text-gray-600 mb-6">We couldn't load the photos for this demo event.</p>
               <Button onClick={handleRetry}>
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try Again
@@ -451,7 +451,7 @@ function DemoGalleryContent() {
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
               {photos.map((photo) => (
-                <Card key={photo.id} className="group cursor-pointer hover:shadow-md transition-all duration-200 overflow-hidden rounded-xl" onClick={() => setSelectedPhoto(photo)}>
+                <Card key={photo.id} className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden rounded-xl bg-white/80 ring-1 ring-slate-200/60 backdrop-blur-md" onClick={() => setSelectedPhoto(photo)}>
                   <CardContent className="p-0">
                     <div className="aspect-square relative overflow-hidden">
                       <img
@@ -616,15 +616,33 @@ function DemoGalleryContent() {
 
 export default function DemoGallery() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
-          <p className="text-slate-600">Loading demo...</p>
+    <>
+      <header className="sticky top-0 z-30 bg-transparent">
+        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 h-24 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-3">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 shadow-lg">
+                <img src="/favicon.ico" alt="Logo" className="h-8 w-8" />
+              </span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">memories<span className="text-amber-600">Vault</span></span>
+            </Link>
+          </div>
+          <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
+            <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
+            <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
+          </nav>
         </div>
-      </div>
-    }>
-      <DemoGalleryContent />
-    </Suspense>
+      </header>
+      <Suspense fallback={
+        <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mx-auto mb-4"></div>
+            <p className="text-slate-600">Loading demo...</p>
+          </div>
+        </div>
+      }>
+        <DemoGalleryContent />
+      </Suspense>
+    </>
   );
 }

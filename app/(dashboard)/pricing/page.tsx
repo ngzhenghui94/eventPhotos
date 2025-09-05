@@ -74,8 +74,8 @@ export default async function PricingPage() {
             </Link>
           </div>
           <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
-            <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
-            <Link href="/dashboard/general" className="hover:text-amber-600 transition-colors">Account</Link>
+            <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
+            <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
           </nav>
         </div>
       </header>
@@ -101,6 +101,7 @@ export default async function PricingPage() {
               '5MB per upload',
               'Guest Photo Sharing',
               'Basic Photo Gallery',
+              'Photo Download & Export',
             ]}
             free
           />
@@ -115,7 +116,7 @@ export default async function PricingPage() {
               '20MB per upload',
               'Guest Photo Sharing',
               'Basic Photo Gallery',
-              'Email Support',
+              'Photo Download & Export',
             ]}
             priceId={starterStripeId}
           />
@@ -130,7 +131,7 @@ export default async function PricingPage() {
               '25MB per upload',
               'Guest Photo Sharing',
               'Basic Photo Gallery',
-              'Email Support',
+              'Photo Download & Export',
             ]}
             priceId={hobbyStripeId}
           />
@@ -146,9 +147,7 @@ export default async function PricingPage() {
               'Guest Photo Sharing',
               'Advanced Photo Gallery',
               'Photo Download & Export',
-              'Custom Event Branding',
               'Teams Enabled',
-              '24/7 Support + Priority',
             ]}
             priceId={proStripeId}
           />
@@ -164,9 +163,7 @@ export default async function PricingPage() {
               'Guest Photo Sharing',
               'Advanced Photo Gallery',
               'Photo Download & Export',
-              'Custom Event Branding',
               'Teams Enabled',
-              'Dedicated Support',
             ]}
             priceId={businessStripeId}
           />
