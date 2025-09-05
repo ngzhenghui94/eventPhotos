@@ -33,9 +33,10 @@ interface Photo {
 interface EventGalleryProps {
   event: Event;
   onBack: () => void;
+  planName?: string;
 }
 
-export function EventGallery({ event, onBack }: EventGalleryProps) {
+export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -194,27 +195,38 @@ export function EventGallery({ event, onBack }: EventGalleryProps) {
 
       {/* Photo Grid */}
       {!loading && photos.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-          {photos.map((photo) => (
-            <Card
-              key={photo.id}
-              className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden"
-              onClick={() => setSelectedPhoto(photo)}
-            >
-              <CardContent className="p-0">
-                <div className="aspect-square relative overflow-hidden">
-                  <img
-                    src={`/api/photos/${photo.id}/thumb`}
-                    alt={photo.originalName}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                    loading="lazy"
-                  />
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity duration-200" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <>
+          {(planName === 'pro' || planName === 'business') ? (
+            <div className="mb-4 flex flex-wrap gap-2">
+              {/* Advanced features: Sorting, Filtering, Bulk Download */}
+              <Button variant="outline" size="sm">Sort by Date</Button>
+              <Button variant="outline" size="sm">Sort by Name</Button>
+              <Button variant="outline" size="sm">Filter by Uploader</Button>
+              <Button variant="outline" size="sm">Bulk Download</Button>
+            </div>
+          ) : null}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {photos.map((photo) => (
+              <Card
+                key={photo.id}
+                className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden"
+                onClick={() => setSelectedPhoto(photo)}
+              >
+                <CardContent className="p-0">
+                  <div className="aspect-square relative overflow-hidden">
+                    <img
+                      src={`/api/photos/${photo.id}/thumb`}
+                      alt={photo.originalName}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                      loading="lazy"
+                    />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity duration-200" />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Upload Modal */}

@@ -5,7 +5,8 @@ import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request, { params }: { params: { userId: string } }) {
-  const userId = Number(params.userId);
+  const awaitedParams = await params;
+  const userId = Number(awaitedParams.userId);
   const data = await req.formData();
   const planName = data.get('planName') as string;
 
