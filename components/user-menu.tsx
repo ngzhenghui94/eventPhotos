@@ -17,8 +17,7 @@ import useSWR, { mutate } from 'swr';
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function UserMenu() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+export function UserMenu({ mobile = false }: { mobile?: boolean } = {}) {
   const { data: user } = useSWR<User>('/api/user', fetcher);
   const router = useRouter();
 
@@ -26,6 +25,38 @@ export function UserMenu() {
     await fetch('/api/auth/signout', { method: 'POST' });
     mutate('/api/user');
     router.push('/');
+  }
+
+  if (mobile) {
+    // Render user actions as DropdownMenuItems for mobile combined menu
+    if (!user) {
+      return (
+        <>
+          <DropdownMenuItem>
+            <Link href="/api/auth/google" className="w-full">Sign in</Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem>
+            <Link href="/api/auth/google" className="w-full">Create free event</Link>
+          </DropdownMenuItem>
+        </>
+      );
+    }
+    return (
+      <>
+        <DropdownMenuItem>
+          <Link href="/dashboard/general" className="flex w-full items-center">
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>Edit Profile</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem>
+          <button type="button" className="flex w-full" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Sign out</span>
+          </button>
+        </DropdownMenuItem>
+      </>
+    );
   }
 
   // Responsive: show desktop menu, and mobile menu
@@ -41,7 +72,7 @@ export function UserMenu() {
         </div>
         {/* Mobile actions: show as menu/hamburger */}
         <div className="sm:hidden">
-          <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="icon">
                 <span className="sr-only">Open menu</span>
@@ -66,7 +97,7 @@ export function UserMenu() {
     <div className="flex items-center gap-2">
       {/* Desktop user menu */}
       <div className="hidden sm:flex">
-        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <DropdownMenu>
           <DropdownMenuTrigger>
             <Avatar className="cursor-pointer size-9">
               <AvatarImage alt={user.name || ''} />
@@ -98,7 +129,7 @@ export function UserMenu() {
       </div>
       {/* Mobile user menu: hamburger */}
       <div className="sm:hidden">
-        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+        <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="icon">
               <span className="sr-only">Open menu</span>
