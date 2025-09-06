@@ -29,7 +29,7 @@ function SelectedPhotoThumb({ file, idx, formatFileSize, handleRemoveFile, uploa
     reader.readAsDataURL(file);
   }, [file]);
   return (
-    <li className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
+    <div className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
       {thumbUrl ? (
         <img src={thumbUrl} alt={file.name} className="w-full h-32 object-cover rounded" />
       ) : (
@@ -44,7 +44,7 @@ function SelectedPhotoThumb({ file, idx, formatFileSize, handleRemoveFile, uploa
       <Button variant="ghost" size="sm" className="absolute top-2 right-2" onClick={() => handleRemoveFile(idx)} disabled={uploading}>
         <X className="h-4 w-4" />
       </Button>
-    </li>
+    </div>
   );
 }
 
@@ -602,7 +602,7 @@ function DemoGalleryContent() {
                       <div className="text-sm font-medium text-gray-700 mb-2">Selected Photos ({selectedFiles.length}/5):</div>
                       <ul className="grid grid-cols-2 gap-3">
                         {selectedFiles.map((file, idx) => (
-                          <li key={file.name + file.size + idx} className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
+                          <div key={file.name + file.size + idx} className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
                             <SelectedPhotoThumb
                               file={file}
                               idx={idx}
@@ -621,7 +621,7 @@ function DemoGalleryContent() {
                                 <div className="text-xs text-gray-500 mt-1 text-right">{uploadProgress[idx] || 0}%</div>
                               </div>
                             )}
-                          </li>
+                          </div>
                         ))}
                       </ul>
                     </div>
