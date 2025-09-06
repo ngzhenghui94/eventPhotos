@@ -188,10 +188,10 @@ function PricingCard({
 						</li>
 					))}
 				</ul>
-				{free ? (
-					<form action={chooseFreePlanAction} className="w-full">
-						<SubmitButton disabled>Get Started</SubmitButton>
-					</form>
+				   {free ? (
+					   <form action={chooseFreePlanAction} className="w-full">
+						   <SubmitButton disabled />
+					   </form>
 				) : priceId ? (
 					<form action={checkoutAction} className="w-full">
 						<input type="hidden" name="priceId" value={priceId} />
