@@ -4,6 +4,7 @@ import { Calendar, MapPin, Users, Upload, Camera, Lock } from 'lucide-react';
 import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { GuestPhotoUpload } from '@/components/guest-photo-upload';
+import { EventQr } from '@/components/event-qr';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
@@ -63,7 +64,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
           <div className="lg:col-span-3 space-y-8">
             {/* Event Description */}
             {event.description && (
-              <Card className="bg-gradient-to-br from-indigo-400 via-pink-200 to-pink-500 rounded-xl shadow-2xl ring-2 ring-pink-300/60">
+              <Card className="bg-gradient-to-br from-indigo-50 via-white to-pink-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
                 <CardHeader>
                   <CardTitle>About This Event</CardTitle>
                 </CardHeader>
@@ -79,7 +80,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             )}
 
             {/* Photo Gallery */}
-            <Card className="bg-gradient-to-br from-cyan-400 via-emerald-300 to-emerald-600 rounded-xl shadow-2xl ring-2 ring-emerald-400/60">
+            <Card className="bg-gradient-to-br from-emerald-50 via-white to-cyan-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Users className="mr-2 h-5 w-5" />
@@ -103,7 +104,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-yellow-300 via-pink-200 to-pink-500 rounded-xl shadow-2xl ring-2 ring-yellow-400/60">
+            <Card className="bg-gradient-to-br from-pink-50 via-white to-yellow-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
               <CardHeader>
                 <CardTitle>Event Info</CardTitle>
               </CardHeader>
@@ -115,8 +116,11 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                       {event.eventCode}
                     </p>
                   </div>
+                  <div className="flex flex-col items-center mb-4">
+                    <EventQr code={event.eventCode} size={128} compact={true} />
+                  </div>
                   <p className="text-sm text-gray-600">
-                    Share this event code so guests can find your event. Private events still require an access code.
+                    Share this event code or QR so guests can find your event. Private events still require an access code.
                   </p>
                 </div>
 
@@ -130,7 +134,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-violet-400 via-blue-300 to-blue-600 rounded-xl shadow-2xl ring-2 ring-violet-400/60">
+            <Card className="bg-gradient-to-br from-blue-50 via-white to-violet-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
               <CardHeader>
                 <CardTitle>How to Use</CardTitle>
               </CardHeader>

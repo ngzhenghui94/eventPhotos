@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,12 +10,25 @@ import { Label } from '@/components/ui/label';
 import { Upload, X, Image as ImageIcon, User } from 'lucide-react';
 // Using API route directly to avoid server action double-invocation in dev
 
+
 interface GuestPhotoUploadProps {
   eventId: number;
 }
-
 export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   const router = useRouter();
+  const [maxFileSizeMB, setMaxFileSizeMB] = useState(10);
+  useEffect(() => {
+    async function fetchHostPlan() {
+      try {
+        const res = await fetch(`/api/events/${eventId}/host-plan`);
+        if (res.ok) {
+          const data = await res.json();
+          setMaxFileSizeMB(Math.floor((data.maxFileSize || 10485760) / 1024 / 1024));
+        }
+      } catch {}
+    }
+    fetchHostPlan();
+  }, [eventId]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -129,7 +142,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   };
 
   return (
-  <Card className="bg-gradient-to-br from-orange-400 via-pink-400 to-rose-500 rounded-xl shadow-2xl ring-2 ring-rose-400/60">
+    <Card className="bg-gradient-to-br from-orange-50 via-pink-50 to-rose-100 rounded-xl shadow-lg ring-1 ring-rose-100/60">
       <CardHeader>
   <CardTitle className="flex items-center bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 text-xl font-bold">
           <Upload className="mr-2 h-5 w-5 text-orange-500" />
@@ -180,7 +193,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
               Drop photos here or click to browse
             </p>
             <p className="text-sm text-gray-500">
-              Supports JPG, PNG, GIF up to 10MB each
+              Supports JPG, PNG, GIF up to {maxFileSizeMB}MB each
             </p>
           </div>
           <Button
@@ -272,7 +285,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
                 <li>• Please provide your name so others know who shared the photos</li>
                 <li>• Your photos may require approval before appearing in the gallery</li>
                 <li>• Only upload photos that are appropriate and relevant to this event</li>
-                <li>• Supported formats: JPG, PNG, GIF (max 10MB each)</li>
+                <li>• Supported formats: JPG, PNG, GIF (max {maxFileSizeMB}MB each)</li>
               </ul>
             </div>
           </div>

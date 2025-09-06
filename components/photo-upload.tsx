@@ -59,43 +59,35 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
     setIsUploading(true);
     try {
       // 1) Ask server for presigned PUT URLs
-      const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
-      const { uploads, maxFileSize } = await createSignedUploadUrlsAction(eventId, meta);
+  const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
+  const { uploads, maxFileSize } = await createSignedUploadUrlsAction(eventId, meta, planName);
       if (!maxBytes) setMaxBytes(maxFileSize);
 
-      // 2) Upload directly to S3 using presigned URLs
+      // 2) Upload directly to S3 using presigned URLs (parallel), finalize each immediately
       const remaining = [...uploads];
       const succeeded: typeof uploads = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
-      for (const file of selectedFiles) {
+      await Promise.all(selectedFiles.map(async (file) => {
         const idx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
-        if (idx === -1) continue;
+        if (idx === -1) return;
         const u = remaining.splice(idx, 1)[0];
         const res = await fetch(u.url, {
           method: 'PUT',
-          // Omit Content-Type header to reduce signature/CORS mismatch risk; S3 will infer or store default
-          // headers: { 'Content-Type': file.type },
           body: file,
         });
         if (res.ok) {
           succeeded.push(u);
-        } else {
-          failures.push({ name: u.originalFilename, status: res.status, detail: await res.text() });
-        }
-      }
-
-      // 3) Finalize in DB
-      if (succeeded.length > 0) {
-        await finalizeUploadedPhotosAction(
-          eventId,
-          succeeded.map(u => ({
+          // Finalize/tag this photo immediately after upload
+          await finalizeUploadedPhotosAction(eventId, [{
             key: u.key,
             originalFilename: u.originalFilename,
             mimeType: u.mimeType,
             fileSize: u.fileSize,
-          }))
-        );
-      }
+          }]);
+        } else {
+          failures.push({ name: u.originalFilename, status: res.status, detail: await res.text() });
+        }
+      }));
 
       setSelectedFiles([]);
       router.refresh();

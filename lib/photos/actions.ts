@@ -2,11 +2,11 @@
 
 import { join } from 'path';
 import { db } from '@/lib/db/drizzle';
-import { photos, events } from '@/lib/db/schema';
+import { photos, events, users } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { uploadToS3, generatePhotoKey, deleteFromS3, getSignedUploadUrl, deriveThumbKey } from '@/lib/s3';
-import { uploadLimitBytes } from '@/lib/plans';
+import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
 
 export async function uploadPhotosAction(formData: FormData) {
   const user = await getUser();
@@ -16,12 +16,15 @@ export async function uploadPhotosAction(formData: FormData) {
     const files = formData.getAll('photos') as File[];
     if (!eventId || isNaN(eventId)) throw new Error('Invalid event ID');
 
-    const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
+  const { getEventById } = await import('@/lib/db/queries');
+  const event = await getEventById(eventId);
+  const host = await db.query.users.findFirst({ where: eq(users.id, event.createdBy) });
     if (!event) throw new Error('Event not found');
     if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
     if (files.length === 0) throw new Error('No files selected');
 
-    const MAX_FILE_SIZE = uploadLimitBytes('free');
+  const planName = host?.planName || 'free';
+  const MAX_FILE_SIZE = uploadLimitBytes(normalizePlanName(planName));
     const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
     const currentCount = currentCountRes?.[0]?.count ?? 0;
     let remaining = Number.MAX_SAFE_INTEGER;
@@ -159,7 +162,8 @@ export async function uploadPhotosAction(formData: FormData) {
 
   export async function createSignedUploadUrlsAction(
     eventId: number,
-    files: FileMeta[]
+    files: FileMeta[],
+    planName?: string | null
   ): Promise<{ uploads: UploadDescriptor[]; maxFileSize: number }> {
     const user = await getUser();
     if (!user) throw new Error('Unauthorized');
@@ -167,7 +171,9 @@ export async function uploadPhotosAction(formData: FormData) {
     const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
     if (!event) throw new Error('Event not found');
     if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
-    const MAX_FILE_SIZE = uploadLimitBytes('free');
+    // Use planName from argument, event, or user
+  const plan = planName ? normalizePlanName(planName) : 'free';
+    const MAX_FILE_SIZE = uploadLimitBytes(plan);
     const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
     const currentCount = currentCountRes?.[0]?.count ?? 0;
     const uploads: UploadDescriptor[] = [];
