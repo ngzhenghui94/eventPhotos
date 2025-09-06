@@ -4,6 +4,7 @@ import { Carousel } from 'react-responsive-carousel';
 import 'react-responsive-carousel/lib/styles/carousel.min.css';
 
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
+import { DEMO_FALLBACK_IMAGES } from '@/lib/demo-fallback-images';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
@@ -72,6 +73,12 @@ type DemoPhoto = {
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 function DemoGalleryContent() {
+  // Helper to randomly pick N items from an array
+  function pickRandom<T>(arr: T[], count: number): T[] {
+    if (arr.length <= count) return arr;
+    const shuffled = arr.slice().sort(() => 0.5 - Math.random());
+    return shuffled.slice(0, count);
+  }
   // Track upload progress for each file
   const [uploadProgress, setUploadProgress] = useState<number[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<DemoPhoto | null>(null);
@@ -487,25 +494,9 @@ function DemoGalleryContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="rounded-3xl bg-white/60 ring-1 ring-slate-200/60 backdrop-blur-lg p-4 sm:p-6">
           {/* Photo Grid */}
-          {photosState === 'loading' && photos.length === 0 ? (
+          {photos.length > 0 ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {Array.from({ length: 10 }).map((_, i) => (
-                <div key={i} className="aspect-square rounded-xl bg-slate-200/60 animate-pulse" />
-              ))}
-            </div>
-          ) : photosState === 'error' && photos.length === 0 ? (
-            <div className="text-center py-12">
-              <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Failed to Load Photos</h3>
-              <p className="text-gray-600 mb-6">We couldn't load the photos for this demo event.</p>
-              <Button onClick={handleRetry}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-              {photos.map((photo) => (
+              {pickRandom(photos, 10).map((photo) => (
                 <Card key={photo.id} className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden rounded-xl bg-white/80 ring-1 ring-slate-200/60 backdrop-blur-md" onClick={() => setSelectedPhoto(photo)}>
                   <CardContent className="p-0">
                     <div className="aspect-square relative overflow-hidden">
@@ -526,6 +517,24 @@ function DemoGalleryContent() {
                       <div className="absolute bottom-2 left-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                         <div className="backdrop-blur bg-black/60 text-white text-xs px-2 py-1 rounded truncate">{photo.guestName || photo.uploadedByUser?.name || ''}</div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {pickRandom(DEMO_FALLBACK_IMAGES, 10).map((src, i) => (
+                <Card key={src + i} className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden rounded-xl bg-white/80 ring-1 ring-slate-200/60 backdrop-blur-md">
+                  <CardContent className="p-0">
+                    <div className="aspect-square relative overflow-hidden">
+                      <img
+                        src={src}
+                        alt={`Fallback demo photo ${i + 1}`}
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity duration-300" />
                     </div>
                   </CardContent>
                 </Card>

@@ -4,14 +4,14 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useFormStatus } from 'react-dom';
 
-export function SubmitButton() {
+
+export function SubmitButton({ disabled = false }: { disabled?: boolean } = {}) {
   const { pending } = useFormStatus();
 
-  // Accept disabled prop
   return (
     <Button
       type="submit"
-      disabled={pending || (typeof arguments[0] === 'object' && arguments[0]?.disabled)}
+      disabled={pending || disabled}
       variant="outline"
       className="w-full rounded-full"
     >

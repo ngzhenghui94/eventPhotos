@@ -79,7 +79,7 @@ export default async function PricingPage() {
             trialDays={0}
             features={[
               '1 Event',
-              '20MB per upload',
+              '50 photos per event',
               '5MB per upload',
               'Guest Photo Sharing',
               'Basic Photo Gallery',
@@ -94,7 +94,7 @@ export default async function PricingPage() {
             trialDays={0}
             features={[
               '1 Event',
-              '50 photos per event',
+              '100 photos per event',
               '20MB per upload',
               'Guest Photo Sharing',
               'Basic Photo Gallery',
@@ -109,7 +109,7 @@ export default async function PricingPage() {
             trialDays={0}
             features={[
               '5 Events',
-              '100 photos per event',
+              '500 photos per event',
               '25MB per upload',
               'Guest Photo Sharing',
               'Basic Photo Gallery',
@@ -124,12 +124,11 @@ export default async function PricingPage() {
             trialDays={0}
             features={[
               '20 Events',
-              '500 photos per event',
+              '250 photos per event',
               '50MB per upload',
               'Guest Photo Sharing',
               'Advanced Photo Gallery',
               'Photo Download & Export',
-              // 'Teams Enabled' removed
             ]}
             priceId={proStripeId}
           />
@@ -140,7 +139,7 @@ export default async function PricingPage() {
             trialDays={0}
             features={[
               'Unlimited Events',
-              '1000 photos per event',
+              '500 photos per event',
               '100MB per upload',
               'Guest Photo Sharing',
               'Advanced Photo Gallery',
@@ -197,7 +196,7 @@ function PricingCard({
       </ul>
       {free ? (
         <form action={chooseFreePlanAction} className="w-full">
-          <SubmitButton />
+          <SubmitButton disabled={true} />
         </form>
       ) : priceId ? (
         <form action={checkoutAction} className="w-full">

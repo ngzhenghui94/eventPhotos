@@ -67,82 +67,82 @@ export default async function UpgradePage() {
 					</p>
 				</div>
 				<div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 max-w-7xl mx-auto fade-in-up">
-					<PricingCard
-						name={'Free'}
-						price={0}
-						interval={'month'}
-						trialDays={0}
-						features={[
-							'1 Event',
-							'20MB per upload',
-							'5MB per upload',
-							'Guest Photo Sharing',
-							'Basic Photo Gallery',
-							'Photo Download & Export',
-						]}
-						free
-					/>
-					<PricingCard
-						name={'Starter'}
-						price={starterUnitAmount}
-						interval={starterInterval}
-						trialDays={0}
-						features={[
-							'1 Event',
-							'50 photos per event',
-							'20MB per upload',
-							'Guest Photo Sharing',
-							'Basic Photo Gallery',
-							'Photo Download & Export',
-						]}
-						priceId={starterStripeId}
-					/>
-					<PricingCard
-						name={'Hobby'}
-						price={hobbyUnitAmount}
-						interval={hobbyInterval}
-						trialDays={0}
-						features={[
-							'5 Events',
-							'100 photos per event',
-							'25MB per upload',
-							'Guest Photo Sharing',
-							'Basic Photo Gallery',
-							'Photo Download & Export',
-						]}
-						priceId={hobbyStripeId}
-					/>
-					<PricingCard
-						name={'Pro'}
-						price={proUnitAmount}
-						interval={proInterval}
-						trialDays={0}
-						features={[
-							'20 Events',
-							'500 photos per event',
-							'50MB per upload',
-							'Guest Photo Sharing',
-							'Advanced Photo Gallery',
-							'Photo Download & Export',
-						]}
-						priceId={proStripeId}
-					/>
-					<PricingCard
-						name={'Business'}
-						price={businessUnitAmount}
-						interval={businessInterval}
-						trialDays={0}
-						features={[
-							'Unlimited Events',
-							'1000 photos per event',
-							'100MB per upload',
-							'Guest Photo Sharing',
-							'Advanced Photo Gallery',
-							'Photo Download & Export',
-							'Teams Enabled',
-						]}
-						priceId={businessStripeId}
-					/>
+								<PricingCard
+									name={'Free'}
+									price={0}
+									interval={'month'}
+									trialDays={0}
+									features={[
+										'1 Event',
+										'50 photos per event',
+										'5MB per upload',
+										'Guest Photo Sharing',
+										'Basic Photo Gallery',
+										'Photo Download & Export',
+									]}
+									free
+								/>
+								<PricingCard
+									name={'Starter'}
+									price={starterUnitAmount}
+									interval={starterInterval}
+									trialDays={0}
+									features={[
+										'1 Event',
+										'100 photos per event',
+										'20MB per upload',
+										'Guest Photo Sharing',
+										'Basic Photo Gallery',
+										'Photo Download & Export',
+									]}
+									priceId={starterStripeId}
+								/>
+								<PricingCard
+									name={'Hobby'}
+									price={hobbyUnitAmount}
+									interval={hobbyInterval}
+									trialDays={0}
+									features={[
+										'5 Events',
+										'500 photos per event',
+										'25MB per upload',
+										'Guest Photo Sharing',
+										'Basic Photo Gallery',
+										'Photo Download & Export',
+									]}
+									priceId={hobbyStripeId}
+								/>
+								<PricingCard
+									name={'Pro'}
+									price={proUnitAmount}
+									interval={proInterval}
+									trialDays={0}
+									features={[
+										'20 Events',
+										'250 photos per event',
+										'50MB per upload',
+										'Guest Photo Sharing',
+										'Advanced Photo Gallery',
+										'Photo Download & Export',
+									]}
+									priceId={proStripeId}
+								/>
+								<PricingCard
+									name={'Business'}
+									price={businessUnitAmount}
+									interval={businessInterval}
+									trialDays={0}
+									features={[
+										'Unlimited Events',
+										'500 photos per event',
+										'100MB per upload',
+										'Guest Photo Sharing',
+										'Advanced Photo Gallery',
+										'Photo Download & Export',
+										'Teams Enabled',
+									]}
+									priceId={businessStripeId}
+								/>
 				</div>
 			</section>
 		</main>
