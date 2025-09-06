@@ -72,6 +72,8 @@ type DemoPhoto = {
 type LoadingState = 'idle' | 'loading' | 'success' | 'error';
 
 function DemoGalleryContent() {
+  // Track upload progress for each file
+  const [uploadProgress, setUploadProgress] = useState<number[]>([]);
   const [selectedPhoto, setSelectedPhoto] = useState<DemoPhoto | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [demo, setDemo] = useState<DemoMeta | null>(null);
@@ -216,7 +218,8 @@ function DemoGalleryContent() {
   // Submit selected files
   const handleSubmitUpload = async () => {
     if (!demo || selectedFiles.length === 0) return;
-    setUploading(true);
+  setUploading(true);
+  setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
       let successCount = 0;
       const failures: { name: string; message: string }[] = [];
@@ -229,17 +232,48 @@ function DemoGalleryContent() {
         if (uploaderEmail) form.append('uploaderEmail', uploaderEmail);
 
         try {
-          const res = await fetch('/api/photos', { method: 'POST', body: form });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            const msg = data?.error || `Failed to upload ${file.name}`;
-            failures.push({ name: file.name, message: msg });
-            if (res.status === 429) break; // Rate limited
-          } else {
-            successCount += 1;
-          }
+          // Use XMLHttpRequest for progress feedback
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/photos');
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                setUploadProgress((prev) => {
+                  const next = [...prev];
+                  next[i] = Math.round((e.loaded / e.total) * 100);
+                  return next;
+                });
+              }
+            };
+            xhr.onload = () => {
+              if (xhr.status === 201) {
+                successCount += 1;
+                resolve();
+              } else {
+                let msg = `Failed to upload ${file.name}`;
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  msg = data?.error || msg;
+                } catch {}
+                failures.push({ name: file.name, message: msg });
+                if (xhr.status === 429) {
+                  (window as any).__EP_TOAST?.error?.('Upload rate limit reached', {
+                    description: 'You can only upload up to 5 photos per hour as a guest. Please try again later.'
+                  });
+                  reject(new Error('Rate limited'));
+                  return;
+                }
+                resolve();
+              }
+            };
+            xhr.onerror = () => {
+              failures.push({ name: file.name, message: 'Network error' });
+              resolve();
+            };
+            xhr.send(form);
+          });
         } catch (error) {
-          failures.push({ name: file.name, message: 'Network error' });
+          break;
         }
       }
 
@@ -545,20 +579,32 @@ function DemoGalleryContent() {
                     </Button>
                     {/* Drag and drop handler removed; now handled by parent div */}
                   </div>
-                  {/* Selected files list */}
+                  {/* Selected files list with progress bars */}
                   {selectedFiles.length > 0 && (
                     <div className="mt-4">
                       <div className="text-sm font-medium text-gray-700 mb-2">Selected Photos ({selectedFiles.length}/5):</div>
                       <ul className="grid grid-cols-2 gap-3">
                         {selectedFiles.map((file, idx) => (
-                          <SelectedPhotoThumb
-                            key={file.name + file.size + idx}
-                            file={file}
-                            idx={idx}
-                            formatFileSize={formatFileSize}
-                            handleRemoveFile={handleRemoveFile}
-                            uploading={uploading}
-                          />
+                          <li key={file.name + file.size + idx} className="relative bg-slate-100 rounded overflow-hidden flex flex-col items-center justify-center p-2">
+                            <SelectedPhotoThumb
+                              file={file}
+                              idx={idx}
+                              formatFileSize={formatFileSize}
+                              handleRemoveFile={handleRemoveFile}
+                              uploading={uploading}
+                            />
+                            {uploading && (
+                              <div className="w-full mt-2">
+                                <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                                  <div
+                                    className="h-2 rounded bg-blue-500 transition-all duration-200"
+                                    style={{ width: `${uploadProgress[idx] || 0}%` }}
+                                  />
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1 text-right">{uploadProgress[idx] || 0}%</div>
+                              </div>
+                            )}
+                          </li>
                         ))}
                       </ul>
                     </div>

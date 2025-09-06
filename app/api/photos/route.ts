@@ -5,19 +5,22 @@ import { photos, ActivityType } from '@/lib/db/schema';
 import { getUser, getEventById } from '@/lib/db/queries';
 import { generatePhotoKey, uploadToS3 } from '@/lib/s3';
 import { DEMO_ACCESS_CODE } from '@/lib/db/demo';
+import { redis } from '@/lib/upstash';
 
-// Simple in-memory rate limit for demo: 5 uploads per IP per hour
-const demoRateMap = new Map<string, { count: number; resetAt: number }>();
-function rateLimitDemo(ip: string | null | undefined) {
+// Redis-based rate limit for demo: 5 uploads per IP per hour
+async function rateLimitDemo(ip: string | null | undefined) {
   if (!ip) return { ok: true };
-  const now = Date.now();
-  const rec = demoRateMap.get(ip);
-  if (!rec || rec.resetAt < now) {
-    demoRateMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 });
-    return { ok: true };
+  const key = `demo-upload-rate:${ip}`;
+  const count = await redis.incr(key);
+  if (count === 1) {
+    // Set expiry for 1 hour on first upload
+    await redis.expire(key, 60 * 60);
   }
-  if (rec.count >= 5) return { ok: false, retryAt: rec.resetAt } as const;
-  rec.count += 1;
+  if (count > 5) {
+    const ttl = await redis.ttl(key);
+    const retryAt = Date.now() + ttl * 1000;
+    return { ok: false, retryAt } as const;
+  }
   return { ok: true } as const;
 }
 
@@ -63,8 +66,20 @@ export async function POST(request: NextRequest) {
 
   // If this is the demo event (access code DEMO), apply IP rate limit
     if (event.accessCode === DEMO_ACCESS_CODE) {
-  const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || request.headers.get('x-real-ip') || null;
-      const rl = rateLimitDemo(ip);
+      // Improved IP extraction: checks multiple headers, falls back to request.ip if available
+      let ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+      if (!ip || ip === '' || ip === '::1' || ip === '127.0.0.1') {
+        ip = request.headers.get('x-real-ip')?.trim();
+      }
+      // Next.js edge runtime may not provide request.ip, but fallback if available
+      if ((!ip || ip === '') && (request as any).ip) {
+        ip = (request as any).ip;
+      }
+      // If still no IP, use a unique string for local/dev, but do not default to '1' or null
+      if (!ip || ip === '') {
+        ip = 'unknown-ip';
+      }
+      const rl = await rateLimitDemo(ip);
       if (!rl.ok) {
         const waitMins = Math.ceil(((rl.retryAt! - Date.now()) / 1000) / 60);
         return Response.json({ error: `Demo limit reached. Try again in ~${waitMins} min.` }, { status: 429 });
