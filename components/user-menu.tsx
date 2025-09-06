@@ -28,46 +28,99 @@ export function UserMenu() {
     router.push('/');
   }
 
+  // Responsive: show desktop menu, and mobile menu
   if (!user) {
     return (
-      <>
-        <Link href="/api/auth/google" className="hover:text-gray-900">Sign in</Link>
-        <Button asChild className="rounded-full">
-          <Link href="/api/auth/google">Create free event</Link>
-        </Button>
-      </>
+      <div className="flex items-center gap-2">
+        {/* Desktop actions */}
+        <div className="hidden sm:flex gap-2">
+          <Link href="/api/auth/google" className="hover:text-gray-900">Sign in</Link>
+          <Button asChild className="rounded-full">
+            <Link href="/api/auth/google">Create free event</Link>
+          </Button>
+        </div>
+        {/* Mobile actions: show as menu/hamburger */}
+        <div className="sm:hidden">
+          <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon">
+                <span className="sr-only">Open menu</span>
+                <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Link href="/api/auth/google" className="w-full">Sign in</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/api/auth/google" className="w-full">Create free event</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
     );
   }
 
   return (
-    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
-      <DropdownMenuTrigger>
-        <Avatar className="cursor-pointer size-9">
-          <AvatarImage alt={user.name || ''} />
-          <AvatarFallback>
-            {user.email
-              .split(' ')
-              .map((n) => n[0])
-              .join('')}
-          </AvatarFallback>
-        </Avatar>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="flex flex-col gap-1">
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard/general" className="flex w-full items-center">
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Edit Profile</span>
-          </Link>
-        </DropdownMenuItem>
-        <form action={handleSignOut} className="w-full">
-          <button type="submit" className="flex w-full">
-            <DropdownMenuItem className="w-full flex-1 cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
+    <div className="flex items-center gap-2">
+      {/* Desktop user menu */}
+      <div className="hidden sm:flex">
+        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <DropdownMenuTrigger>
+            <Avatar className="cursor-pointer size-9">
+              <AvatarImage alt={user.name || ''} />
+              <AvatarFallback>
+                {user.email
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')}
+              </AvatarFallback>
+            </Avatar>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="flex flex-col gap-1">
+            <DropdownMenuItem className="cursor-pointer">
+              <Link href="/dashboard/general" className="flex w-full items-center">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Edit Profile</span>
+              </Link>
             </DropdownMenuItem>
-          </button>
-        </form>
-      </DropdownMenuContent>
-    </DropdownMenu>
+            <form action={handleSignOut} className="w-full">
+              <button type="submit" className="flex w-full">
+                <DropdownMenuItem className="w-full flex-1 cursor-pointer">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Sign out</span>
+                </DropdownMenuItem>
+              </button>
+            </form>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {/* Mobile user menu: hamburger */}
+      <div className="sm:hidden">
+        <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon">
+              <span className="sr-only">Open menu</span>
+              <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>
+              <Link href="/dashboard/general" className="flex w-full items-center">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Edit Profile</span>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem>
+              <button type="button" className="flex w-full" onClick={handleSignOut}>
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </button>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }
