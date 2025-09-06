@@ -257,9 +257,26 @@ function DemoGalleryContent() {
                 } catch {}
                 failures.push({ name: file.name, message: msg });
                 if (xhr.status === 429) {
-                  (window as any).__EP_TOAST?.error?.('Upload rate limit reached', {
-                    description: 'You can only upload up to 5 photos per hour as a guest. Please try again later.'
-                  });
+                  // Custom toast for rate limit
+                  if (window.sonner) {
+                    window.sonner(
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-6 w-6 text-red-500 animate-bounce" />
+                        <div>
+                          <div className="font-bold text-red-700">Upload rate limit reached</div>
+                          <div className="text-sm text-gray-700">You can only upload up to 5 photos per hour as a guest.<br />Please try again later.</div>
+                        </div>
+                      </div>,
+                      {
+                        duration: 6000,
+                        position: 'top-center',
+                        className: 'bg-white border border-red-200 shadow-lg rounded-xl px-6 py-4',
+                        style: { boxShadow: '0 4px 24px rgba(255,0,0,0.08)' }
+                      }
+                    );
+                  } else {
+                    alert('Upload rate limit reached: You can only upload up to 5 photos per hour as a guest.');
+                  }
                   reject(new Error('Rate limited'));
                   return;
                 }

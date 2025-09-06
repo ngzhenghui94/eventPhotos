@@ -24,6 +24,21 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
   const allIds = useMemo(() => photos.map(p => p.id), [photos]);
   const allSelected = selectedIds.size > 0 && selectedIds.size === allIds.length;
 
+  // --- Photo limit logic ---
+  // Assume planName is available via props or context, fallback to 'free'
+  // You may need to pass planName from parent if not available here
+  const planName = (typeof window !== 'undefined' && window.__EP_PLAN) ? window.__EP_PLAN : 'free';
+  const normalizedPlan = planName.toLowerCase().includes('business') ? 'business'
+    : planName.toLowerCase().includes('pro') ? 'pro'
+    : planName.toLowerCase().includes('hobby') ? 'hobby'
+    : planName.toLowerCase().includes('starter') ? 'starter'
+    : 'free';
+  const photoLimit = normalizedPlan === 'business' ? 500
+    : normalizedPlan === 'pro' ? 250
+    : normalizedPlan === 'hobby' ? 500
+    : normalizedPlan === 'starter' ? 100
+    : 50;
+
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
   const handleDeletePhoto = async (photoId: number) => {
     if (confirmingId !== photoId) {
