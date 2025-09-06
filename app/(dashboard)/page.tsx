@@ -59,25 +59,49 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-12">How {brand.productName} works</h2>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="glass-card p-7 shadow-xl hover:shadow-2xl transition-shadow border border-amber-100/40 backdrop-blur-md bg-white/70 hover:bg-white/90 hover:border-amber-300/60">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Calendar className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Create an event</h3>
-              <p className="mt-2 text-sm text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
+            {/* Card 1 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-500 via-orange-400 to-blue-400 text-white flex items-center justify-center shadow-lg">
+                  <Calendar className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Create an event</h3>
+                <p className="mt-3 text-base text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
+              </div>
             </div>
-            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><QrCode className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Share your code</h3>
-              <p className="mt-2 text-sm text-gray-600">Guests join via a short code or QR—no app or sign-up required.</p>
+            {/* Card 2 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-amber-400 to-orange-400 text-white flex items-center justify-center shadow-lg">
+                  <QrCode className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Share your code</h3>
+                <p className="mt-3 text-base text-gray-600">Guests join via a short code or QR—no app or sign-up required.</p>
+              </div>
             </div>
-            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Upload className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Guests upload</h3>
-              <p className="mt-2 text-sm text-gray-600">Everyone contributes their best shots in real time during the event.</p>
+            {/* Card 3 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
+                  <Upload className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Guests upload</h3>
+                <p className="mt-3 text-base text-gray-600">Everyone contributes their best shots in real time during the event.</p>
+              </div>
             </div>
-            <div className="glass-card p-7 shadow-lg hover:shadow-2xl transition-shadow">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><CheckCircle2 className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Approve & share</h3>
-              <p className="mt-2 text-sm text-gray-600">You stay in control. Approve photos and share the gallery instantly.</p>
+            {/* Card 4 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-orange-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-orange-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
+                  <CheckCircle2 className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Approve & share</h3>
+                <p className="mt-3 text-base text-gray-600">You stay in control. Approve photos and share the gallery instantly.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -87,20 +111,38 @@ export default function HomePage() {
   <section className="py-16 sm:py-24 fade-in-up">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid gap-8 lg:grid-cols-3">
-            <div className="rounded-2xl border bg-white/80 p-8 shadow-xl hover:shadow-2xl transition-shadow border-amber-100/40 backdrop-blur-md hover:bg-white/95 hover:border-amber-300/60">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Shield className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Private & secure</h3>
-              <p className="mt-2 text-sm text-gray-600">Each event has its own private gallery secured by access codes. Optional approval before anything goes live.</p>
+            {/* Card 1 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-500 via-orange-400 to-blue-400 text-white flex items-center justify-center shadow-lg">
+                  <Shield className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Private & secure</h3>
+                <p className="mt-3 text-base text-gray-600">Each event has its own private gallery secured by access codes. Optional approval before anything goes live.</p>
+              </div>
             </div>
-            <div className="rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-shadow">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><Users className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Built for guests</h3>
-              <p className="mt-2 text-sm text-gray-600">No accounts needed. Mobile-first upload and viewing that just works for everyone attending.</p>
+            {/* Card 2 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-amber-400 to-orange-400 text-white flex items-center justify-center shadow-lg">
+                  <Users className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Built for guests</h3>
+                <p className="mt-3 text-base text-gray-600">No accounts needed. Mobile-first upload and viewing that just works for everyone attending.</p>
+              </div>
             </div>
-            <div className="rounded-2xl border bg-white p-8 shadow-sm hover:shadow-lg transition-shadow">
-              <div className="h-12 w-12 rounded-lg bg-amber-600 text-white flex items-center justify-center"><ImageIcon className="h-6 w-6"/></div>
-              <h3 className="mt-5 font-semibold text-lg">Beautiful galleries</h3>
-              <p className="mt-2 text-sm text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
+            {/* Card 3 */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
+                  <ImageIcon className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Beautiful galleries</h3>
+                <p className="mt-3 text-base text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
+              </div>
             </div>
           </div>
           <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
