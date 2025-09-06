@@ -78,78 +78,76 @@ const NewEventPage = () => {
         )}
 
         <form action={createEventAction} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Calendar className="mr-2 h-5 w-5" />
-                Event Details
-              </CardTitle>
+          <Card className="bg-gradient-to-br from-white via-amber-50 to-blue-50 border-0 shadow-2xl rounded-3xl px-2 py-2">
+            <CardHeader className="pb-2 flex items-center gap-3">
+              <div className="flex items-center justify-center h-12 w-12 rounded-full bg-amber-100 shadow-lg">
+                <Calendar className="h-7 w-7 text-amber-600" />
+              </div>
+              <CardTitle className="text-2xl font-extrabold text-gray-900 tracking-tight">Event Details</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <Label htmlFor="name">Event Name *</Label>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Enter event name"
-                  required
-                  className="mt-1"
-                  disabled={eventLimitReached}
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  placeholder="Describe your event (optional)"
-                  rows={3}
-                  className="mt-1"
-                  disabled={eventLimitReached}
-                />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="date">Event Date *</Label>
+                  <Label htmlFor="name" className="text-base font-semibold text-gray-700">Event Name *</Label>
+                  <Input
+                    id="name"
+                    name="name"
+                    placeholder="Enter event name"
+                    required
+                    className="mt-2 border-2 border-amber-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    disabled={eventLimitReached}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="location" className="text-base font-semibold text-gray-700">Location</Label>
+                  <Input
+                    id="location"
+                    name="location"
+                    placeholder="Event location (optional)"
+                    className="mt-2 border-2 border-amber-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+                    disabled={eventLimitReached}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <Label htmlFor="date" className="text-base font-semibold text-gray-700">Event Date *</Label>
                   <Input
                     id="date"
                     name="date"
                     type="datetime-local"
                     required
-                    className="mt-1"
+                    className="mt-2 border-2 border-amber-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                     disabled={eventLimitReached}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    placeholder="Event location (optional)"
-                    className="mt-1"
+                  <Label htmlFor="description" className="text-base font-semibold text-gray-700">Description</Label>
+                  <Textarea
+                    id="description"
+                    name="description"
+                    placeholder="Describe your event (optional)"
+                    rows={3}
+                    className="mt-2 border-2 border-amber-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                     disabled={eventLimitReached}
                   />
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox id="isPublic" name="isPublic" disabled={eventLimitReached} />
-                <Label htmlFor="isPublic" className="text-sm font-normal">
-                  Make event publicly discoverable
-                </Label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="flex items-center space-x-3">
+                  <Checkbox id="isPublic" name="isPublic" disabled={eventLimitReached} />
+                  <Label htmlFor="isPublic" className="text-sm font-medium text-gray-700">Make event publicly discoverable</Label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox id="allowGuestUploads" name="allowGuestUploads" defaultChecked disabled={eventLimitReached} />
+                  <Label htmlFor="allowGuestUploads" className="text-sm font-medium text-gray-700">Allow guests to upload photos</Label>
+                </div>
+                <div className="flex items-center space-x-3">
+                  <Checkbox id="requireApproval" name="requireApproval" disabled={eventLimitReached} />
+                  <Label htmlFor="requireApproval" className="text-sm font-medium text-gray-700">Require approval before photos are visible</Label>
+                </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox id="allowGuestUploads" name="allowGuestUploads" defaultChecked disabled={eventLimitReached} />
-                <Label htmlFor="allowGuestUploads" className="text-sm font-normal">
-                  Allow guests to upload photos
-                </Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox id="requireApproval" name="requireApproval" disabled={eventLimitReached} />
-                <Label htmlFor="requireApproval" className="text-sm font-normal">
-                  Require approval before photos are visible
-                </Label>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mt-4">
+              <div className="bg-gradient-to-r from-amber-100 via-white to-blue-100 border border-amber-200 rounded-xl p-4 mt-4 shadow">
                 <p className="text-sm text-amber-800">
                   <strong>Note:</strong> After creating the event, you'll receive a unique access code
                   that guests can use to access the event and upload photos.
