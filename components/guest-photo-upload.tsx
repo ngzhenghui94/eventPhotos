@@ -90,7 +90,6 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         fd.append('eventId', eventId.toString());
         fd.append('guestName', guestName.trim());
         if (guestEmail.trim()) fd.append('guestEmail', guestEmail.trim());
-        // The /api/photos endpoint expects a single file under 'file'
         fd.append('file', file);
         try {
           const res = await fetch('/api/photos', {
@@ -100,6 +99,10 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
           });
           if (!res.ok) {
             const data = await res.json().catch(() => ({}));
+            // Photo limit enforcement toast
+            if (data?.error && typeof data.error === 'string' && data.error.includes('Photo limit for this event has been reached')) {
+              toast.error('You have reached the maximum number of photos allowed for this event.');
+            }
             failures.push({ name: file.name, message: data?.error || 'Upload failed' });
           } else {
             successCount += 1;

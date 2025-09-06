@@ -59,9 +59,23 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
     setIsUploading(true);
     try {
       // 1) Ask server for presigned PUT URLs
-  const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
-  const { uploads, maxFileSize } = await createSignedUploadUrlsAction(eventId, meta, planName);
-      if (!maxBytes) setMaxBytes(maxFileSize);
+      const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
+      let uploads, maxFileSize;
+      try {
+        const result = await createSignedUploadUrlsAction(eventId, meta, planName);
+        uploads = result.uploads;
+        maxFileSize = result.maxFileSize;
+        if (!maxBytes) setMaxBytes(maxFileSize);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
+        if (message.includes('Photo limit for this event has been reached')) {
+          toast.error('You have reached the maximum number of photos allowed for this event.');
+        } else {
+          toast.error('Failed to upload photos', { description: String(message) });
+        }
+        setIsUploading(false);
+        return;
+      }
 
       // 2) Upload directly to S3 using presigned URLs (parallel), finalize each immediately
       const remaining = [...uploads];
