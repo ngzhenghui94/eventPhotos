@@ -5,6 +5,7 @@ import { getUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 import { Toaster } from '@/components/ui/sonner';
 import { Home, Camera } from 'lucide-react';
+import { Analytics } from "@vercel/analytics/next"
 
 export const metadata: Metadata = {
   metadataBase: new URL(brand.siteUrl),
@@ -38,6 +39,7 @@ export default function RootLayout({
       className="bg-white dark:bg-gray-950 text-black dark:text-white"
       style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}
     >
+      <Analytics/>
       <body className="min-h-[100dvh] bg-gray-50">
         <SWRConfig
           value={{
