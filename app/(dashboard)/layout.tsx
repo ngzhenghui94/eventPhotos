@@ -71,7 +71,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
       <section className="flex flex-col min-h-screen">
         {children}
-                       <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
       </section>
     </>
   );
