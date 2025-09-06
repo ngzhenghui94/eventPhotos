@@ -166,7 +166,44 @@ export async function getUser() {
 
 // Fetch all events created by a user
 export async function getUserEvents(userId: number) {
-  return await db.select().from(events).where(eq(events.createdBy, userId));
+  const rows = await db
+    .select({
+      id: events.id,
+      name: events.name,
+      description: events.description,
+      date: events.date,
+      location: events.location,
+      eventCode: events.eventCode,
+      accessCode: events.accessCode,
+      createdBy: events.createdBy,
+      isPublic: events.isPublic,
+      allowGuestUploads: events.allowGuestUploads,
+      requireApproval: events.requireApproval,
+      createdAt: events.createdAt,
+      updatedAt: events.updatedAt,
+      photoCount: sql<number>`coalesce(count(${photos.id}), 0)`,
+    })
+    .from(events)
+    .leftJoin(photos, eq(photos.eventId, events.id))
+    .where(eq(events.createdBy, userId))
+    .groupBy(
+      events.id,
+      events.name,
+      events.description,
+      events.date,
+      events.location,
+      events.eventCode,
+      events.accessCode,
+      events.createdBy,
+      events.isPublic,
+      events.allowGuestUploads,
+      events.requireApproval,
+      events.createdAt,
+      events.updatedAt,
+    )
+    .orderBy(desc(events.createdAt));
+
+  return rows;
 }
 
 export async function getEventByAccessCode(code: string) {

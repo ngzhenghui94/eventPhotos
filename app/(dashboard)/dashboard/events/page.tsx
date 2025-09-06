@@ -11,7 +11,7 @@ import UpdateToast from '@/components/update-toast';
 
 export default async function EventsPage() {
   const user = await getUser();
-  let items: import('@/lib/db/schema').Event[] = [];
+  let items: (import('@/lib/db/schema').Event & { photoCount: number })[] = [];
   if (user && user.id) {
     items = await getUserEvents(user.id);
   }
@@ -56,7 +56,7 @@ export default async function EventsPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-blue-900">Total Photos</p>
-                  <p className="text-2xl font-bold text-blue-800">{0}</p>
+                  <p className="text-2xl font-bold text-blue-800">{items.reduce((total, e) => total + (e.photoCount ?? 0), 0)}</p>
                 </div>
               </div>
             </CardContent>
