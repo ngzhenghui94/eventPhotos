@@ -1,5 +1,8 @@
 "use client";
 
+import { Carousel } from 'react-responsive-carousel';
+import 'react-responsive-carousel/lib/styles/carousel.min.css';
+
 import { useEffect, useMemo, useRef, useState, Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -272,7 +275,7 @@ function DemoGalleryContent() {
   const heroBg = useMemo(() => {
     const first = photos[0];
     if (!first) return undefined;
-    return `url(/api/photos/${first.id}/thumb)`;
+    return `url(/api/photos/${first.id})`;
   }, [photos]);
 
   const copyGuestLink = async () => {
@@ -456,7 +459,7 @@ function DemoGalleryContent() {
                   <CardContent className="p-0">
                     <div className="aspect-square relative overflow-hidden">
                       <img
-                        src={`/api/photos/${photo.id}/thumb`}
+                        src={`/api/photos/${photo.id}`}
                         alt={photo.originalFilename || photo.filename || 'Event photo'}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"

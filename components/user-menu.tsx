@@ -64,9 +64,11 @@ export function UserMenu({ mobile = false }: { mobile?: boolean } = {}) {
     return (
       <div className="flex items-center gap-2">
         {/* Desktop actions */}
-        <div className="hidden sm:flex gap-2">
-          <Link href="/api/auth/google" className="hover:text-gray-900">Sign in</Link>
-          <Button asChild className="rounded-full">
+        <div className="hidden sm:flex gap-2 items-center">
+          <Button asChild variant="ghost" className="rounded-full h-9 px-4">
+            <Link href="/api/auth/google">Sign in</Link>
+          </Button>
+          <Button asChild className="rounded-full h-9 px-4">
             <Link href="/api/auth/google">Create free event</Link>
           </Button>
         </div>
