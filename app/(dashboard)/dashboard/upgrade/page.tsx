@@ -166,45 +166,45 @@ function PricingCard({
 	priceId?: string;
 	free?: boolean;
 }) {
-	return (
-		<div className="glass-card rounded-xl pt-8 pb-6 px-6 flex flex-col items-center text-center shadow-lg fade-in-up">
-			<h2 className="text-2xl font-bold text-gray-900 mb-2">{name}</h2>
-			{trialDays > 0 ? (
-				<p className="text-sm text-gray-600 mb-4">with {trialDays} day free trial</p>
-			) : (
-				<p className="text-sm text-gray-600 mb-4">no credit card required</p>
-			)}
-			<p className="text-4xl font-extrabold text-amber-600 mb-6">
-				{price === 0 ? '$0' : `$${price / 100}`} {' '}
-				<span className="text-xl font-normal text-gray-600">
-					/ {interval}
-				</span>
-			</p>
-			<ul className="space-y-4 mb-8 w-full">
-				{features.map((feature, index) => (
-					<li key={index} className="flex items-center justify-center">
-						<Check className="h-5 w-5 text-orange-500 mr-2 flex-shrink-0" />
-						<span className="text-gray-700 text-base">{feature}</span>
-					</li>
-				))}
-			</ul>
-			{free ? (
-				<form action={chooseFreePlanAction} className="w-full">
-					<SubmitButton />
-				</form>
-			) : priceId ? (
-				<form action={checkoutAction} className="w-full">
-					<input type="hidden" name="priceId" value={priceId} />
-					<SubmitButton />
-				</form>
-			) : (
-				<div className="space-y-2 w-full">
-					<a href="/api/auth/google" className="inline-block w-full">
+		return (
+			<div className="glass-card rounded-xl pt-8 pb-6 px-6 flex flex-col items-center text-center shadow-lg fade-in-up">
+				<h2 className="text-2xl font-bold text-gray-900 mb-2">{name}</h2>
+				{trialDays > 0 ? (
+					<p className="text-sm text-gray-600 mb-4">with {trialDays} day free trial</p>
+				) : (
+					<p className="text-sm text-gray-600 mb-4">no credit card required</p>
+				)}
+				<p className="text-4xl font-extrabold text-amber-600 mb-6">
+					{price === 0 ? '$0' : `$${price / 100}`} {' '}
+					<span className="text-xl font-normal text-gray-600">
+						/ {interval}
+					</span>
+				</p>
+				<ul className="space-y-4 mb-8 w-full">
+					{features.map((feature, index) => (
+						<li key={index} className="flex items-center justify-center">
+							<Check className="h-5 w-5 text-orange-500 mr-2 flex-shrink-0" />
+							<span className="text-gray-700 text-base">{feature}</span>
+						</li>
+					))}
+				</ul>
+				{free ? (
+					<form action={chooseFreePlanAction} className="w-full">
+						<SubmitButton disabled>Get Started</SubmitButton>
+					</form>
+				) : priceId ? (
+					<form action={checkoutAction} className="w-full">
+						<input type="hidden" name="priceId" value={priceId} />
 						<SubmitButton />
-					</a>
-					<p className="text-xs text-gray-500">Stripe price not configured. Set STRIPE_PRICE_BASE_ID / STRIPE_PRICE_PLUS_ID in your environment.</p>
-				</div>
-			)}
-		</div>
-	);
+					</form>
+				) : (
+					<div className="space-y-2 w-full">
+						<a href="/api/auth/google" className="inline-block w-full">
+							<SubmitButton />
+						</a>
+						<p className="text-xs text-gray-500">Stripe price not configured. Set STRIPE_PRICE_BASE_ID / STRIPE_PRICE_PLUS_ID in your environment.</p>
+					</div>
+				)}
+			</div>
+		);
 }

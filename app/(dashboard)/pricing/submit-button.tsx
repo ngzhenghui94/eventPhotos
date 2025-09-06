@@ -7,10 +7,11 @@ import { useFormStatus } from 'react-dom';
 export function SubmitButton() {
   const { pending } = useFormStatus();
 
+  // Accept disabled prop
   return (
     <Button
       type="submit"
-      disabled={pending}
+      disabled={pending || (typeof arguments[0] === 'object' && arguments[0]?.disabled)}
       variant="outline"
       className="w-full rounded-full"
     >
