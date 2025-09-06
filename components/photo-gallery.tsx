@@ -302,10 +302,13 @@ export function PhotoModalGallery({ photos, currentIndex, accessCode, onClose, o
   useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        e.preventDefault();
         onNavigate(currentIndex - 1);
       } else if (e.key === 'ArrowRight' && currentIndex < photos.length - 1) {
+        e.preventDefault();
         onNavigate(currentIndex + 1);
       } else if (e.key === 'Escape') {
+        e.preventDefault();
         onClose();
       }
     }
