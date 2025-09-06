@@ -129,10 +129,10 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   };
 
   return (
-    <Card>
+  <Card className="bg-gradient-to-br from-orange-400 via-pink-400 to-rose-500 rounded-xl shadow-2xl ring-2 ring-rose-400/60">
       <CardHeader>
-        <CardTitle className="flex items-center">
-          <Upload className="mr-2 h-5 w-5" />
+  <CardTitle className="flex items-center bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 text-xl font-bold">
+          <Upload className="mr-2 h-5 w-5 text-orange-500" />
           Share Your Photos
         </CardTitle>
       </CardHeader>
