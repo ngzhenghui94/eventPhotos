@@ -5,6 +5,7 @@ import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
 import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { EventQr } from '@/components/event-qr';
+import { env } from 'process';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
@@ -100,7 +101,20 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 )}
               </CardContent>
             </Card>
+
+            <Card className="bg-gradient-to-br from-yellow-50 via-white to-orange-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+              <CardHeader>
+                <CardTitle>Find out more about memoriesVault</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-700 mb-2">memoriesVault is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
+                <a href={process.env.BASE_URL} target="_blank" rel="noopener noreferrer">
+                  <Button variant="default">Learn More</Button>
+                </a>
+              </CardContent>
+            </Card>
           </div>
+
 
           {/* Sidebar */}
           <div className="space-y-6">
@@ -177,6 +191,18 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                     </p>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="bg-gradient-to-br from-yellow-50 via-white to-orange-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+              <CardHeader>
+                <CardTitle>Find out more about memoriesVault</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-700 mb-2">memoriesVault is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
+                <a href="https://memoriesvault.com" target="_blank" rel="noopener noreferrer">
+                  <Button variant="default">Learn More</Button>
+                </a>
               </CardContent>
             </Card>
           </div>

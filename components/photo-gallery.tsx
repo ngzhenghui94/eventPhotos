@@ -1,10 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, Download, Eye, X } from 'lucide-react';
+import { Upload, Trash2, Download, Eye, X, ArrowLeft, ArrowRight } from 'lucide-react';
 import { deletePhotoAction, deletePhotosBulkAction } from '@/lib/photos/actions';
 import type { Photo, User } from '@/lib/db/schema';
 
@@ -17,7 +17,7 @@ interface PhotoGalleryProps {
 }
 
 export function PhotoGallery({ photos, eventId, currentUserId, canManage, accessCode }: PhotoGalleryProps) {
-  const [selectedPhoto, setSelectedPhoto] = useState<number | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [multiMode, setMultiMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -124,11 +124,11 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {photos.map((photo) => (
+        {photos.map((photo, idx) => (
           <PhotoCard
             key={photo.id}
             photo={photo}
-            onView={() => setSelectedPhoto(photo.id)}
+            onView={() => setSelectedIndex(idx)}
             onDelete={() => handleDeletePhoto(photo.id)}
             canDelete={
               Boolean(canManage) ||
@@ -143,14 +143,16 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
         ))}
       </div>
 
-  {/* Photo Modal */}
-  {selectedPhoto !== null && (
-        <PhotoModal
-          photoId={selectedPhoto}
-          accessCode={accessCode}
-          onClose={() => setSelectedPhoto(null)}
-        />
-      )}
+  {/* Photo Modal with navigation */}
+  {selectedIndex !== null && (
+    <PhotoModalGallery
+      photos={photos}
+      currentIndex={selectedIndex}
+      accessCode={accessCode}
+      onClose={() => setSelectedIndex(null)}
+      onNavigate={setSelectedIndex}
+    />
+  )}
     </>
   );
 }
@@ -279,6 +281,97 @@ function PhotoModal({ photoId, onClose, accessCode }: PhotoModalProps) {
             }
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+interface PhotoModalGalleryProps {
+  photos: (Photo & { uploadedByUser?: Pick<User, 'id' | 'name' | 'email'> | null })[];
+  currentIndex: number;
+  accessCode?: string;
+  onClose: () => void;
+  onNavigate: (index: number) => void;
+}
+
+export function PhotoModalGallery({ photos, currentIndex, accessCode, onClose, onNavigate }: PhotoModalGalleryProps) {
+  const photo = photos[currentIndex];
+  const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
+
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'ArrowLeft' && currentIndex > 0) {
+        onNavigate(currentIndex - 1);
+      } else if (e.key === 'ArrowRight' && currentIndex < photos.length - 1) {
+        onNavigate(currentIndex + 1);
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    }
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [currentIndex, photos.length, onNavigate, onClose]);
+
+  // Use the normal photo API endpoint for full-size view
+  const photoApiSrc = `/api/photos/${photo.id}${codeQuery}`;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50" onClick={onClose}>
+      <div className="relative flex flex-col items-center justify-center w-full h-full">
+        {/* Close button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onClose}
+          className="absolute top-6 right-8 bg-white/20 hover:bg-white/30 text-white z-10"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+        {/* Left arrow */}
+        {currentIndex > 0 && (
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={(e) => { e.stopPropagation(); onNavigate(currentIndex - 1); }}
+            className="absolute left-8 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white z-10"
+          >
+            <ArrowLeft className="h-8 w-8" />
+          </Button>
+        )}
+        {/* Main image centered and sized */}
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <img
+            src={photoApiSrc}
+            alt={photo.originalFilename}
+            className="block max-w-[90vw] max-h-[80vh] object-contain rounded-lg mx-auto shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
+          <div className="flex items-center gap-3 mt-6 mb-2">
+            <Button
+              size="sm"
+              variant="secondary"
+              asChild
+              className="bg-white/90 hover:bg-white"
+            >
+              <a href={photoApiSrc} download={photo.originalFilename}>
+                <Download className="h-5 w-5 mr-1" /> Download
+              </a>
+            </Button>
+            <span className="text-xs text-gray-200">{photo.originalFilename}</span>
+          </div>
+        </div>
+        {/* Right arrow */}
+        {currentIndex < photos.length - 1 && (
+          <Button
+            variant="ghost"
+            size="lg"
+            onClick={(e) => { e.stopPropagation(); onNavigate(currentIndex + 1); }}
+            className="absolute right-8 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 text-white z-10"
+          >
+            <ArrowRight className="h-8 w-8" />
+          </Button>
+        )}
       </div>
     </div>
   );
