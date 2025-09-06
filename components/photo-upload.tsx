@@ -19,6 +19,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [maxBytes, setMaxBytes] = useState<number | null>(null);
@@ -57,6 +58,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
     if (selectedFiles.length === 0) return;
 
     setIsUploading(true);
+    setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
       // 1) Ask server for presigned PUT URLs
       const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
@@ -77,33 +79,55 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
         return;
       }
 
-      // 2) Upload directly to S3 using presigned URLs (parallel), finalize each immediately
+      // 2) Upload directly to S3 using presigned URLs (parallel), show progress
       const remaining = [...uploads];
       const succeeded: typeof uploads = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
-      await Promise.all(selectedFiles.map(async (file) => {
-        const idx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
-        if (idx === -1) return;
-        const u = remaining.splice(idx, 1)[0];
-        const res = await fetch(u.url, {
-          method: 'PUT',
-          body: file,
+
+      await Promise.all(selectedFiles.map((file, idx) => {
+        return new Promise<void>((resolve) => {
+          const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
+          if (uIdx === -1) return resolve();
+          const u = remaining.splice(uIdx, 1)[0];
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', u.url);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              setUploadProgress((prev) => {
+                const next = [...prev];
+                next[idx] = Math.round((e.loaded / e.total) * 100);
+                return next;
+              });
+            }
+          };
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              succeeded.push(u);
+            } else {
+              failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
+            }
+            resolve();
+          };
+          xhr.onerror = () => {
+            failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
+            resolve();
+          };
+          xhr.send(file);
         });
-        if (res.ok) {
-          succeeded.push(u);
-          // Finalize/tag this photo immediately after upload
-          await finalizeUploadedPhotosAction(eventId, [{
-            key: u.key,
-            originalFilename: u.originalFilename,
-            mimeType: u.mimeType,
-            fileSize: u.fileSize,
-          }]);
-        } else {
-          failures.push({ name: u.originalFilename, status: res.status, detail: await res.text() });
-        }
       }));
 
+      // Finalize all succeeded uploads in one batch
+      if (succeeded.length > 0) {
+        await finalizeUploadedPhotosAction(eventId, succeeded.map(u => ({
+          key: u.key,
+          originalFilename: u.originalFilename,
+          mimeType: u.mimeType,
+          fileSize: u.fileSize,
+        })));
+      }
+
       setSelectedFiles([]);
+      setUploadProgress([]);
       router.refresh();
       if (failures.length) {
         const first = failures[0];
@@ -201,6 +225,17 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
                       <p className="text-xs text-gray-500">
                         {formatFileSize(file.size)}
                       </p>
+                      {isUploading && (
+                        <div className="w-32 mt-2">
+                          <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                            <div
+                              className="h-2 rounded bg-blue-500 transition-all duration-200"
+                              style={{ width: `${uploadProgress[index] || 0}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 text-right">{uploadProgress[index] || 0}%</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Button
@@ -209,6 +244,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
                     size="sm"
                     onClick={() => removeFile(index)}
                     className="text-gray-400 hover:text-gray-600"
+                    disabled={isUploading}
                   >
                     <X className="h-4 w-4" />
                   </Button>

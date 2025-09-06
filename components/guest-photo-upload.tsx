@@ -34,6 +34,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [uploadProgress, setUploadProgress] = useState<number[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (files: FileList | null) => {
@@ -67,8 +68,8 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
     if (selectedFiles.length === 0 || !guestName.trim()) return;
 
     setIsUploading(true);
+    setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
-  // We call the REST API directly to avoid server action quirks with FormData in dev
       let eventCode = '';
       try {
         const parts = window.location.pathname.split('/');
@@ -85,36 +86,51 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
 
       let successCount = 0;
       const failures: { name: string; message: string }[] = [];
-      for (const file of selectedFiles) {
-        const fd = new FormData();
-        fd.append('eventId', eventId.toString());
-        fd.append('guestName', guestName.trim());
-        if (guestEmail.trim()) fd.append('guestEmail', guestEmail.trim());
-        fd.append('file', file);
-        try {
-          const res = await fetch('/api/photos', {
-            method: 'POST',
-            headers: accessCode ? { 'x-access-code': accessCode } : undefined,
-            body: fd,
-          });
-          if (!res.ok) {
-            const data = await res.json().catch(() => ({}));
-            // Photo limit enforcement toast
-            if (data?.error && typeof data.error === 'string' && data.error.includes('Photo limit for this event has been reached')) {
-              toast.error('You have reached the maximum number of photos allowed for this event.');
+
+      await Promise.all(selectedFiles.map((file, idx) => {
+        return new Promise<void>((resolve) => {
+          const fd = new FormData();
+          fd.append('eventId', eventId.toString());
+          fd.append('guestName', guestName.trim());
+          if (guestEmail.trim()) fd.append('guestEmail', guestEmail.trim());
+          fd.append('file', file);
+
+          // Progress tracking
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/api/photos');
+          if (accessCode) xhr.setRequestHeader('x-access-code', accessCode);
+          xhr.upload.onprogress = (e) => {
+            if (e.lengthComputable) {
+              setUploadProgress((prev) => {
+                const next = [...prev];
+                next[idx] = Math.round((e.loaded / e.total) * 100);
+                return next;
+              });
             }
-            failures.push({ name: file.name, message: data?.error || 'Upload failed' });
-          } else {
-            successCount += 1;
-          }
-        } catch (e) {
-          failures.push({ name: file.name, message: 'Network error' });
-        }
-      }
+          };
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              successCount += 1;
+            } else {
+              let data: any = {};
+              try { data = JSON.parse(xhr.responseText); } catch {}
+              if (data?.error && typeof data.error === 'string' && data.error.includes('Photo limit for this event has been reached')) {
+                toast.error('You have reached the maximum number of photos allowed for this event.');
+              }
+              failures.push({ name: file.name, message: data?.error || 'Upload failed' });
+            }
+            resolve();
+          };
+          xhr.onerror = () => {
+            failures.push({ name: file.name, message: 'Network error' });
+            resolve();
+          };
+          xhr.send(fd);
+        });
+      }));
 
       if (successCount > 0) {
         toast.success('Photos uploaded', { description: `${successCount} photo${successCount > 1 ? 's' : ''} uploaded.` });
-        // Refresh the current route so the new photos render
         router.refresh();
       }
       if (failures.length > 0) {
@@ -123,11 +139,10 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         toast.error('Some uploads failed', { description: `${first.name}: ${first.message}${more}` });
       }
 
-  // Reset form
       setSelectedFiles([]);
       setGuestName('');
       setGuestEmail('');
-      
+      setUploadProgress([]);
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload photos. Please try again.');
@@ -238,6 +253,17 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
                       <p className="text-xs text-gray-500">
                         {formatFileSize(file.size)}
                       </p>
+                      {isUploading && (
+                        <div className="w-32 mt-2">
+                          <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                            <div
+                              className="h-2 rounded bg-blue-500 transition-all duration-200"
+                              style={{ width: `${uploadProgress[index] || 0}%` }}
+                            />
+                          </div>
+                          <div className="text-xs text-gray-500 mt-1 text-right">{uploadProgress[index] || 0}%</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <Button
@@ -246,6 +272,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
                     size="sm"
                     onClick={() => removeFile(index)}
                     className="text-gray-400 hover:text-gray-600"
+                    disabled={isUploading}
                   >
                     <X className="h-4 w-4" />
                   </Button>
