@@ -43,19 +43,37 @@ const NewEventPage = () => {
         </div>
 
         {eventLimitReached && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-sm text-red-800 font-semibold mb-2">
-              You have reached your event limit for your current plan.
-            </p>
-            <div className="flex gap-6 text-sm">
-              <div>
-                <span className="font-medium">Current Events:</span> {eventCount}
-              </div>
-              <div>
-                <span className="font-medium">Event Limit:</span> {eventLimit === null ? 'Unlimited' : eventLimit}
-              </div>
-            </div>
-            <p className="mt-2 text-xs text-gray-700">Upgrade your plan to create more events.</p>
+          <div className="mb-6">
+            <Card className="border-2 border-red-300 bg-gradient-to-br from-red-50 via-white to-red-100 shadow-xl animate-in fade-in duration-500">
+              <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                  <Calendar className="h-7 w-7 text-red-500 animate-pulse" />
+                </div>
+                <CardTitle className="text-red-700 text-lg font-bold">Event Limit Reached</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-red-800 text-base font-semibold mb-2">You’ve hit the maximum number of events for your current plan.</div>
+                <div className="flex gap-6 text-sm mb-2">
+                  <div>
+                    <span className="font-medium">Current Events:</span> {eventCount}
+                  </div>
+                  <div>
+                    <span className="font-medium">Event Limit:</span> {eventLimit === null ? 'Unlimited' : eventLimit}
+                  </div>
+                </div>
+                <div className="mt-2 text-sm text-gray-700">Upgrade your plan to unlock more events and features.</div>
+                <div className="mt-4 flex gap-3">
+                  <Link href="/dashboard/upgrade">
+                    <Button className="bg-gradient-to-r from-red-500 to-amber-400 text-white font-semibold shadow-lg hover:scale-105 transition-transform rounded-full px-6 py-2">
+                      Upgrade Plan
+                    </Button>
+                  </Link>
+                  <Link href="/dashboard/events">
+                    <Button variant="outline" className="rounded-full px-6 py-2">Back to Events</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
