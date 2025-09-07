@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Loader2 } from 'lucide-react';
+import { Modal } from '@/components/modal';
 
 type DeleteState = {
   error?: string;
@@ -13,9 +14,9 @@ type DeleteState = {
 export default function SecurityPage() {
   const [deleteState, setDeleteState] = React.useState<DeleteState>({});
   const [isDeletePending, setIsDeletePending] = React.useState(false);
+  const [showModal, setShowModal] = React.useState(false);
 
-  async function handleDelete(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
+  async function handleDelete() {
     setIsDeletePending(true);
     setDeleteState({});
     try {
@@ -31,6 +32,7 @@ export default function SecurityPage() {
       setDeleteState({ error: 'Failed to delete account.' });
     }
     setIsDeletePending(false);
+    setShowModal(false);
   }
 
   return (
@@ -61,26 +63,37 @@ export default function SecurityPage() {
           {deleteState?.error && (
             <p className="text-red-500 text-sm mb-2">{deleteState.error}</p>
           )}
-          <form onSubmit={handleDelete} className="space-y-4">
+          <div className="space-y-4">
             <Button
-              type="submit"
+              type="button"
               variant="destructive"
               className="bg-red-600 hover:bg-red-700"
               disabled={isDeletePending}
+              onClick={() => setShowModal(true)}
             >
-              {isDeletePending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete Account
-                </>
-              )}
+              <Trash2 className="mr-2 h-4 w-4" />
+              Delete Account
             </Button>
-        </form>
+            <Modal open={showModal} onClose={() => setShowModal(false)}>
+              <div className="text-lg font-semibold text-red-700 mb-2">Confirm Account Deletion</div>
+              <div className="text-sm text-gray-700 mb-4">
+                Are you sure you want to delete your account?<br />
+                <b>This action is irreversible.</b><br />
+                You will lose access to your account, all your events, and all your photos.<br />
+                All data will be permanently deleted.
+              </div>
+              <div className="flex gap-2 justify-end">
+                <Button variant="outline" onClick={() => setShowModal(false)} disabled={isDeletePending}>Cancel</Button>
+                <Button variant="destructive" onClick={handleDelete} disabled={isDeletePending}>
+                  {isDeletePending ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...</>
+                  ) : (
+                    <>Delete Account</>
+                  )}
+                </Button>
+              </div>
+            </Modal>
+          </div>
         </CardContent>
       </Card>
     </section>
