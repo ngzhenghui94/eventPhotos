@@ -40,6 +40,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
     : 50;
 
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
+  const { refresh } = require('next/navigation');
   const handleDeletePhoto = async (photoId: number) => {
     if (confirmingId !== photoId) {
       setConfirmingId(photoId);
@@ -54,6 +55,12 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       formData.append('photoId', photoId.toString());
       await deletePhotoAction(formData);
       toast.success('Photo deleted');
+      // Use Next.js router.refresh for server-side revalidation
+      if (typeof refresh === 'function') {
+        refresh();
+      } else if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     } catch (error: unknown) {
       // Suppress toast for NEXT_REDIRECT errors
       if (error && typeof error === 'object' && 'digest' in error && (error as any).digest === 'NEXT_REDIRECT') {
@@ -108,6 +115,12 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       toast.success(`${result?.count ?? selectedIds.size} photo(s) deleted`);
       clearAll();
       setMultiMode(false);
+      // Use Next.js router.refresh for server-side revalidation
+      if (typeof refresh === 'function') {
+        refresh();
+      } else if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
       toast.error(`Failed to delete photos: ${message}`);
