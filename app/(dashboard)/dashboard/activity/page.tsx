@@ -81,7 +81,7 @@ function formatAction(action: ActivityType): string {
 
 export default async function ActivityPage() {
   // Pass 0 as eventId to fetch all logs (or refactor as needed)
-  const logs = await getActivityLogs(0, 50);
+  const logs = await getActivityLogs(0, { limit: 50 });
 
   return (
     <section className="flex-1 p-4 lg:p-8">

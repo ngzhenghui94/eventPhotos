@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
     for (const photoId of photoIds) {
       const photo = await getPhotoById(photoId);
       if (!photo) continue;
-      const canAccess = await canUserAccessEvent(photo.eventId, user?.id, null);
+      const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
       if (!canAccess) continue;
       let fileBuffer;
       let filename = photo.originalFilename || photo.filename;
