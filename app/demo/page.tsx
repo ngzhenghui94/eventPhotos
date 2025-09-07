@@ -511,7 +511,7 @@ function DemoGalleryContent() {
                   <CardContent className="p-0">
                     <div className="aspect-square relative overflow-hidden">
                       <img
-                        src={`/api/photos/${photo.id}`}
+                        src={`/api/photos/${photo.id}/thumb`}
                         alt={photo.originalFilename || photo.filename || 'Event photo'}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         loading="lazy"
