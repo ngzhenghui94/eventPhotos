@@ -2,80 +2,64 @@
 
 import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
-import { getUser } from '@/lib/db/queries';
 import { eq } from 'drizzle-orm';
-import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { deleteFromS3 } from '@/lib/s3';
+import { AuthenticationUtils } from '@/lib/utils/auth';
+import { FileOperationUtils } from '@/lib/utils/files';
+import { withDatabaseErrorHandling } from '@/lib/utils/database';
 
 export async function approvePhotoAction(formData: FormData) {
-  const user = await getUser();
-  if (!user) {
-  redirect('/api/auth/google');
-  }
+  return withDatabaseErrorHandling(async () => {
+    const user = await AuthenticationUtils.requireAuth();
+    const photoId = AuthenticationUtils.extractPhotoId(formData);
+    const eventId = AuthenticationUtils.extractEventId(formData);
 
-  const photoId = parseInt(formData.get('photoId') as string);
-  const eventId = parseInt(formData.get('eventId') as string);
-  
-  if (!photoId || isNaN(photoId)) {
-    throw new Error('Invalid photo ID');
-  }
+    // Verify photo exists
+    const photo = await db.query.photos.findFirst({
+      where: eq(photos.id, photoId)
+    });
+    
+    if (!photo) {
+      throw new Error('Photo not found');
+    }
 
-  // Verify photo exists
-  const photo = await db.query.photos.findFirst({
-    where: eq(photos.id, photoId)
-  });
-  if (!photo) {
-    throw new Error('Photo not found');
-  }
+    await db.update(photos)
+      .set({ isApproved: true })
+      .where(eq(photos.id, photoId));
 
-  await db.update(photos)
-    .set({ isApproved: true })
-    .where(eq(photos.id, photoId));
-
-  // Revalidate pages
-  // Teams feature removed; eventCode may not exist
+    // Revalidate pages
+    revalidatePath('/dashboard/events');
+    revalidatePath('/events');
+    
+    return { success: true };
+  }, 'approvePhotoAction');
 }
 
 export async function rejectPhotoAction(formData: FormData) {
-  const user = await getUser();
-  if (!user) {
-  redirect('/api/auth/google');
-  }
+  return withDatabaseErrorHandling(async () => {
+    const user = await AuthenticationUtils.requireAuth();
+    const photoId = AuthenticationUtils.extractPhotoId(formData);
+    const eventId = AuthenticationUtils.extractEventId(formData);
 
-  const photoId = parseInt(formData.get('photoId') as string);
-  const eventId = parseInt(formData.get('eventId') as string);
-  
-  if (!photoId || isNaN(photoId)) {
-    throw new Error('Invalid photo ID');
-  }
-
-  // Verify photo exists
-  const photo = await db.query.photos.findFirst({
-    where: eq(photos.id, photoId)
-  });
-  if (!photo) {
-    throw new Error('Photo not found');
-  }
-
-  // Delete the photo (S3 or local fallback)
-  try {
-    if (photo.filePath?.startsWith('s3:')) {
-      const key = photo.filePath.replace(/^s3:/, '');
-      await deleteFromS3(key);
-    } else if (photo.filePath) {
-      const fs = require('fs').promises;
-      const { join } = require('path');
-      const filePath = join(process.cwd(), 'public', photo.filePath);
-      await fs.unlink(filePath);
+    // Verify photo exists
+    const photo = await db.query.photos.findFirst({
+      where: eq(photos.id, photoId)
+    });
+    
+    if (!photo) {
+      throw new Error('Photo not found');
     }
-  } catch (fileError) {
-    console.error('Error deleting file:', fileError);
-  }
 
-  await db.delete(photos).where(eq(photos.id, photoId));
+    // Delete the physical file
+    await FileOperationUtils.deleteFile(photo.filePath);
 
-  // Revalidate pages (Teams feature removed; eventCode unavailable)
-  revalidatePath(`/dashboard/events`);
-  revalidatePath(`/events`);
+    // Delete the database record
+    await db.delete(photos).where(eq(photos.id, photoId));
+
+    // Revalidate pages
+    revalidatePath('/dashboard/events');
+    revalidatePath('/events');
+    
+    return { success: true };
+  }, 'rejectPhotoAction');
 }
