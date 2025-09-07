@@ -7,12 +7,17 @@ import { revalidatePath } from 'next/cache';
 import { AuthenticationUtils } from '@/lib/utils/auth';
 import { FileOperationUtils } from '@/lib/utils/files';
 import { withDatabaseErrorHandling } from '@/lib/utils/database';
+import { ValidationUtils, photoActionSchema, bulkPhotoActionSchema } from '@/lib/utils/validation';
 
 export async function approvePhotoAction(formData: FormData) {
   return withDatabaseErrorHandling(async () => {
     const user = await AuthenticationUtils.requireAuth();
-    const photoId = AuthenticationUtils.extractPhotoId(formData);
-    const eventId = AuthenticationUtils.extractEventId(formData);
+    
+    // Validate input with Zod schema
+    const { photoId } = ValidationUtils.validateFormData(formData, photoActionSchema, (data) => ({
+      photoId: parseInt(data.photoId as string),
+      eventId: data.eventId ? parseInt(data.eventId as string) : undefined,
+    }));
 
     // Verify photo exists
     const photo = await db.query.photos.findFirst({
@@ -38,8 +43,12 @@ export async function approvePhotoAction(formData: FormData) {
 export async function rejectPhotoAction(formData: FormData) {
   return withDatabaseErrorHandling(async () => {
     const user = await AuthenticationUtils.requireAuth();
-    const photoId = AuthenticationUtils.extractPhotoId(formData);
-    const eventId = AuthenticationUtils.extractEventId(formData);
+    
+    // Validate input with Zod schema
+    const { photoId } = ValidationUtils.validateFormData(formData, photoActionSchema, (data) => ({
+      photoId: parseInt(data.photoId as string),
+      eventId: data.eventId ? parseInt(data.eventId as string) : undefined,
+    }));
 
     // Verify photo exists
     const photo = await db.query.photos.findFirst({

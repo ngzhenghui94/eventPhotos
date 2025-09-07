@@ -10,6 +10,7 @@ import { uploadLimitBytes, normalizePlanName, photoLimitPerEvent } from '@/lib/p
 import { AuthenticationUtils } from '@/lib/utils/auth';
 import { FileOperationUtils } from '@/lib/utils/files';
 import { withDatabaseErrorHandling } from '@/lib/utils/database';
+import { ValidationUtils, bulkPhotoActionSchema } from '@/lib/utils/validation';
 
 export async function uploadPhotosAction(formData: FormData) {
   const user = await getUser();
@@ -101,8 +102,12 @@ export async function uploadPhotosAction(formData: FormData) {
   export async function deletePhotosBulkAction(formData: FormData) {
     return withDatabaseErrorHandling(async () => {
       const user = await AuthenticationUtils.requireAuth();
-      const eventId = AuthenticationUtils.extractEventId(formData);
-      const photoIds = AuthenticationUtils.extractPhotoIds(formData);
+      
+      // Validate input with Zod schema
+      const { eventId, photoIds } = ValidationUtils.validateFormData(formData, bulkPhotoActionSchema, (data) => ({
+        eventId: parseInt(data.eventId as string),
+        photoIds: JSON.parse(data.photoIds as string).map((id: any) => parseInt(id)),
+      }));
 
       const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
       if (!event) throw new Error('Event not found');
