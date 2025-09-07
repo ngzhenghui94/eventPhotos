@@ -7,6 +7,10 @@ import { getUser } from '@/lib/db/queries';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { uploadToS3, generatePhotoKey, deleteFromS3, getSignedUploadUrl, deriveThumbKey } from '@/lib/s3';
 import { uploadLimitBytes, normalizePlanName, photoLimitPerEvent } from '@/lib/plans';
+import { AuthenticationUtils } from '@/lib/utils/auth';
+import { FileOperationUtils } from '@/lib/utils/files';
+import { withDatabaseErrorHandling } from '@/lib/utils/database';
+import { ValidationUtils, bulkPhotoActionSchema } from '@/lib/utils/validation';
 
 export async function uploadPhotosAction(formData: FormData) {
   const user = await getUser();
@@ -18,10 +22,11 @@ export async function uploadPhotosAction(formData: FormData) {
 
   const { getEventById } = await import('@/lib/db/queries');
   const event = await getEventById(eventId);
+  if (!event) throw new Error('Event not found');
+  if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
+  if (files.length === 0) throw new Error('No files selected');
+
   const host = await db.query.users.findFirst({ where: eq(users.id, event.createdBy) });
-    if (!event) throw new Error('Event not found');
-    if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
-    if (files.length === 0) throw new Error('No files selected');
 
   const planName = host?.planName || 'free';
   const normalizedPlan = normalizePlanName(planName);
@@ -74,98 +79,68 @@ export async function uploadPhotosAction(formData: FormData) {
   }
 
   export async function deletePhotoAction(formData: FormData) {
-    const user = await getUser();
-    if (!user) throw new Error('Unauthorized');
+    return withDatabaseErrorHandling(async () => {
+      const user = await AuthenticationUtils.requireAuth();
+      const photoId = AuthenticationUtils.extractPhotoId(formData);
 
-    const photoIdRaw = formData.get('photoId');
-    const photoId = typeof photoIdRaw === 'string' ? parseInt(photoIdRaw) : Number(photoIdRaw);
-    if (!photoId || isNaN(photoId)) throw new Error('Invalid photo ID');
-
-    const photoRecord = await db.query.photos.findFirst({ where: eq(photos.id, photoId) });
-    if (!photoRecord) throw new Error('Photo not found');
-    if (photoRecord.uploadedBy !== user.id) throw new Error('You do not have permission to delete this photo');
-
-    try {
-      if (photoRecord.filePath.startsWith('s3:')) {
-        const key = photoRecord.filePath.replace(/^s3:/, '');
-        await deleteFromS3(key);
-        try {
-          const sm = deriveThumbKey(key, 'sm');
-          const md = deriveThumbKey(key, 'md');
-          await deleteFromS3(sm).catch(() => {});
-          await deleteFromS3(md).catch(() => {});
-        } catch {}
-      } else {
-        const fs = require('fs').promises;
-        const filePath = join(process.cwd(), 'public', photoRecord.filePath);
-        await fs.unlink(filePath);
+      const photoRecord = await db.query.photos.findFirst({ where: eq(photos.id, photoId) });
+      if (!photoRecord) throw new Error('Photo not found');
+      if (photoRecord.uploadedBy !== user.id) {
+        throw new Error('You do not have permission to delete this photo');
       }
-    } catch (fileError) {
-      console.error('Error deleting media:', fileError);
-    }
-    try {
+
+      // Delete the physical file
+      await FileOperationUtils.deleteFile(photoRecord.filePath);
+
+      // Delete the database record
       await db.delete(photos).where(eq(photos.id, photoId));
-    } catch (error) {
-      console.error('Error deleting photo record:', error);
-      throw new Error('Failed to delete photo');
-    }
-    return { success: true };
+      
+      return { success: true };
+    }, 'deletePhotoAction');
   }
 
   export async function deletePhotosBulkAction(formData: FormData) {
-    const user = await getUser();
-    if (!user) throw new Error('Unauthorized');
+    return withDatabaseErrorHandling(async () => {
+      const user = await AuthenticationUtils.requireAuth();
+      
+      // Validate input with Zod schema
+      const { eventId, photoIds } = ValidationUtils.validateFormData(formData, bulkPhotoActionSchema, (data) => ({
+        eventId: parseInt(data.eventId as string),
+        photoIds: JSON.parse(data.photoIds as string).map((id: any) => parseInt(id)),
+      }));
 
-    const rawEventId = formData.get('eventId');
-    const rawIds = formData.get('photoIds');
-    const eventId = Number(rawEventId);
-    if (!eventId || Number.isNaN(eventId)) throw new Error('Invalid event ID');
-    let photoIds: number[] = [];
-    try {
-      const parsed = typeof rawIds === 'string' ? JSON.parse(rawIds) : [];
-      if (Array.isArray(parsed)) {
-        photoIds = parsed.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+      const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
+      if (!event) throw new Error('Event not found');
+      if (event.createdBy !== user.id) {
+        throw new Error('You do not have permission to delete photos for this event');
       }
-    } catch {}
-    if (photoIds.length === 0) throw new Error('No photos selected');
 
-  const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
-  if (!event) throw new Error('Event not found');
-  if (event.createdBy !== user.id) throw new Error('You do not have permission to delete photos for this event');
-  // Enforce photo limit per event (for bulk upload, not delete)
-  // If you want to block bulk upload, add similar logic here
+      const target = await db.query.photos.findMany({
+        where: and(eq(photos.eventId, eventId), inArray(photos.id, photoIds)),
+        columns: { id: true, filePath: true }
+      });
+      
+      if (target.length === 0) return { count: 0 };
 
-    const target = await db.query.photos.findMany({
-      where: and(eq(photos.eventId, eventId), inArray(photos.id, photoIds)),
-      columns: { id: true, filePath: true }
-    });
-    if (target.length === 0) return { count: 0 };
-    const targetIds = target.map((p) => p.id);
+      // Delete all files concurrently
+      const filePaths = target.map(p => p.filePath);
+      await FileOperationUtils.deleteFiles(filePaths);
 
-    for (const p of target) {
+      // Delete database records
+      const targetIds = target.map((p) => p.id);
+      await db.delete(photos).where(inArray(photos.id, targetIds));
+
+      // Revalidate pages
       try {
-        if (p.filePath?.startsWith('s3:')) {
-          const key = p.filePath.replace(/^s3:/, '');
-          await deleteFromS3(key).catch(() => {});
-          const sm = deriveThumbKey(key, 'sm');
-          const md = deriveThumbKey(key, 'md');
-          await deleteFromS3(sm).catch(() => {});
-          await deleteFromS3(md).catch(() => {});
-        } else if (p.filePath) {
-          const fs = require('fs').promises;
-          const filePath = join(process.cwd(), 'public', p.filePath);
-          await fs.unlink(filePath).catch(() => {});
-        }
-      } catch {}
-    }
-
-    await db.delete(photos).where(inArray(photos.id, targetIds));
-    try {
-      const { revalidatePath } = await import('next/cache');
-      revalidatePath(`/dashboard/events/${event.eventCode}`);
-      revalidatePath(`/events/${event.eventCode}`);
-    } catch {}
-    return { count: targetIds.length };
+        const { revalidatePath } = await import('next/cache');
+        revalidatePath(`/dashboard/events/${event.eventCode}`);
+        revalidatePath(`/events/${event.eventCode}`);
+      } catch {
+        // Revalidation failure is not critical
+      }
+      
+      return { count: targetIds.length };
+    }, 'deletePhotosBulkAction');
   }
 
   export async function createSignedUploadUrlsAction(

@@ -21,7 +21,10 @@ export async function GET(
   const user = await getUser();
   const url = new URL(request.url);
   const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
-  const canAccess = await canUserAccessEvent(photo.eventId, user?.id, code);
+  const canAccess = await canUserAccessEvent(photo.eventId, { 
+    userId: user?.id, 
+    accessCode: code ?? undefined 
+  });
     
     if (!canAccess) {
       return Response.json({ error: 'Not authorized to view this photo' }, { status: 403 });

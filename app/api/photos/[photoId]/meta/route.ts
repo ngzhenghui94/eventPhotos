@@ -19,7 +19,7 @@ export async function GET(
     }
 
     const user = await getUser();
-    const canAccess = await canUserAccessEvent(photo.eventId, user?.id);
+    const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
     
     if (!canAccess) {
       return Response.json({ error: 'Not authorized to view this photo' }, { status: 403 });

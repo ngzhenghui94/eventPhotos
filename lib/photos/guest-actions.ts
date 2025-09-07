@@ -11,13 +11,23 @@ import { uploadToS3, generatePhotoKey } from '@/lib/s3';
 import { db } from '@/lib/db/drizzle';
 import { users } from '@/lib/db/schema';
 import { photoLimitPerEvent, normalizePlanName, uploadLimitBytes } from '@/lib/plans';
+import { FileOperationUtils } from '@/lib/utils/files';
+import { withDatabaseErrorHandling, validateRequiredFields, safeParseInt } from '@/lib/utils/database';
 
 export async function uploadGuestPhotosAction(formData: FormData) {
-  let eventId = parseInt(formData.get('eventId') as string);
-  const eventCodeFromForm = (formData.get('eventCode') as string | null)?.trim().toUpperCase() || null;
-  const guestName = (formData.get('guestName') as string)?.trim();
-  const guestEmail = (formData.get('guestEmail') as string)?.trim() || null;
-  const files = formData.getAll('photos') as File[];
+  return withDatabaseErrorHandling(async () => {
+    const eventId = safeParseInt(formData.get('eventId') as string, 'Event ID');
+    const eventCodeFromForm = (formData.get('eventCode') as string | null)?.trim().toUpperCase() || null;
+    const guestName = (formData.get('guestName') as string)?.trim();
+    const guestEmail = (formData.get('guestEmail') as string)?.trim() || null;
+    const files = formData.getAll('photos') as File[];
+
+    // Validate required fields
+    validateRequiredFields({ guestName }, ['guestName']);
+
+    if (files.length === 0) {
+      throw new Error('No files provided');
+    }
 
     // Query event with all required fields
     type EventType = {
@@ -59,6 +69,7 @@ export async function uploadGuestPhotosAction(formData: FormData) {
     const normalizedPlan = normalizePlanName(planName);
     const MAX_PHOTOS = photoLimitPerEvent(normalizedPlan);
     const MAX_FILE_SIZE = uploadLimitBytes(normalizedPlan);
+    
     const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
     const currentCount = currentCountRes?.[0]?.count ?? 0;
     let remaining = Number.MAX_SAFE_INTEGER;
@@ -67,18 +78,21 @@ export async function uploadGuestPhotosAction(formData: FormData) {
       if (remaining === 0) throw new Error('Photo limit for this event has been reached.');
     }
 
+    // Validate and filter files
+    const validFiles = FileOperationUtils.validatePhotoFiles(
+      files.slice(0, remaining) as File[], 
+      MAX_FILE_SIZE
+    );
+
     // Upload photos
     const uploadedPhotos = [];
-    for (const file of files.slice(0, remaining)) {
-      if (!file || typeof file !== 'object') continue;
-      if (file.size === 0) continue;
-      if (!file.type || !file.type.startsWith('image/')) continue;
-      if (file.size > MAX_FILE_SIZE) continue;
+    for (const file of validFiles) {
       try {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
         const key = generatePhotoKey(eventId, file.name);
         await uploadToS3(key, buffer, file.type);
+        
         const [photoRecord] = await db.insert(photos).values({
           filename: key.split('/').pop() || file.name,
           originalFilename: file.name,
@@ -91,12 +105,18 @@ export async function uploadGuestPhotosAction(formData: FormData) {
           guestEmail: guestEmail,
           isApproved: !event.requireApproval,
         }).returning();
+        
         uploadedPhotos.push(photoRecord);
       } catch (error) {
         console.error('Error uploading file:', error);
       }
     }
-    if (uploadedPhotos.length === 0) throw new Error('No photos were uploaded successfully');
+    
+    if (uploadedPhotos.length === 0) {
+      throw new Error('No photos were uploaded successfully');
+    }
+    
     revalidatePath(`/events/${event.eventCode}`);
     return { success: true, count: uploadedPhotos.length };
-  }
+  }, 'uploadGuestPhotosAction');
+}
