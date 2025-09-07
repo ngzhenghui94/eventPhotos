@@ -8,7 +8,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Upload, X, Image as ImageIcon, User } from 'lucide-react';
-// Using API route directly to avoid server action double-invocation in dev
+
+// Deterministic gradient picker for guest upload card
+const gradients = [
+  'bg-gradient-to-br from-orange-50 via-pink-50 to-rose-100',
+  'bg-gradient-to-br from-indigo-50 via-white to-pink-100',
+  'bg-gradient-to-br from-emerald-50 via-white to-cyan-100',
+  'bg-gradient-to-br from-yellow-50 via-white to-orange-100',
+  'bg-gradient-to-br from-pink-50 via-white to-yellow-100',
+  'bg-gradient-to-br from-blue-50 via-white to-violet-100',
+];
+function pickGradient(seed: string | number, offset: number = 0) {
+  let hash = 0;
+  const str = String(seed);
+  for (let i = 0; i < str.length; i++) {
+    hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  }
+  const idx = Math.abs(hash + offset) % gradients.length;
+  return gradients[idx];
+}
 
 
 interface GuestPhotoUploadProps {
@@ -160,7 +178,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-orange-50 via-pink-50 to-rose-100 rounded-xl shadow-lg ring-1 ring-rose-100/60">
+    <Card className={`${pickGradient(eventId)} rounded-xl shadow-lg ring-1 ring-rose-100/60`}>
       <CardHeader>
   <CardTitle className="flex items-center bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 text-xl font-bold">
           <Upload className="mr-2 h-5 w-5 text-orange-500" />

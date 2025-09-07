@@ -30,6 +30,23 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
 
+  // Deterministic gradient picker per event using a simple hash on event code
+  const gradients = [
+    'bg-gradient-to-br from-indigo-50 via-white to-pink-100',
+    'bg-gradient-to-br from-emerald-50 via-white to-cyan-100',
+    'bg-gradient-to-br from-yellow-50 via-white to-orange-100',
+    'bg-gradient-to-br from-pink-50 via-white to-yellow-100',
+    'bg-gradient-to-br from-blue-50 via-white to-violet-100',
+  ];
+  const pickGradient = (seed: string, offset: number = 0) => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+    }
+    const idx = Math.abs(hash + offset) % gradients.length;
+    return gradients[idx];
+  };
+
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100">
       {/* Decorative */}
@@ -65,7 +82,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
           <div className="lg:col-span-3 space-y-8">
             {/* Event Description */}
             {event.description && (
-              <Card className="bg-gradient-to-br from-indigo-50 via-white to-pink-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+              <Card className={`${pickGradient(event.eventCode, 0)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
                 <CardHeader>
                   <CardTitle>About This Event</CardTitle>
                 </CardHeader>
@@ -81,7 +98,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             )}
 
             {/* Photo Gallery */}
-            <Card className="bg-gradient-to-br from-emerald-50 via-white to-cyan-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+            <Card className={`${pickGradient(event.eventCode, 1)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Users className="mr-2 h-5 w-5" />
@@ -102,7 +119,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-yellow-50 via-white to-orange-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+            <Card className={`${pickGradient(event.eventCode, 2)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
                 <CardTitle>Find out more about memoriesVault</CardTitle>
               </CardHeader>
@@ -118,7 +135,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            <Card className="bg-gradient-to-br from-pink-50 via-white to-yellow-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+            <Card className={`${pickGradient(event.eventCode, 3)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
                 <CardTitle>Event Info</CardTitle>
               </CardHeader>
@@ -148,7 +165,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-blue-50 via-white to-violet-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+            <Card className={`${pickGradient(event.eventCode, 4)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
                 <CardTitle>How to Use</CardTitle>
               </CardHeader>
@@ -194,7 +211,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-yellow-50 via-white to-orange-100 rounded-xl shadow-lg ring-1 ring-slate-200/60">
+            <Card className={`${pickGradient(event.eventCode, 5)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
                 <CardTitle>Find out more about memoriesVault</CardTitle>
               </CardHeader>
