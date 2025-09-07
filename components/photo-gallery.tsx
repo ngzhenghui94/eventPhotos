@@ -54,6 +54,13 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       formData.append('photoId', photoId.toString());
       await deletePhotoAction(formData);
       toast.success('Photo deleted');
+      // Refresh the page to update images
+      if (typeof window !== 'undefined') {
+        const { useRouter } = await import('next/navigation');
+        // Use router.refresh to reload server data
+        // This must be called inside a component, so fallback to window.location.reload()
+        window.location.reload();
+      }
     } catch (error: unknown) {
       // Suppress toast for NEXT_REDIRECT errors
       if (error && typeof error === 'object' && 'digest' in error && (error as any).digest === 'NEXT_REDIRECT') {
@@ -108,6 +115,10 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       toast.success(`${result?.count ?? selectedIds.size} photo(s) deleted`);
       clearAll();
       setMultiMode(false);
+      // Refresh the page to update images
+      if (typeof window !== 'undefined') {
+        window.location.reload();
+      }
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
       toast.error(`Failed to delete photos: ${message}`);
