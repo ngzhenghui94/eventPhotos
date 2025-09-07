@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, Trash2, Download, Eye, X, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Upload, Trash2, Download, Eye, X, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { deletePhotoAction, deletePhotosBulkAction } from '@/lib/photos/actions';
 import type { Photo, User } from '@/lib/db/schema';
 
@@ -21,6 +21,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
   const [isDeleting, setIsDeleting] = useState<number | null>(null);
   const [multiMode, setMultiMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [downloading, setDownloading] = useState(false);
   const allIds = useMemo(() => photos.map(p => p.id), [photos]);
   const allSelected = selectedIds.size > 0 && selectedIds.size === allIds.length;
 
@@ -127,6 +128,43 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
     }
   };
 
+  const downloadSelected = async () => {
+    if (selectedIds.size === 0) return;
+    try {
+      setDownloading(true);
+      toast.info('Preparing ZIP file. This may take a moment...');
+      const res = await fetch('/api/photos/bulk-download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ photoIds: Array.from(selectedIds) }),
+      });
+      if (res.status === 429) {
+        let message = 'Rate limit reached. Please try again later.';
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {}
+        toast.error(message);
+        return;
+      }
+      if (!res.ok) throw new Error('Failed to download ZIP');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `selected-photos.zip`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('ZIP file downloaded!');
+    } catch (err) {
+      toast.error('Download failed. Please try again.');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-3">
@@ -140,6 +178,10 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
                 <>
                   <Button size="sm" variant="outline" onClick={allSelected ? clearAll : selectAll}>
                     {allSelected ? 'Clear all' : 'Select all'}
+                  </Button>
+                  <Button size="sm" variant="outline" disabled={selectedIds.size === 0 || downloading} onClick={downloadSelected}>
+                    {downloading ? (<Loader2 className="h-4 w-4 mr-1 animate-spin" />) : (<Download className="h-4 w-4 mr-1" />)}
+                    {downloading ? 'Preparing ZIP...' : `Download selected (${selectedIds.size})`}
                   </Button>
                   <Button size="sm" variant="destructive" disabled={selectedIds.size === 0} onClick={deleteSelected}>
                     Delete selected ({selectedIds.size})

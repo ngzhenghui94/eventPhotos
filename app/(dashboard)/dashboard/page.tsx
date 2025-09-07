@@ -83,106 +83,78 @@ function EventCard({ event }: { event: EventWithPhotoCount }) {
     });
   };
 
+  // Deterministic gradient based on eventCode
+  const gradients = [
+    'from-orange-50 to-blue-100',
+    'from-pink-50 to-yellow-100',
+    'from-green-50 to-blue-50',
+    'from-purple-50 to-orange-50',
+    'from-amber-50 to-lime-100',
+    'from-cyan-50 to-indigo-100',
+    'from-red-50 to-pink-100',
+    'from-teal-50 to-green-100',
+    'from-gray-50 to-gray-100',
+  ];
+  function pickGradient(code: string) {
+    let hash = 0;
+    for (let i = 0; i < code.length; i++) hash = (hash * 31 + code.charCodeAt(i)) % gradients.length;
+    return gradients[Math.abs(hash) % gradients.length];
+  }
+  const gradient = pickGradient(event.eventCode || '');
   return (
-    <Card className="group hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-orange-300 bg-white flex flex-col h-full">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
-              {event.name}
-            </CardTitle>
-            <p className="text-sm text-gray-500 mt-1">
-              Created {formatTime(event.createdAt)}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {event.isPublic ? (
-              <span title="Public event">
-                <Eye className="h-4 w-4 text-green-500" />
-              </span>
-            ) : (
-              <span title="Private event">
-                <EyeOff className="h-4 w-4 text-gray-400" />
-              </span>
-            )}
-            {event.allowGuestUploads && (
-              <span title="Guest uploads allowed">
-                <Upload className="h-4 w-4 text-blue-500" />
-              </span>
-            )}
+    <Card className={`border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full bg-gradient-to-br ${gradient}`}>
+      <CardHeader className="pb-2">
+        <div className="flex flex-col gap-2">
+          <CardTitle className="text-base font-semibold text-gray-900 truncate">{event.name || 'Untitled Event'}</CardTitle>
+          <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full border ${event.isPublic ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+              {event.isPublic ? 'Public' : 'Private'}
+            </span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+              Code: {event.eventCode}
+            </span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-gray-50 text-gray-700 border-gray-200">
+              {formatDate(event.date)}
+            </span>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 text-xs font-medium border border-pink-200 ml-auto" title="Total Photos">
+              {event.photoCount} photo{event.photoCount !== 1 ? 's' : ''}
+            </span>
           </div>
         </div>
       </CardHeader>
-
-      <CardContent className="pb-4 flex-1">
-        <div className="space-y-3 h-full flex flex-col">
-          {/* Event Details */}
-          <div className="space-y-2">
-            <div className="flex items-center text-sm text-gray-600">
-              <Calendar className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-              {formatDate(event.date)}
-            </div>
-            {event.location && (
-              <div className="flex items-center text-sm text-gray-600">
-                <MapPin className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                <span className="truncate" title={event.location}>{event.location}</span>
-              </div>
-            )}
-            {event.ownerName && (
-              <div className="flex items-center text-sm text-gray-600">
-                <Users className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                <span className="truncate">by {event.ownerName}</span>
-              </div>
-            )}
-          </div>
-
-          {/* Description */}
-          {event.description && (
-            <div className="text-sm text-gray-600 flex-1">
-              <p className="line-clamp-2">
-                {event.description}
-              </p>
-            </div>
+      <CardContent className="flex flex-col flex-1 justify-between pt-0">
+        <div className="text-xs text-gray-600 mb-3">
+          {event.ownerName && (
+            <>Owner: <span className="font-medium text-gray-800">{event.ownerName}</span></>
           )}
-
-          {/* Photo Count */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-auto">
-            <div className="flex items-center text-sm">
-              <ImageIcon className="h-4 w-4 mr-1 text-gray-400" />
-              <span className="font-medium text-gray-700">
-                {event.photoCount} photo{event.photoCount !== 1 ? 's' : ''}
-              </span>
-            </div>
-            <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">
-              #{event.eventCode}
-            </div>
+        </div>
+        {event.location && (
+          <div className="flex items-center text-xs text-gray-600 mb-2">
+            <MapPin className="h-4 w-4 mr-1 text-gray-400 flex-shrink-0" />
+            <span className="truncate" title={event.location}>{event.location}</span>
           </div>
+        )}
+        {event.description && (
+          <div className="text-xs text-gray-600 mb-2">
+            <p className="line-clamp-2">{event.description}</p>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 mb-4">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200">Access: {event.isPublic ? 'Public' : 'Private'}</span>
+        </div>
+        <div className="flex items-center gap-2 mt-auto pt-2">
+          <Link href={`/dashboard/events/${event.id}`} className="flex-1">
+            <Button size="sm" variant="secondary" className="w-full flex items-center gap-1">
+              <Camera className="h-4 w-4" /> Manage
+            </Button>
+          </Link>
+          <Link href={`/gallery/${event.id}`} className="flex-1">
+            <Button size="sm" variant="outline" className="w-full flex items-center gap-1">
+              <ExternalLink className="h-4 w-4" /> View
+            </Button>
+          </Link>
         </div>
       </CardContent>
-
-      <CardFooter className="pt-0 flex gap-2">
-        <Button 
-          asChild 
-          size="sm" 
-          className="flex-1 bg-orange-500 hover:bg-orange-600 text-white"
-        >
-          <Link href={`/dashboard/events/${event.id}`} className="flex items-center gap-1">
-            <Camera className="h-4 w-4" />
-            Manage
-          </Link>
-        </Button>
-        <Button 
-          asChild 
-          variant="outline" 
-          size="sm"
-          className="border-gray-300 hover:bg-gray-50"
-        >
-          <Link href={`/gallery/${event.id}`} className="flex items-center gap-1">
-            <ExternalLink className="h-4 w-4" />
-            View
-          </Link>
-        </Button>
-      </CardFooter>
     </Card>
   );
 }

@@ -1,4 +1,3 @@
-// ...existing code...
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
@@ -20,6 +19,8 @@ import { events as eventsTable, photos as photosTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
 import { generateAccessCode } from '@/lib/events/actions';
+// ...existing code...
+import DeleteEventModal from '@/components/delete-event-modal';
 
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -111,6 +112,16 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     }
 
     const ok = confirmText === existing.name || confirmText === existing.accessCode || confirmText.toUpperCase() === 'DELETE';
+    if (!ok) {
+      return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('Confirmation text incorrect')}`);
+    }
+
+    // Delete all photos for this event
+    await db.delete(photosTable).where(eq(photosTable.eventId, eventId));
+    // Delete the event itself
+    await db.delete(eventsTable).where(eq(eventsTable.id, eventId));
+    // Redirect to dashboard events
+    redirect('/dashboard/events?deleted=1');
   }
 
   async function regenerateAccessCode(formData: FormData) {
@@ -333,16 +344,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               <div className="text-xs text-gray-600 mb-3">
                 Deleting this event will permanently remove all photos and cannot be undone.
               </div>
-              <form action={deleteEventAction as any} className="space-y-3">
-                <input type="hidden" name="eventId" value={String(eventId)} />
-                <div className="space-y-1.5">
-                  <Label htmlFor="confirmText">Type the event name, access code, or DELETE to confirm</Label>
-                  <Input id="confirmText" name="confirmText" placeholder={event?.name} />
-                </div>
-                <div className="flex justify-end">
-                  <Button variant="destructive" size="sm" type="submit">Delete Event</Button>
-                </div>
-              </form>
+              <DeleteEventModal eventId={eventId} eventName={event?.name} eventCode={event?.eventCode} accessCode={event?.accessCode} action={deleteEventAction as any} />
             </div>
           )}
 
