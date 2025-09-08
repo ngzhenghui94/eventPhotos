@@ -1,4 +1,5 @@
 import { checkoutAction, chooseFreePlanAction } from '@/lib/payments/actions';
+import { eventLimit, photoLimitPerEvent, uploadLimitBytes, PlanName } from '@/lib/plans';
 import { Check } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -72,82 +73,68 @@ export default async function PricingPage() {
           </p>
         </div>
         <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 max-w-7xl mx-auto fade-in-up">
-          <PricingCard
-            name={'Free'}
-            price={0}
-            interval={'month'}
-            trialDays={0}
-            features={[
-              '1 Event',
-              '50 photos per event',
-              '5MB per upload',
-              'Guest Photo Sharing',
-              'Basic Photo Gallery',
-              'Photo Download & Export',
-            ]}
-            free
-          />
-          <PricingCard
-            name={'Starter'}
-            price={starterUnitAmount}
-            interval={starterInterval}
-            trialDays={0}
-            features={[
-              '1 Event',
-              '100 photos per event',
-              '20MB per upload',
-              'Guest Photo Sharing',
-              'Basic Photo Gallery',
-              'Photo Download & Export',
-            ]}
-            priceId={starterStripeId}
-          />
-          <PricingCard
-            name={'Hobby'}
-            price={hobbyUnitAmount}
-            interval={hobbyInterval}
-            trialDays={0}
-            features={[
-              '5 Events',
-              '500 photos per event',
-              '25MB per upload',
-              'Guest Photo Sharing',
-              'Basic Photo Gallery',
-              'Photo Download & Export',
-            ]}
-            priceId={hobbyStripeId}
-          />
-          <PricingCard
-            name={'Pro'}
-            price={proUnitAmount}
-            interval={proInterval}
-            trialDays={0}
-            features={[
-              '20 Events',
-              '250 photos per event',
-              '50MB per upload',
-              'Guest Photo Sharing',
-              'Advanced Photo Gallery',
-              'Photo Download & Export',
-            ]}
-            priceId={proStripeId}
-          />
-          <PricingCard
-            name={'Business'}
-            price={businessUnitAmount}
-            interval={businessInterval}
-            trialDays={0}
-            features={[
-              'Unlimited Events',
-              '500 photos per event',
-              '100MB per upload',
-              'Guest Photo Sharing',
-              'Advanced Photo Gallery',
-              'Photo Download & Export',
-              'Teams Enabled',
-            ]}
-            priceId={businessStripeId}
-          />
+          {[
+            {
+              name: 'Free',
+              plan: 'free' as PlanName,
+              price: 0,
+              interval: 'month',
+              trialDays: 0,
+              priceId: undefined,
+              free: true,
+            },
+            {
+              name: 'Starter',
+              plan: 'starter' as PlanName,
+              price: starterUnitAmount,
+              interval: starterInterval,
+              trialDays: 0,
+              priceId: starterStripeId,
+            },
+            {
+              name: 'Hobby',
+              plan: 'hobby' as PlanName,
+              price: hobbyUnitAmount,
+              interval: hobbyInterval,
+              trialDays: 0,
+              priceId: hobbyStripeId,
+            },
+            {
+              name: 'Pro',
+              plan: 'pro' as PlanName,
+              price: proUnitAmount,
+              interval: proInterval,
+              trialDays: 0,
+              priceId: proStripeId,
+            },
+            {
+              name: 'Business',
+              plan: 'business' as PlanName,
+              price: businessUnitAmount,
+              interval: businessInterval,
+              trialDays: 0,
+              priceId: businessStripeId,
+            },
+          ].map(({ name, plan, price, interval, trialDays, priceId, free }) => (
+            <PricingCard
+              key={name}
+              name={name}
+              price={price}
+              interval={interval}
+              trialDays={trialDays}
+              features={[
+                `${eventLimit(plan) === null ? 'Unlimited' : eventLimit(plan)} Event${eventLimit(plan) === 1 ? '' : 's'}`,
+                `${photoLimitPerEvent(plan) === null ? 'Unlimited' : photoLimitPerEvent(plan)} photos per event`,
+                `${uploadLimitBytes(plan) / (1024 * 1024)}MB per upload`,
+                'Guest Photo Sharing',
+                (plan === 'pro' || plan === 'business' ? 'Advanced Photo Gallery' : 'Basic Photo Gallery'),
+                'Photo Download & Export',
+                ...(plan === 'business' ? ['Teams Enabled'] : []),
+              ]}
+              priceId={priceId}
+              free={free}
+            />
+          ))}
         </div>
       </section>
   {/* Animations and glassmorphism are now handled by Tailwind classes. Custom CSS removed to avoid client-only error. */}

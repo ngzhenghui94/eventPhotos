@@ -35,17 +35,31 @@ interface GuestPhotoUploadProps {
 export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   const router = useRouter();
   const [maxFileSizeMB, setMaxFileSizeMB] = useState(10);
+  const [eventInfo, setEventInfo] = useState<any>(null);
   useEffect(() => {
-    async function fetchHostPlan() {
+    let isMounted = true;
+    async function fetchAllData() {
       try {
-        const res = await fetch(`/api/events/${eventId}/host-plan`);
-        if (res.ok) {
-          const data = await res.json();
-          setMaxFileSizeMB(Math.floor((data.maxFileSize || 10485760) / 1024 / 1024));
+        const [hostPlanRes, eventRes] = await Promise.all([
+          fetch(`/api/events/${eventId}/host-plan`),
+          fetch(`/api/events/${eventId}`)
+        ]);
+        let maxFileSize = 10485760;
+        if (hostPlanRes.ok) {
+          const data = await hostPlanRes.json();
+          maxFileSize = data.maxFileSize || 10485760;
         }
-      } catch {}
+        if (isMounted) setMaxFileSizeMB(Math.floor(maxFileSize / 1024 / 1024));
+        if (eventRes.ok) {
+          const eventData = await eventRes.json();
+          if (isMounted) setEventInfo(eventData);
+        }
+      } catch (err) {
+        console.error('Failed to fetch event data:', err);
+      }
     }
-    fetchHostPlan();
+    fetchAllData();
+    return () => { isMounted = false; };
   }, [eventId]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -88,6 +102,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
     setIsUploading(true);
     setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
+      // Get event code and access cookie in parallel
       let eventCode = '';
       try {
         const parts = window.location.pathname.split('/');

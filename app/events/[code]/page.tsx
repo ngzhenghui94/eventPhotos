@@ -16,18 +16,26 @@ interface GuestEventPageProps { params: Promise<{ code: string }>; }
 export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const { code } = await params;
 
-  const event = await getEventByEventCode(code.toUpperCase());
-  
+  // Fetch event and cookies in parallel
+  const [event, cookieStore] = await Promise.all([
+    getEventByEventCode(code.toUpperCase()),
+    cookies(),
+  ]);
+
   if (!event) {
     redirect('/events/not-found');
   }
 
-  const cookieStore = await cookies();
+  // Fetch photos in parallel with cookie logic
+  const [photosRaw] = await Promise.all([
+    getPhotosForEvent(event.id),
+  ]);
+
   const cookieKey = `evt:${event.eventCode}:access`;
   const accessCodeCookie = cookieStore.get(cookieKey)?.value || '';
   const hasAccess = event.isPublic || (accessCodeCookie && accessCodeCookie.toUpperCase() === event.accessCode.toUpperCase());
 
-  const photos = (await getPhotosForEvent(event.id)).filter((p: any) => p.isApproved);
+  const photos = (photosRaw || []).filter((p: any) => p.isApproved);
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
 
