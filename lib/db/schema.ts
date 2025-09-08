@@ -38,6 +38,7 @@ export const events = pgTable('events', {
   description: text('description'),
   date: timestamp('date').notNull(),
   location: varchar('location', { length: 255 }),
+  category: varchar('category', { length: 32 }).notNull().default('General'),
   eventCode: varchar('event_code', { length: 50 }).notNull().unique(),
   accessCode: varchar('access_code', { length: 50 }).notNull().unique(),
   createdBy: integer('created_by').notNull().references(() => users.id),

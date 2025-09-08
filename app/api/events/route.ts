@@ -14,8 +14,21 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Fetch events created by the user
-    const userEvents = await db.select().from(events)
+    // Fetch events created by the user, explicitly select all columns
+    const userEvents = await db.select({
+      id: events.id,
+      eventCode: events.eventCode,
+      name: events.name,
+      description: events.description,
+      date: events.date,
+      location: events.location,
+      category: events.category,
+      isPublic: events.isPublic,
+      allowGuestUploads: events.allowGuestUploads,
+      requireApproval: events.requireApproval,
+      createdAt: events.createdAt,
+      createdBy: events.createdBy
+    }).from(events)
       .where(eq(events.createdBy, user.id));
 
     // Fetch photo counts for all events in one query
@@ -32,7 +45,7 @@ export async function GET() {
       });
     }
 
-    // Add photoCount and ownerName
+    // Add photoCount, ownerName, and category
     const result = userEvents.map(ev => ({
       id: ev.id,
       eventCode: ev.eventCode,
@@ -40,6 +53,7 @@ export async function GET() {
       description: ev.description,
       date: ev.date,
       location: ev.location,
+      category: ev.category,
       isPublic: ev.isPublic,
       allowGuestUploads: ev.allowGuestUploads,
       requireApproval: ev.requireApproval,
@@ -48,7 +62,8 @@ export async function GET() {
       ownerId: user.id,
       photoCount: photoCounts[ev.id] || 0
     }));
-    return Response.json(result, { status: 200 });
+  console.log('API /api/events result:', result);
+  return Response.json(result, { status: 200 });
   } catch (error) {
     console.error('Error fetching events:', error);
     return Response.json({ error: 'Failed to fetch events' }, { status: 500 });

@@ -4,44 +4,9 @@
   "entries": [
     {
       "idx": 0,
-      "version": "7",
+      "version": "1",
       "when": 1726443359662,
-      "tag": "0000_soft_the_anarchist",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1756512000000,
-      "tag": "0001_add_events_photos",
-      "breakpoints": false
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1756512300000,
-      "tag": "0002_relax_event_columns",
-      "breakpoints": false
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1756684800000,
-      "tag": "0003_add_is_owner_to_users",
-      "breakpoints": false
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1756771200000,
-      "tag": "0004_email_verification",
-      "breakpoints": false
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1757071849990,
-      "tag": "0005_loud_the_hunter",
+      "tag": "0007_add_category_to_events",
       "breakpoints": true
     }
   ]

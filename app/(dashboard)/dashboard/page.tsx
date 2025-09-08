@@ -9,6 +9,7 @@ import {
   CardTitle,
   CardFooter
 } from '@/components/ui/card';
+import { getCategoryIcon } from '@/components/events-grid';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 import { 
@@ -33,6 +34,7 @@ interface EventWithPhotoCount {
   description?: string;
   date: Date;
   location?: string;
+  category?: string;
   isPublic: boolean;
   allowGuestUploads: boolean;
   requireApproval: boolean;
@@ -105,7 +107,10 @@ function EventCard({ event }: { event: EventWithPhotoCount }) {
     <Card className={`border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full bg-gradient-to-br ${gradient}`}>
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-2">
-          <CardTitle className="text-base font-semibold text-gray-900 truncate">{event.name || 'Untitled Event'}</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900 truncate flex items-center gap-2">
+            {getCategoryIcon(event.category)}
+            {event.name || 'Untitled Event'}
+          </CardTitle>
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
             <span className={`inline-flex items-center px-2 py-0.5 rounded-full border ${event.isPublic ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
               {event.isPublic ? 'Public' : 'Private'}
@@ -189,7 +194,7 @@ function EventsList() {
           <h3 className="text-lg font-medium text-gray-900 mb-2">No events yet</h3>
           <p className="text-gray-600 mb-6">Create your first event to start collecting and sharing photos.</p>
           <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
-            <Link href="/dashboard/events/new" className="flex items-center gap-2">
+            <Link href="/dashboard/new" className="flex items-center gap-2">
               <Plus className="h-4 w-4" />
               Create Event
             </Link>
@@ -281,8 +286,8 @@ function DashboardPage() {
               </h1>
               <p className="text-lg text-gray-700 mb-4">Capture, share, and relive your event memories in one beautiful dashboard.</p>
               <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg text-base px-6 py-3">
-                <Link href="/dashboard/events/new" className="flex items-center gap-2">
-                  <Plus className="h-5 w-5" />
+                <Link href="/dashboard/new" className="flex items-center gap-2">
+                  <Plus className="h-4 w-5" />
                   Create New Event
                 </Link>
               </Button>

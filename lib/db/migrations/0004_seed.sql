@@ -1,0 +1,2 @@
+-- Optionally seed demo data here if needed
+-- INSERT INTO users (name, email, password_hash) VALUES ('Demo User', 'demo@example.com', 'hashedpassword');

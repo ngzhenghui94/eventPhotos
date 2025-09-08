@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { Calendar, ChevronDown, ChevronUp, Users } from 'lucide-react';
 
-type EventItem = import('@/lib/db/schema').Event & { photoCount: number; ownerName?: string | null };
+type EventItem = import('@/lib/db/schema').Event & { photoCount: number; ownerName?: string | null; category?: string };
 
 function formatDate(date: Date | string) {
   const d = typeof date === 'string' ? new Date(date) : date;
@@ -47,9 +47,13 @@ export function EventsGrid({ items }: { items: EventItem[] }) {
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-start gap-3">
                   <div className="flex-1 min-w-0">
-                    <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors truncate">
-                      {event.name}
-                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors truncate flex items-center gap-2">
+                        {getCategoryIcon(event.category)}
+                        {event.name}
+                        <span style={{fontSize:12, color:'#888'}}>({String(event.category)})</span>
+                      </CardTitle>
+                    </div>
                     <p className="text-sm text-gray-500 mt-1">Created {formatCreated(event.createdAt as any)}</p>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -121,4 +125,38 @@ export function EventsGrid({ items }: { items: EventItem[] }) {
       )}
     </div>
   );
+}
+
+// Category icon mapping
+// ...existing code...
+// Category icon mapping
+export function getCategoryIcon(category: string) {
+  switch (category) {
+    case 'Wedding':
+      return (<svg className="h-4 w-4 text-pink-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M2 20c0-4 8-4 8-4s8 0 8 4" /></svg>);
+    case 'Birthday':
+      return (<svg className="h-4 w-4 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="8" width="18" height="8" rx="2" /><path d="M12 2v6" /><path d="M8 2v6" /><path d="M16 2v6" /></svg>);
+    case 'Party':
+      return (<svg className="h-4 w-4 text-yellow-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2l1.5 4.5L18 7l-3.5 2.5L15 14l-3-2-3 2 1.5-4.5L6 7l4.5-0.5L12 2z" /></svg>);
+    case 'Travel':
+      return (<svg className="h-4 w-4 text-green-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 16V8a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v8" /><rect x="7" y="16" width="10" height="2" rx="1" /></svg>);
+    case 'Event':
+      return (<svg className="h-4 w-4 text-purple-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4" /><path d="M8 2v4" /></svg>);
+    case 'Conference':
+      return (<svg className="h-4 w-4 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" /><path d="M16 2v5" /><path d="M8 2v5" /></svg>);
+    case 'Reunion':
+      return (<svg className="h-4 w-4 text-teal-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M8 14s1.5 2 4 2 4-2 4-2" /></svg>);
+    case 'Festival':
+      return (<svg className="h-4 w-4 text-orange-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="15" rx="2" /><path d="M12 2v5" /></svg>);
+    case 'Corporate':
+      return (<svg className="h-4 w-4 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M8 2v5" /><path d="M16 2v5" /></svg>);
+    case 'Sports':
+      return (<svg className="h-4 w-4 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M8 12h8" /><path d="M12 8v8" /></svg>);
+    case 'Holiday':
+      return (<svg className="h-4 w-4 text-emerald-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2" /><path d="M12 2v5" /></svg>);
+    case 'Other':
+      return (<svg className="h-4 w-4 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4" /><path d="M12 16h.01" /></svg>);
+    default:
+      return (<svg className="h-4 w-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /></svg>);
+  }
 }

@@ -64,6 +64,7 @@ export async function GET(
           isPublic: event.isPublic,
           allowGuestUploads: event.allowGuestUploads,
           owner: event.createdBy,
+          category: event.category,
         },
         photos,
       });

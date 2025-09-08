@@ -1,11 +1,13 @@
 'use client';
 
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
 import { ArrowLeft, Calendar, MapPin, FileText, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { createEventAction } from '../actions';
@@ -23,6 +25,11 @@ const NewEventPage = () => {
   const eventLimit = dashboardInfo?.eventLimit;
   const eventCount = events?.length ?? 0;
   const eventLimitReached = eventLimit !== null && typeof eventLimit === 'number' && eventCount >= eventLimit;
+
+  const [category, setCategory] = React.useState('General');
+  const categories = [
+    'General', 'Wedding', 'Birthday', 'Party', 'Travel', 'Event', 'Conference', 'Reunion', 'Festival', 'Corporate', 'Sports', 'Holiday', 'Other'
+  ];
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -122,15 +129,25 @@ const NewEventPage = () => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="description" className="text-base font-semibold text-gray-700">Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Describe your event (optional)"
-                    rows={3}
-                    className="mt-2 border-2 border-amber-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
-                    disabled={eventLimitReached}
-                  />
+                  <Label htmlFor="category" className="text-base font-semibold text-gray-700">Category *</Label>
+                  <input type="hidden" name="category" value={category} />
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" className="w-full mt-2 border-2 border-amber-200 rounded-lg text-left flex justify-between items-center">
+                        {category}
+                        <span className="ml-2 text-gray-400">▼</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-full min-w-[180px]">
+                      <DropdownMenuRadioGroup value={category} onValueChange={setCategory}>
+                        {categories.map((cat) => (
+                          <DropdownMenuRadioItem key={cat} value={cat} className="capitalize">
+                            {cat}
+                          </DropdownMenuRadioItem>
+                        ))}
+                      </DropdownMenuRadioGroup>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
