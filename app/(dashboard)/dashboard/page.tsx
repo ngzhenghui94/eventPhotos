@@ -142,16 +142,6 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Sort Toggle */}
-        <div className="flex items-center justify-end mb-4">
-          <Button variant="outline" size="sm" onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}>
-            Sort by Event Date {sortDir === 'desc' ? (
-              <span className="inline-flex items-center ml-2 text-gray-600">Newest</span>
-            ) : (
-              <span className="inline-flex items-center ml-2 text-gray-600">Oldest</span>
-            )}
-          </Button>
-        </div>
 
         {/* Events Grid with sorting */}
         {sortedEvents.length > 0 ? (

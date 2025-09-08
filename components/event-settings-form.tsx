@@ -13,13 +13,15 @@ type EventSettingsFormProps = {
 
 const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
   const [category, setCategory] = React.useState(event?.category || "General");
+  const [loading, setLoading] = React.useState(false);
 
   if (!isEventOwner) return null;
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoading(true);
     const form = e.target;
-  const formData = new FormData(form as HTMLFormElement);
+    const formData = new FormData(form as HTMLFormElement);
     formData.set('category', category);
     await fetch('/api/events/update', {
       method: 'POST',
@@ -43,21 +45,42 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
           <div className="flex items-center gap-2">
             <input type="checkbox" id="isPublic" name="isPublic" defaultChecked={!!event.isPublic} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="isPublic" className="font-medium">Public</Label>
-            <span className="text-gray-400 ml-1">Visible to anyone with the link</span>
+            <span className="text-gray-400 font-medium">Visible to anyone with the link</span>
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="allowGuestUploads" name="allowGuestUploads" defaultChecked={!!event.allowGuestUploads} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="allowGuestUploads" className="font-medium">Guest uploads</Label>
-            <span className="text-gray-400 ml-1">Allow guests to upload photos</span>
+            <span className="text-gray-400 font-medium">Allow guests to upload photos</span>
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="requireApproval" name="requireApproval" defaultChecked={!!event.requireApproval} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="requireApproval" className="font-medium">Require approval</Label>
-            <span className="text-gray-400 ml-1">New uploads need approval</span>
+            <span className="text-gray-400 font-small">New uploads need approval</span>
           </div>
         </div>
-        <div className="flex justify-end pt-2">
-          <Button type="submit" size="sm" variant="default">Save Event Settings</Button>
+        <div className="flex justify-end pt-2 gap-2">
+          <Button type="submit" size="sm" variant="default" disabled={loading}>
+            {loading ? 'Saving...' : 'Save Event Settings'}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              setLoading(true);
+              const formData = new FormData();
+              formData.set('eventId', String(event.id));
+              formData.set('name', event.name);
+              formData.set('category', category);
+              formData.set('regenerateCode', 'true');
+              await fetch('/api/events/update', {
+                method: 'POST',
+                body: formData,
+              });
+              window.location.reload();
+            }}
+            disabled={loading}
+          >{loading ? 'Regenerating...' : 'Regenerate Code'}</Button>
         </div>
       </form>
     </div>
