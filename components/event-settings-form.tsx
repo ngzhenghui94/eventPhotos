@@ -11,10 +11,22 @@ const EventSettingsForm = ({ event, isEventOwner }) => {
 
   if (!isEventOwner) return null;
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    formData.set('category', category);
+    await fetch('/api/events/update', {
+      method: 'POST',
+      body: formData,
+    });
+    window.location.reload();
+  };
+
   return (
     <div className="mt-4">
       <p className="text-sm font-medium mb-2">Edit Event</p>
-      <form action="/api/events/update" method="POST" className="space-y-3">
+      <form className="space-y-3" onSubmit={handleSubmit}>
         <input type="hidden" name="eventId" value={String(event.id)} />
         <div className="space-y-1.5">
           <Label htmlFor="name">Name</Label>

@@ -21,17 +21,32 @@ export default async function EventsPage() {
     <section className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <UpdateToast />
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-6">
-          <div>
-            <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-2">Events</h1>
-            <p className="text-sm text-gray-600">Manage your photo sharing events</p>
+        {/* Hero Section - replicated from /dashboard */}
+        <div className="relative rounded-xl overflow-hidden mb-10 shadow-lg bg-gradient-to-r from-orange-100 via-white to-blue-100 border border-orange-200 animate-fade-in">
+          <div className="absolute inset-0 pointer-events-none">
+            <svg width="100%" height="100%" viewBox="0 0 600 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="100" cy="60" r="80" fill="#FFEDD5" opacity="0.3" />
+              <circle cx="500" cy="60" r="80" fill="#DBEAFE" opacity="0.3" />
+            </svg>
           </div>
-          <Link href="/dashboard/events/new">
-            <Button className="mt-4 lg:mt-0">
-              <Plus className="mr-2 h-4 w-4" />
-              Create Event
-            </Button>
-          </Link>
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between px-8 py-10 gap-6">
+            <div className="flex-1">
+              <h1 className="text-3xl lg:text-4xl font-extrabold text-orange-900 mb-2 flex items-center gap-2">
+                <Camera className="h-8 w-8 text-orange-500 animate-bounce" />
+                Memories Vault
+              </h1>
+              <p className="text-lg text-gray-700 mb-4">Capture, share, and relive your event memories in one beautiful dashboard.</p>
+              <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg text-base px-6 py-3">
+                <Link href="/dashboard/events/new" className="flex items-center gap-2">
+                  <Plus className="h-4 w-5" />
+                  Create New Event
+                </Link>
+              </Button>
+            </div>
+            <div className="flex-shrink-0 hidden md:block">
+              <img src="/favicon.ico" alt="Memories Vault" className="w-32 h-32 rounded-full shadow-lg border-4 border-orange-200" />
+            </div>
+          </div>
         </div>
 
         {/* Summary cards */}

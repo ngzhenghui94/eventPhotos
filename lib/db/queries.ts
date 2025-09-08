@@ -193,6 +193,7 @@ export async function getUserEvents(userId: number): Promise<EventWithPhotoCount
         description: events.description,
         date: events.date,
         location: events.location,
+        category: events.category,
         eventCode: events.eventCode,
         accessCode: events.accessCode,
         createdBy: events.createdBy,
