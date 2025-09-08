@@ -1,14 +1,54 @@
 "use client";
+import { useEffect, useState } from 'react';
 import { brand } from '@/lib/brand';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode } from 'lucide-react';
+import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
 
 
 export default function HomePage() {
+  const [showBanner, setShowBanner] = useState(true);
+  useEffect(() => {
+    try {
+      const dismissed = localStorage.getItem('mv_beta_banner_dismissed');
+      if (dismissed === '1') setShowBanner(false);
+    } catch {}
+  }, []);
+
+  const dismissBanner = () => {
+    setShowBanner(false);
+    try { localStorage.setItem('mv_beta_banner_dismissed', '1'); } catch {}
+  };
+
   return (
   <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
+      {/* Beta banner */}
+      {showBanner && (
+        <section className="px-4 pt-4">
+          <div className="max-w-7xl mx-auto">
+            <div className="relative flex items-center justify-center gap-3 rounded-xl border border-amber-200/60 ring-1 ring-white/60 shadow-sm px-4 py-2 text-sm text-slate-800 bg-gradient-to-r from-amber-50 via-rose-50 to-blue-50">
+              <Megaphone className="h-4 w-4 text-amber-600" />
+              <span className="font-medium">Beta test</span>
+              <span className="text-slate-700">— Found a bug or have feedback / suggestion?</span>
+              <a
+                href="mailto:ngzhenghui94@gmail.com?subject=memoriesVault%20Beta%20Feedback&body=Hi%20there%2C%0A%0AFeedback%2Fbug%20details%3A%0A%0A%28Screenshots%2Fsteps%20to%20reproduce%20help%29%0A%0AThanks!"
+                className="inline-flex items-center rounded-full bg-white/70 hover:bg-white px-3 py-1 text-amber-700 font-medium border border-amber-200 transition-colors"
+              >
+                Send feedback
+              </a>
+              <button
+                type="button"
+                onClick={dismissBanner}
+                aria-label="Dismiss beta banner"
+                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-white/70"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
       {/* Hero Section with animated gradient background */}
   <section className="py-16 sm:py-24 relative overflow-hidden">
         <div className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-br from-orange-200 via-amber-100 to-blue-200 opacity-60"></div>
