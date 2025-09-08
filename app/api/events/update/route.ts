@@ -3,7 +3,7 @@ import { db } from '@/lib/db/drizzle';
 import { events as eventsTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function POST(req) {
+export async function POST(req: Request) {
   try {
     const formData = await req.formData();
     const eventId = Number(formData.get('eventId'));
@@ -21,6 +21,7 @@ export async function POST(req) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  const errMsg = (error instanceof Error) ? error.message : String(error);
+  return NextResponse.json({ success: false, error: errMsg }, { status: 500 });
   }
 }
