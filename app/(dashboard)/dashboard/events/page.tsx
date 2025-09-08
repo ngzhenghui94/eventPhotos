@@ -12,7 +12,7 @@ import { EventsGrid } from '@/components/events-grid';
 
 export default async function EventsPage() {
   const user = await getUser();
-  let items: (import('@/lib/db/schema').Event & { photoCount: number; category: string })[] = [];
+  let items: import('@/lib/types/common').EventWithPhotoCount[] = [];
   if (user && user.id) {
     items = await getUserEvents(user.id);
   }
@@ -58,7 +58,7 @@ export default async function EventsPage() {
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-orange-900">Total Events</p>
+                  <p className="text-sm font-medium text-orange-900">Your Total Vaults</p>
                   <p className="text-2xl font-bold text-orange-800">{items.length}</p>
                 </div>
               </div>
@@ -71,7 +71,7 @@ export default async function EventsPage() {
                   <Camera className="h-5 w-5 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-blue-900">Total Photos</p>
+                  <p className="text-sm font-medium text-blue-900">Your Total Photos</p>
                   <p className="text-2xl font-bold text-blue-800">{items.reduce((total, e) => total + (e.photoCount ?? 0), 0)}</p>
                 </div>
               </div>
@@ -84,7 +84,7 @@ export default async function EventsPage() {
                   <Eye className="h-5 w-5 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-green-900">Public Events</p>
+                  <p className="text-sm font-medium text-green-900">Your Public Vaults</p>
                   <p className="text-2xl font-bold text-green-800">{items.filter(event => event.isPublic).length}</p>
                 </div>
               </div>

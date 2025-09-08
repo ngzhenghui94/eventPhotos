@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { getCategoryIcon } from '@/components/events-grid';
 import useSWR from 'swr';
-import { Suspense } from 'react';
+import { Suspense, useState, useMemo } from 'react';
 import { 
   Calendar, 
   MapPin, 
@@ -108,7 +108,7 @@ function EventCard({ event }: { event: EventWithPhotoCount }) {
       <CardHeader className="pb-2">
         <div className="flex flex-col gap-2">
           <CardTitle className="text-base font-semibold text-gray-900 truncate flex items-center gap-2">
-            {getCategoryIcon(event.category)}
+            {getCategoryIcon(event.category ?? 'Other')}
             {event.name || 'Untitled Event'}
           </CardTitle>
           <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
@@ -215,7 +215,7 @@ function EventsList() {
                 <Calendar className="h-5 w-5 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-orange-900">Total Events</p>
+                <p className="text-sm font-medium text-orange-900">Your Total Vaults</p>
                 <p className="text-2xl font-bold text-orange-800">{events.length}</p>
               </div>
             </div>
@@ -229,7 +229,7 @@ function EventsList() {
                 <ImageIcon className="h-5 w-5 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-blue-900">Total Photos</p>
+                <p className="text-sm font-medium text-blue-900">Your Total Photos</p>
                 <p className="text-2xl font-bold text-blue-800">
                   {events.reduce((total, event) => total + event.photoCount, 0)}
                 </p>
@@ -245,7 +245,7 @@ function EventsList() {
                 <Eye className="h-5 w-5 text-white" />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-green-900">Public Events</p>
+                <p className="text-sm font-medium text-green-900">Your Public Vaults</p>
                 <p className="text-2xl font-bold text-green-800">
                   {events.filter(event => event.isPublic).length}
                 </p>
@@ -255,18 +255,92 @@ function EventsList() {
         </Card>
       </div>
 
-      {/* Events Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {events.map((event) => (
-          <EventCard key={event.id} event={event} />
-        ))}
+      {/* Sort Toggle */}
+      <div className="flex items-center justify-end mb-4">
+        <Button variant="outline" size="sm" onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}>
+          Sort by Event Date {sortDir === 'desc' ? (
+            <span className="inline-flex items-center ml-2 text-gray-600">Newest</span>
+          ) : (
+            <span className="inline-flex items-center ml-2 text-gray-600">Oldest</span>
+          )}
+        </Button>
       </div>
+
+      {/* Events Grid with sorting */}
+      {sortedEvents.length > 0 ? (
+        <EventsGrid items={sortedEvents as any} />
+      ) : (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center text-center py-12">
+            <Camera className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">No events yet</h3>
+            <p className="text-sm text-gray-500 max-w-sm mb-6">Create your first event to start collecting and sharing photos.</p>
+            <Link href="/dashboard/events/new">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Create Your First Event
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
 
-function DashboardPage() {
+export default function DashboardPage() {
+  const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
+  const { data: events, error, isLoading } = useSWR<EventWithPhotoCount[]>('/api/events', fetcher);
+
+  const sortedEvents = useMemo(() => {
+    if (!events) return [];
+    const list = [...events];
+    list.sort((a, b) => {
+      const aDate = a?.date ? new Date(a.date as any).getTime() : (a?.createdAt ? new Date(a.createdAt as any).getTime() : 0);
+      const bDate = b?.date ? new Date(b.date as any).getTime() : (b?.createdAt ? new Date(b.createdAt as any).getTime() : 0);
+      return sortDir === 'desc' ? bDate - aDate : aDate - bDate;
+    });
+    return list;
+  }, [events, sortDir]);
+
+  if (error) {
+    return (
+      <Card className="text-center py-12">
+        <CardContent>
+          <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to load events</h3>
+          <p className="text-gray-600 mb-4">There was an error loading your events.</p>
+          <Button onClick={() => window.location.reload()}>
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (isLoading) {
+    return <EventsSkeleton />;
+  }
+
+  if (!events || events.length === 0) {
+    return (
+      <Card className="text-center py-12">
+        <CardContent>
+          <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No events yet</h3>
+          <p className="text-gray-600 mb-6">Create your first event to start collecting and sharing photos.</p>
+          <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
+            <Link href="/dashboard/events/new" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Create Event
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <section className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
@@ -315,6 +389,3 @@ function DashboardPage() {
     </section>
   );
 }
-
-
-export default DashboardPage;
