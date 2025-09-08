@@ -12,7 +12,7 @@ import { EventsGrid } from '@/components/events-grid';
 
 export default async function EventsPage() {
   const user = await getUser();
-  let items: (import('@/lib/db/schema').Event & { photoCount: number })[] = [];
+  let items: (import('@/lib/db/schema').Event & { photoCount: number; category: string })[] = [];
   if (user && user.id) {
     items = await getUserEvents(user.id);
   }

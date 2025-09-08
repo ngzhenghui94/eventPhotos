@@ -52,6 +52,7 @@ export interface EventWithPhotoCount {
   description: string | null;
   date: Date; // This should match the schema - NOT NULL
   location: string | null;
+  category: string;
   eventCode: string;
   accessCode: string;
   createdBy: number;
