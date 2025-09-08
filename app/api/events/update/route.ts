@@ -4,6 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { events as eventsTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateAccessCode } from '@/lib/events/actions';
+import { getUser, getEventById } from '@/lib/db/queries';
 
 export async function POST(req: Request) {
   try {
@@ -12,6 +13,20 @@ export async function POST(req: Request) {
     const name = String(formData.get('name') ?? '').trim();
     const category = String(formData.get('category') ?? '').trim();
     // Add other fields as needed
+
+    // Auth protection: Only event owner or app owner can update
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+    }
+    const event = await getEventById(eventId);
+    if (!event) {
+      return NextResponse.json({ success: false, error: 'Event not found' }, { status: 404 });
+    }
+    const isOwner = user.id === event.createdBy || !!user.isOwner;
+    if (!isOwner) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
 
     // Only regenerate code if explicitly requested
     let updateObj: any = {
