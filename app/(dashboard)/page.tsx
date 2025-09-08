@@ -58,7 +58,7 @@ export default function HomePage() {
               A warmer, simpler way to gather event photos together
             </h1>
             <p className="mb-8 text-lg sm:text-xl text-gray-700">
-              Create your event, share a friendly code, and let everyone add their favorite moments. You stay in control—beautiful, secure galleries on any device.
+              Create your event, share a friendly code, and let everyone add their favorite moments. You stay in control! Beautiful, secured galleries on any device.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Link href="/api/auth/google">
