@@ -62,7 +62,7 @@ export async function GET() {
       ownerId: user.id,
       photoCount: photoCounts[ev.id] || 0
     }));
-  console.log('API /api/events result:', result);
+  // Removed debug log
   return Response.json(result, { status: 200 });
   } catch (error) {
     console.error('Error fetching events:', error);

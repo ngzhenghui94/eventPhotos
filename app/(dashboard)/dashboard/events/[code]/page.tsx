@@ -12,6 +12,8 @@ import { EventQr } from '@/components/event-qr';
 import UpdateToast from '@/components/update-toast';
 import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
 import { Input } from '@/components/ui/input';
+import { CategoryDropdown } from '@/components/category-dropdown';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
@@ -21,6 +23,7 @@ import { deleteFromS3, deriveThumbKey } from '@/lib/s3';
 import { generateAccessCode } from '@/lib/events/actions';
 // ...existing code...
 import DeleteEventModal from '@/components/delete-event-modal';
+import EventSettingsForm from '@/components/event-settings-form';
 
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -69,10 +72,11 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   async function saveEvent(formData: FormData) {
     'use server';
     const eventId = Number(formData.get('eventId'));
-    const name = String(formData.get('name') ?? '').trim();
-    const isPublic = !!formData.get('isPublic');
-    const allowGuestUploads = !!formData.get('allowGuestUploads');
-    const requireApproval = !!formData.get('requireApproval');
+  const name = String(formData.get('name') ?? '').trim();
+  const isPublic = !!formData.get('isPublic');
+  const allowGuestUploads = !!formData.get('allowGuestUploads');
+  const requireApproval = !!formData.get('requireApproval');
+  const category = String(formData.get('category') ?? '').trim();
 
     const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return;
@@ -87,6 +91,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
         isPublic,
         allowGuestUploads,
         requireApproval,
+        category: category || existing.category,
         updatedAt: new Date(),
       })
       .where(eq(eventsTable.id, eventId));
@@ -262,40 +267,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
               </div>
               {isEventOwner && (
-                <div className="mt-4">
-                  <p className="text-sm font-medium mb-2">Edit Event</p>
-                  <form action={saveEvent} className="space-y-3">
-                    <input type="hidden" name="eventId" value={String(eventId)} />
-                    <div className="space-y-1.5">
-                      <Label htmlFor="name">Name</Label>
-                      <Input id="name" name="name" defaultValue={event?.name} required maxLength={200} />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="isPublic">Public</Label>
-                        <p className="text-xs text-gray-500">Visible to anyone with the link</p>
-                      </div>
-                      <input id="isPublic" name="isPublic" type="checkbox" defaultChecked={!!event?.isPublic} className="h-4 w-4" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="allowGuestUploads">Guest uploads</Label>
-                        <p className="text-xs text-gray-500">Allow guests to upload photos</p>
-                      </div>
-                      <input id="allowGuestUploads" name="allowGuestUploads" type="checkbox" defaultChecked={!!event?.allowGuestUploads} className="h-4 w-4" />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <Label htmlFor="requireApproval">Require approval</Label>
-                        <p className="text-xs text-gray-500">New uploads need approval</p>
-                      </div>
-                      <input id="requireApproval" name="requireApproval" type="checkbox" defaultChecked={!!event?.requireApproval} className="h-4 w-4" />
-                    </div>
-                    <div className="flex justify-end pt-2">
-                      <Button type="submit" size="sm" variant="default">Save Event Settings</Button>
-                    </div>
-                  </form>
-                </div>
+                <EventSettingsForm event={event} isEventOwner={isEventOwner} />
               )}
             </div>
           </div>

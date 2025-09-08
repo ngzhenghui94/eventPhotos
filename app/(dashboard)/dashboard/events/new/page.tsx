@@ -28,7 +28,7 @@ const NewEventPage = () => {
 
   const [category, setCategory] = React.useState('General');
   const categories = [
-    'General', 'Wedding', 'Birthday', 'Party', 'Travel', 'Event', 'Conference', 'Reunion', 'Festival', 'Corporate', 'Sports', 'Holiday', 'Other'
+      'General', 'Wedding', 'Birthday', 'Party', 'Travel', 'Event', 'Conference', 'Reunion', 'Festival', 'Corporate', 'Sports', 'Holiday', 'Other'
   ];
 
   return (
@@ -131,6 +131,7 @@ const NewEventPage = () => {
                 <div>
                   <Label htmlFor="category" className="text-base font-semibold text-gray-700">Category *</Label>
                   <input type="hidden" name="category" value={category} />
+                  {/* Shadcn UI Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" variant="outline" className="w-full mt-2 border-2 border-amber-200 rounded-lg text-left flex justify-between items-center">
