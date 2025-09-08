@@ -42,83 +42,87 @@ export function EventsGrid({ items }: { items: EventItem[] }) {
       </div>
       {sorted.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sorted.map((event) => (
-            <Card key={event.id} className="group hover:shadow-lg transition-all duration-300 border border-gray-200 hover:border-orange-300 bg-white flex flex-col h-full">
-              <CardHeader className="pb-3">
-                <div className="flex justify-between items-start gap-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg font-semibold text-gray-900 group-hover:text-orange-600 transition-colors truncate flex items-center gap-2">
-                        {getCategoryIcon(event.category)}
-                        {event.name}
-                        <span style={{fontSize:12, color:'#888'}}>({String(event.category)})</span>
-                      </CardTitle>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">Created {formatCreated(event.createdAt as any)}</p>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    {event.isPublic ? (
-                      <span title="Public event">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="8"></line></svg>
+          {sorted.map((event) => {
+            // Deterministic gradient based on eventCode
+            const gradients = [
+              'from-orange-50 to-blue-100',
+              'from-pink-50 to-yellow-100',
+              'from-green-50 to-blue-50',
+              'from-purple-50 to-orange-50',
+              'from-amber-50 to-lime-100',
+              'from-cyan-50 to-indigo-100',
+              'from-red-50 to-pink-100',
+              'from-teal-50 to-green-100',
+              'from-gray-50 to-gray-100',
+            ];
+            let hash = 0;
+            for (let i = 0; i < event.eventCode.length; i++) hash = (hash * 31 + event.eventCode.charCodeAt(i)) % gradients.length;
+            const gradient = gradients[Math.abs(hash) % gradients.length];
+            return (
+              <Card key={event.id} className={`border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full bg-gradient-to-br ${gradient} rounded-xl`}>
+                <CardHeader className="pb-2">
+                  <div className="flex flex-col gap-2">
+                    <CardTitle className="text-base font-semibold text-gray-900 truncate flex items-center gap-2">
+                      {getCategoryIcon(event.category)}
+                      {event.name || 'Untitled Event'}
+                      {event.category && (
+                        <span className="ml-2 px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 text-xs font-medium border border-gray-200">{event.category}</span>
+                      )}
+                    </CardTitle>
+                    <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full border ${event.isPublic ? 'bg-green-50 text-green-700 border-green-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                        {event.isPublic ? 'Public' : 'Private'}
                       </span>
-                    ) : (
-                      <span title="Private event">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-200">
+                        Code: {event.eventCode}
                       </span>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="pb-4 flex-1">
-                <div className="space-y-3 h-full flex flex-col">
-                  <div className="space-y-2">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Calendar className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                      {event.date ? formatDate(event.date as any) : 'No date set'}
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full border bg-gray-50 text-gray-700 border-gray-200">
+                        {formatDate(event.date)}
+                      </span>
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-pink-50 text-pink-700 text-xs font-medium border border-pink-200 ml-auto" title="Total Photos">
+                        {event.photoCount} photo{event.photoCount !== 1 ? 's' : ''}
+                      </span>
                     </div>
-                    {event.location && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0"><path d="M21 10c0 6.075-9 13-9 13S3 16.075 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                        <span className="truncate" title={event.location as any}>{event.location}</span>
-                      </div>
-                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="flex flex-col flex-1 justify-between pt-0">
+                  <div className="text-xs text-gray-600 mb-3">
                     {event.ownerName && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Users className="h-4 w-4 mr-2 text-gray-400 flex-shrink-0" />
-                        <span className="truncate">by {event.ownerName}</span>
-                      </div>
+                      <>Owner: <span className="font-medium text-gray-800">{event.ownerName}</span></>
                     )}
                   </div>
+                  {event.location && (
+                    <div className="flex items-center text-xs text-gray-600 mb-2">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-1 text-gray-400 flex-shrink-0"><path d="M21 10c0 6.075-9 13-9 13S3 16.075 3 10a9 9 0 1 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                      <span className="truncate" title={event.location}>{event.location}</span>
+                    </div>
+                  )}
                   {event.description && (
-                    <div className="text-sm text-gray-600 flex-1">
+                    <div className="text-xs text-gray-600 mb-2">
                       <p className="line-clamp-2">{event.description}</p>
                     </div>
                   )}
-                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 mt-auto">
-                    <div className="flex items-center text-sm">
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-1 text-gray-400"><circle cx="12" cy="12" r="3"></circle><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect></svg>
-                      <span className="font-medium text-gray-700">{event.photoCount ?? 0} photo{(event.photoCount ?? 0) !== 1 ? 's' : ''}</span>
-                    </div>
-                    <div className="text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded">#{event.eventCode}</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-600 mb-4">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-50 border border-gray-200">Access: {event.isPublic ? 'Public' : 'Private'}</span>
                   </div>
-                </div>
-              </CardContent>
-              <CardFooter className="pt-0 flex gap-2">
-                <Button asChild size="sm" className="flex-1 bg-orange-500 hover:bg-orange-600 text-white">
-                  <Link href={`/dashboard/events/${event.id}`} className="flex items-center gap-1">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="3"></circle><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect></svg>
-                    Manage
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
-                  <Link href={`/gallery/${event.id}`} className="flex items-center gap-1">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="3"></circle><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect></svg>
-                    View
-                  </Link>
-                </Button>
-              </CardFooter>
-            </Card>
-          ))}
+                  <div className="flex items-center gap-2 mt-auto pt-2">
+                    <Link href={`/dashboard/events/${event.id}`} className="flex-1">
+                      <Button size="sm" variant="secondary" className="w-full flex items-center gap-1">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="3"></circle><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect></svg>
+                        Manage
+                      </Button>
+                    </Link>
+                    <Link href={`/gallery/${event.id}`} className="flex-1">
+                      <Button size="sm" variant="outline" className="w-full flex items-center gap-1">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4"><circle cx="12" cy="12" r="3"></circle><rect x="2" y="7" width="20" height="15" rx="2" ry="2"></rect></svg>
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       ) : (
         <div className="text-sm text-gray-500">No events.</div>
