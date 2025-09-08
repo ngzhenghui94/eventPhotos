@@ -6,15 +6,20 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { CategoryDropdown } from "@/components/category-dropdown";
 
-const EventSettingsForm = ({ event, isEventOwner }) => {
+type EventSettingsFormProps = {
+  event?: any;
+  isEventOwner?: boolean;
+};
+
+const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
   const [category, setCategory] = React.useState(event?.category || "General");
 
   if (!isEventOwner) return null;
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.target;
-    const formData = new FormData(form);
+  const formData = new FormData(form as HTMLFormElement);
     formData.set('category', category);
     await fetch('/api/events/update', {
       method: 'POST',

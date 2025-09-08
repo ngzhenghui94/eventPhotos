@@ -9,7 +9,12 @@ const categories = [
   "General", "Wedding", "Birthday", "Party", "Travel", "Event", "Conference", "Reunion", "Festival", "Corporate", "Sports", "Holiday", "Other"
 ];
 
-export function CategoryDropdown({ initialCategory, onChange }) {
+type CategoryDropdownProps = {
+  initialCategory?: string;
+  onChange?: (category: string) => void;
+};
+
+export function CategoryDropdown({ initialCategory, onChange }: CategoryDropdownProps) {
   const [category, setCategory] = React.useState(initialCategory || "General");
 
   React.useEffect(() => {
