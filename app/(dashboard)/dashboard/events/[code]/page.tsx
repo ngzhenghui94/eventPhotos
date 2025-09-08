@@ -227,6 +227,9 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
                 <span className="text-xs text-gray-700 font-medium">{photoCount} / {planPhotoCap} used</span>
               </div>
+                            {isEventOwner && (
+                <EventSettingsForm event={event} isEventOwner={isEventOwner} />
+              )}
             </div>
             {/* Event Settings - moved beside stats */}
             {/* Redesigned Event Settings card */}
@@ -239,21 +242,36 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               </div>
               <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700">Access Code</span>
-                  <span className="font-mono font-medium">{event?.accessCode}</span>
+                  <span className="font-semibold text-green-700">Event Code</span>
+                  <span className="font-mono font-medium">{event?.eventCode}</span>
                 </div>
                 <div className="flex flex-col items-center">
                   <span className="font-semibold text-green-700">Public Event</span>
                   <span className="font-medium">{event?.isPublic ? 'Yes' : 'No'}</span>
                 </div>
                 <div className="flex flex-col items-center">
+                  <span className="font-semibold text-green-700 flex items-center gap-1">
+                    Access Code
+                    <span className="relative group">
+                      <span className="inline-block w-4 h-4 bg-gray-200 text-gray-600 rounded-full text-xs font-bold cursor-pointer flex items-center justify-center" tabIndex={0}>?
+                        <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-10 hidden group-hover:block group-focus:block bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
+                          If Event is Private, access is required via Access Code
+                        </span>
+                      </span>
+                    </span>
+                  </span>
+                  <span className="font-mono font-medium">{event?.accessCode}</span>
+                </div>
+
+                <div className="flex flex-col items-center">
                   <span className="font-semibold text-green-700">Guest Uploads</span>
                   <span className="font-medium">{event?.allowGuestUploads ? 'Enabled' : 'Disabled'}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700">Approval Required</span>
+                  <span className="font-semibold text-green-700">Photo Approval?</span>
                   <span className="font-medium">{event?.requireApproval ? 'Yes' : 'No'}</span>
                 </div>
+                
               </div>
               <div className="flex items-center gap-2 mt-4">
                 <Link href={`/events/${eventCode}`} target="_blank">
@@ -266,9 +284,6 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                   <EventQr code={eventCode} size={160} compact />
                 </div>
               </div>
-              {isEventOwner && (
-                <EventSettingsForm event={event} isEventOwner={isEventOwner} />
-              )}
             </div>
           </div>
           {/* Event Details */}

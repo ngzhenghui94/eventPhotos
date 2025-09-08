@@ -4,6 +4,7 @@ import React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
 import { CategoryDropdown } from "@/components/category-dropdown";
 
 type EventSettingsFormProps = {
@@ -32,7 +33,12 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
 
   return (
     <div className="mt-4">
-      <p className="text-sm font-medium mb-2">Edit Event</p>
+        <div className="flex items-center gap-3 mb-2">
+          <span className="bg-green-100 rounded-full p-2">
+            <Calendar className="w-6 h-6 text-green-600" />
+          </span>
+          <span className="font-bold text-2xl text-green-900">Edit Event</span>
+        </div>
       <form className="space-y-3" onSubmit={handleSubmit}>
         <input type="hidden" name="eventId" value={String(event.id)} />
         <div className="space-y-1.5">
