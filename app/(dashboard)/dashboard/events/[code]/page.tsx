@@ -9,6 +9,7 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { PhotoApproval } from '@/components/photo-approval';
 import { BulkDownload } from '@/components/bulk-download';
 import { EventQr } from '@/components/event-qr';
+import RegenerateCodeButton from '@/components/regenerate-code-button';
 import UpdateToast from '@/components/update-toast';
 import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
 import { Input } from '@/components/ui/input';
@@ -242,34 +243,115 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               </div>
               <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700">Event Code</span>
-                  <span className="font-mono font-medium">{event?.eventCode}</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700">Public Event</span>
-                  <span className="font-medium">{event?.isPublic ? 'Yes' : 'No'}</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700 flex items-center gap-1">
-                    Access Code
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700">Event Code</span>
                     <span className="relative group">
-                      <span className="inline-block w-4 h-4 bg-gray-200 text-gray-600 rounded-full text-xs font-bold cursor-pointer flex items-center justify-center" tabIndex={0}>?
-                        <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-10 hidden group-hover:block group-focus:block bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap shadow-lg">
-                          If Event is Private, access is required via Access Code
-                        </span>
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                        tabIndex={0}
+                        aria-label="Event Code Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus-within:block bg-white text-green-900 text-xs rounded shadow-lg px-3 py-2 border border-green-200 whitespace-nowrap">
+                        <span className="font-semibold">Event Code:</span> Unique identifier for this event.
                       </span>
                     </span>
-                  </span>
-                  <span className="font-mono font-medium">{event?.accessCode}</span>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-green-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-green-100">{event?.eventCode}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700">Public Event</span>
+                    <span className="relative group">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                        tabIndex={0}
+                        aria-label="Public Event Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus-within:block bg-white text-green-900 text-xs rounded shadow-lg px-3 py-2 border border-green-200 whitespace-nowrap">
+                        <span className="font-semibold">Public Event:</span> Anyone with the link can view and upload.
+                      </span>
+                    </span>
+                  </div>
+                  <span className="font-medium mt-1 tracking-wide text-green-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-green-100">{event?.isPublic ? 'Yes' : 'No'}</span>
+                </div>
+                <div className="flex flex-col items-center">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-red-700">Access Code</span>
+                    <span className="relative group">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
+                        tabIndex={0}
+                        aria-label="Access Code Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus-within:block bg-white text-red-900 text-xs rounded shadow-lg px-3 py-2 border border-red-200 whitespace-nowrap">
+                        <span className="font-semibold">Private Event:</span> Access is required via Access Code.
+                      </span>
+                    </span>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-red-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-red-100">{event?.accessCode}</span>
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700">Guest Uploads</span>
-                  <span className="font-medium">{event?.allowGuestUploads ? 'Enabled' : 'Disabled'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700">Guest Uploads</span>
+                    <span className="relative group">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                        tabIndex={0}
+                        aria-label="Guest Uploads Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus-within:block bg-white text-green-900 text-xs rounded shadow-lg px-3 py-2 border border-green-200 whitespace-nowrap">
+                        <span className="font-semibold">Guest Uploads:</span> Allow non-owners to upload photos.
+                      </span>
+                    </span>
+                  </div>
+                  <span className="font-medium mt-1 tracking-wide text-green-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-green-100">{event?.allowGuestUploads ? 'Enabled' : 'Disabled'}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-green-700">Photo Approval?</span>
-                  <span className="font-medium">{event?.requireApproval ? 'Yes' : 'No'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-green-700">Photo Approval?</span>
+                    <span className="relative group">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-green-100 hover:bg-green-200 text-green-700 border border-green-300 focus:outline-none focus:ring-2 focus:ring-green-400 transition"
+                        tabIndex={0}
+                        aria-label="Photo Approval Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus-within:block bg-white text-green-900 text-xs rounded shadow-lg px-3 py-2 border border-green-200 whitespace-nowrap">
+                        <span className="font-semibold">Photo Approval:</span> Owner must approve photos before they appear.
+                      </span>
+                    </span>
+                  </div>
+                  <span className="font-medium mt-1 tracking-wide text-green-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-green-100">{event?.requireApproval ? 'Yes' : 'No'}</span>
                 </div>
                 
               </div>
@@ -277,7 +359,9 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 <Link href={`/events/${eventCode}`} target="_blank">
                   <Button size="sm" className="px-3 py-1.5 text-sm">View Guest Page</Button>
                 </Link>
+                <RegenerateCodeButton eventId={eventId} eventName={event?.name} category={event?.category} />
               </div>
+
               <div className="mt-4">
                 <div className="space-y-3">
                   <p className="text-sm font-medium">Guest QR Code</p>

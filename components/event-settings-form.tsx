@@ -68,25 +68,7 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
           <Button type="submit" size="sm" variant="default" disabled={loading}>
             {loading ? 'Saving...' : 'Save Event Settings'}
           </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              setLoading(true);
-              const formData = new FormData();
-              formData.set('eventId', String(event.id));
-              formData.set('name', event.name);
-              formData.set('category', category);
-              formData.set('regenerateCode', 'true');
-              await fetch('/api/events/update', {
-                method: 'POST',
-                body: formData,
-              });
-              window.location.reload();
-            }}
-            disabled={loading}
-          >{loading ? 'Regenerating...' : 'Regenerate Code'}</Button>
+          {/* Regenerate Code button moved to page.tsx beside View Guest Page */}
         </div>
       </form>
     </div>

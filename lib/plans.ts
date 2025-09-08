@@ -50,11 +50,11 @@ export function photoLimitPerEvent(plan: PlanName): number | null {
     case 'free':
       return 50;
     case 'starter':
-      return 100;
+      return 150;
     case 'hobby':
-      return 500;
+      return 200;
     case 'pro':
-      return 250;
+      return 500;
     case 'business':
       return 500;
     default:
