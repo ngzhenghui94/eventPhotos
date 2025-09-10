@@ -21,6 +21,7 @@ export function uploadLimitBytes(plan: PlanName): number {
     case 'starter':
       return 20 * 1024 * 1024; // 20MB
     case 'free':
+      return 15 * 1024 * 1024; // 5MB
     default:
       return 5 * 1024 * 1024; // 5MB
   }
@@ -31,13 +32,13 @@ export function uploadLimitBytes(plan: PlanName): number {
 export function eventLimit(plan: PlanName): number | null {
   switch (plan) {
     case 'free':
-      return 1;
-    case 'starter':
-      return 1;
-    case 'hobby':
       return 5;
+    case 'starter':
+      return 10;
+    case 'hobby':
+      return 25;
     case 'pro':
-      return 20;
+      return 100;
     case 'business':
     default:
       return null; // unlimited
