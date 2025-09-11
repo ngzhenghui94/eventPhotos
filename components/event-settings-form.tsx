@@ -51,17 +51,17 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
           <div className="flex items-center gap-2">
             <input type="checkbox" id="isPublic" name="isPublic" defaultChecked={!!event.isPublic} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="isPublic" className="font-medium">Public</Label>
-            <span className="text-gray-400 font-medium">Visible to anyone with the link</span>
+            <span className="text-xs text-gray-400 font-medium min-w-0">Visible to anyone with the link</span>
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="allowGuestUploads" name="allowGuestUploads" defaultChecked={!!event.allowGuestUploads} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="allowGuestUploads" className="font-medium">Guest uploads</Label>
-            <span className="text-gray-400 font-medium">Allow guests to upload photos</span>
+            <span className="text-xs text-gray-400 font-medium min-w-0">Allow guests to upload photos</span>
           </div>
           <div className="flex items-center gap-2">
             <input type="checkbox" id="requireApproval" name="requireApproval" defaultChecked={!!event.requireApproval} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="requireApproval" className="font-medium">Require approval</Label>
-            <span className="text-gray-400 font-small">New uploads need approval</span>
+            <span className="text-xs text-gray-400 font-medium min-w-0">New uploads need approval</span>
           </div>
         </div>
         <div className="flex justify-end pt-2 gap-2">

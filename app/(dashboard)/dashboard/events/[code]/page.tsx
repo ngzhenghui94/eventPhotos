@@ -238,7 +238,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-orange-700">Upload Limit</span>
+                    <span className="font-semibold text-orange-700 min-w-0 truncate text-center">Per Photo Limit</span>
                     <Tooltip content="Maximum file size allowed per upload.">
                       <button
                         type="button"
@@ -276,7 +276,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center gap-1 w-full">
-                    <span className="font-semibold text-orange-700 min-w-0 truncate text-center">Approved Photos</span>
+                    <span className="font-semibold text-orange-700 min-w-0 truncate text-center hover:whitespace-normal hover:overflow-visible">Approved Photos</span>
                     <Tooltip content="Photos that have been approved and are visible to guests.">
                       <button
                         type="button"
@@ -295,7 +295,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-orange-700">Photo Cap</span>
+                    <span className="font-semibold text-orange-700">Photos Cap</span>
                     <Tooltip content="Maximum number of photos allowed for this event.">
                       <button
                         type="button"
@@ -314,10 +314,15 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-4">
-                <div className="flex-1 h-2 rounded bg-gray-100 overflow-hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4 text-orange-700" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 7h2l2-3h10l2 3h2a2 2 0 012 2v10a2 2 0 01-2 2H3a2 2 0 01-2-2V9a2 2 0 012-2zm9 4a4 4 0 100 8 4 4 0 000-8zm0 2a2 2 0 110 4 2 2 0 010-4z" />
+                  </svg><div className="flex-1 h-2 rounded bg-gray-100 overflow-hidden">
                   <div className="h-2 bg-orange-500" style={{ width: `${usedPct}%` }} />
                 </div>
-                <span className="text-xs text-gray-700 font-medium">{photoCount} / {planPhotoCap} used</span>
+                <span className="flex items-center gap-1 text-xs text-gray-700 font-medium">
+                  
+                  {photoCount} / {planPhotoCap} used
+                </span>
               </div>
                             {isEventOwner && (
                 <EventSettingsForm event={event} isEventOwner={isEventOwner} />
@@ -399,7 +404,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
 
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center gap-2 w-full">
-                    <span className="font-semibold text-green-700 min-w-0 truncate text-center">Guest Uploads</span>
+                    <span className="font-semibold text-green-700 min-w-0 truncate text-center hover:whitespace-normal hover:overflow-visible">Guest Uploads</span>
                     <span className="relative group">
                       <button
                         type="button"
@@ -421,7 +426,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
                 <div className="flex flex-col items-center">
                   <div className="flex items-center justify-center gap-2 w-full">
-                    <span className="font-semibold text-green-700 min-w-0 truncate text-center">Photo Approval?</span>
+                    <span className="font-semibold text-green-700 min-w-0 truncate text-center hover:whitespace-normal hover:overflow-visible">Photo Approval?</span>
                     <span className="relative group">
                       <button
                         type="button"
