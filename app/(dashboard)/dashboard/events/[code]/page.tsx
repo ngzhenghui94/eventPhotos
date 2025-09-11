@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, MapPin, Users, QrCode } from 'lucide-react';
+import { Tooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
 import { getEventByEventCode, getPhotosForEvent, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
@@ -198,28 +199,118 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               </div>
               <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-orange-700">Host</span>
-                  <span className="font-medium">{event?.createdBy?.name || 'Unknown'}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-orange-700">Host</span>
+                    <Tooltip content="The event creator.">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                        tabIndex={0}
+                        aria-label="Host Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-orange-900 bg-orange-50 px-2 py-1 rounded shadow-sm border border-orange-100">{event?.createdBy?.name || 'Unknown'}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-orange-700">Date</span>
-                  <span className="font-medium">{eventDate?.toLocaleDateString?.()}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-orange-700">Date</span>
+                    <Tooltip content="The scheduled date of the event.">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                        tabIndex={0}
+                        aria-label="Date Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-orange-900 bg-orange-50 px-2 py-1 rounded shadow-sm border border-orange-100">{eventDate?.toLocaleDateString?.()}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-orange-700">Upload Limit</span>
-                  <span className="font-medium">{toMB(planUploadLimit)}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-orange-700">Upload Limit</span>
+                    <Tooltip content="Maximum file size allowed per upload.">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                        tabIndex={0}
+                        aria-label="Upload Limit Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-orange-900 bg-orange-50 px-2 py-1 rounded shadow-sm border border-orange-100">{toMB(planUploadLimit)}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-orange-700">Total Photos</span>
-                  <span className="font-medium">{photoCount}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-orange-700">Total Photos</span>
+                    <Tooltip content="Total number of photos uploaded to this event.">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                        tabIndex={0}
+                        aria-label="Total Photos Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-orange-900 bg-orange-50 px-2 py-1 rounded shadow-sm border border-orange-100">{photoCount}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-orange-700">Approved Photos</span>
-                  <span className="font-medium">{approvedCount}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-orange-700">Approved Photos</span>
+                    <Tooltip content="Photos that have been approved and are visible to guests.">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                        tabIndex={0}
+                        aria-label="Approved Photos Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-orange-900 bg-orange-50 px-2 py-1 rounded shadow-sm border border-orange-100">{approvedCount}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <span className="font-semibold text-orange-700">Photo Cap</span>
-                  <span className="font-medium">{planPhotoCap}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold text-orange-700">Photo Cap</span>
+                    <Tooltip content="Maximum number of photos allowed for this event.">
+                      <button
+                        type="button"
+                        className="w-5 h-5 flex items-center justify-center rounded-full bg-orange-100 hover:bg-orange-200 text-orange-700 border border-orange-300 focus:outline-none focus:ring-2 focus:ring-orange-400 transition"
+                        tabIndex={0}
+                        aria-label="Photo Cap Info"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="currentColor" opacity="0.15" />
+                          <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
+                        </svg>
+                      </button>
+                    </Tooltip>
+                  </div>
+                  <span className="font-mono font-medium mt-1 tracking-wide text-orange-900 bg-orange-50 px-2 py-1 rounded shadow-sm border border-orange-100">{planPhotoCap}</span>
                 </div>
               </div>
               <div className="flex items-center gap-2 mt-4">
@@ -289,7 +380,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 <div className="flex flex-col items-center">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-red-700">Access Code</span>
-                    <span className="relative group">
+                    <Tooltip content={<span><span className="font-semibold">Private Event:</span> Access is required via Access Code.</span>} side="bottom" align="start" className="max-w-xs whitespace-normal">
                       <button
                         type="button"
                         className="w-5 h-5 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 focus:outline-none focus:ring-2 focus:ring-red-400 transition"
@@ -301,10 +392,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                           <text x="10" y="15" textAnchor="middle" fontSize="12" fill="currentColor" fontWeight="bold">?</text>
                         </svg>
                       </button>
-                      <span className="absolute left-1/2 -translate-x-1/2 mt-2 z-20 hidden group-hover:block group-focus-within:block bg-white text-red-900 text-xs rounded shadow-lg px-3 py-2 border border-red-200 whitespace-nowrap">
-                        <span className="font-semibold">Private Event:</span> Access is required via Access Code.
-                      </span>
-                    </span>
+                    </Tooltip>
                   </div>
                   <span className="font-mono font-medium mt-1 tracking-wide text-red-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-red-100">{event?.accessCode}</span>
                 </div>
