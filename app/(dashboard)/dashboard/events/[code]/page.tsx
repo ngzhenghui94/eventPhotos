@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, MapPin, Users } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, QrCode } from 'lucide-react';
 import Link from 'next/link';
 import { getEventByEventCode, getPhotosForEvent, getUser } from '@/lib/db/queries';
 import { redirect } from 'next/navigation';
@@ -359,12 +359,17 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 <Link href={`/events/${eventCode}`} target="_blank">
                   <Button size="sm" className="px-3 py-1.5 text-sm">View Guest Page</Button>
                 </Link>
-                <RegenerateCodeButton eventId={eventId} eventName={event?.name} category={event?.category} />
+                <RegenerateCodeButton eventId={eventId} eventName={event?.name} category={event?.category} accessCode={event?.accessCode} />
               </div>
 
               <div className="mt-4">
                 <div className="space-y-3">
-                  <p className="text-sm font-medium">Guest QR Code</p>
+                  <span className="flex items-center gap-2 font-bold text-2xl text-green-900">
+                    <span className="bg-green-100 rounded-full p-2">
+                      <QrCode className="w-6 h-6 text-green-600" />
+                    </span>
+                    Guest QR Code
+                  </span>
                   <EventQr code={eventCode} size={160} compact />
                 </div>
               </div>

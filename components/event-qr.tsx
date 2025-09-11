@@ -44,9 +44,9 @@ export function EventQr({ code, className, size = 192, compact = false }: Props)
           <img src={qrSrc} alt="Event QR code" width={size} height={size} />
         </div>
         <div className="flex items-center gap-2">
-          <Button size="sm" className={compact ? 'h-7 px-2 py-1 text-xs' : ''} onClick={copyLink}>Copy link</Button>
+          <Button size="sm" onClick={copyLink}>Copy link</Button>
           <a href={qrSrc} download={`event-${code}-qr.png`}>
-            <Button size="sm" className={compact ? 'h-7 px-2 py-1 text-xs' : ''} variant="outline">Download PNG</Button>
+            <Button size="sm" variant="outline">Download PNG</Button>
           </a>
         </div>
       </div>

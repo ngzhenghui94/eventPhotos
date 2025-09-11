@@ -180,7 +180,7 @@ function PricingCard({
         "group relative overflow-hidden rounded-2xl",
         "bg-white/10 backdrop-blur-xl supports-[backdrop-filter]:bg-white/10",
         "border border-white/30 shadow-[0_10px_30px_rgba(0,0,0,0.08)]",
-        "pt-8 pb-6 px-6 flex flex-col items-center text-center",
+        "pt-12 pb-6 px-6 flex flex-col items-center text-center",
         "transition-transform duration-300 hover:-translate-y-1",
         featured ? "ring-2 ring-amber-400" : ""
       ].join(" ")}
