@@ -21,9 +21,13 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
-    const form = e.target;
-    const formData = new FormData(form as HTMLFormElement);
+    const form = e.target as HTMLFormElement;
+    const formData = new FormData(form);
     formData.set('category', category);
+  // Fix isPublic, allowGuestUploads, requireApproval to always send boolean strings
+  formData.set('isPublic', form.isPublic?.checked ? 'true' : 'false');
+  formData.set('allowGuestUploads', form.allowGuestUploads?.checked ? 'true' : 'false');
+  formData.set('requireApproval', form.requireApproval?.checked ? 'true' : 'false');
     await fetch('/api/events/update', {
       method: 'POST',
       body: formData,

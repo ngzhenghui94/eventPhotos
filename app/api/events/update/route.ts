@@ -13,6 +13,15 @@ export async function POST(req: Request) {
     const name = String(formData.get('name') ?? '').trim();
     const category = String(formData.get('category') ?? '').trim();
     // Add other fields as needed
+  // Handle isPublic, allowGuestUploads, requireApproval as string from FormData
+  const isPublicRaw = formData.get('isPublic');
+  const isPublic = typeof isPublicRaw === 'string' ? isPublicRaw === 'true' : false;
+
+  const allowGuestUploadsRaw = formData.get('allowGuestUploads');
+  const allowGuestUploads = typeof allowGuestUploadsRaw === 'string' ? allowGuestUploadsRaw === 'true' : false;
+
+  const requireApprovalRaw = formData.get('requireApproval');
+  const requireApproval = typeof requireApprovalRaw === 'string' ? requireApprovalRaw === 'true' : false;
 
     // Auth protection: Only event owner or app owner can update
     const user = await getUser();
@@ -32,6 +41,9 @@ export async function POST(req: Request) {
     let updateObj: any = {
       name,
       category,
+      isPublic,
+      allowGuestUploads,
+      requireApproval,
       updatedAt: new Date(),
     };
     if (formData.get('regenerateCode') === 'true') {
