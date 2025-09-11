@@ -197,7 +197,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                   {planName.charAt(0).toUpperCase() + planName.slice(1)}
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
+              <div className="grid grid-cols-3 gap-x-6 gap-y-6 text-sm text-gray-700 items-center">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center gap-2">
                     <span className="font-semibold text-orange-700">Host</span>
@@ -398,8 +398,8 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
 
                 <div className="flex flex-col items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-green-700">Guest Uploads</span>
+                  <div className="flex items-center justify-center gap-2 w-full">
+                    <span className="font-semibold text-green-700 min-w-0 truncate text-center">Guest Uploads</span>
                     <span className="relative group">
                       <button
                         type="button"
@@ -420,8 +420,8 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                   <span className="font-medium mt-1 tracking-wide text-green-900 bg-green-50 px-2 py-1 rounded shadow-sm border border-green-100">{event?.allowGuestUploads ? 'Enabled' : 'Disabled'}</span>
                 </div>
                 <div className="flex flex-col items-center">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-green-700">Photo Approval?</span>
+                  <div className="flex items-center justify-center gap-2 w-full">
+                    <span className="font-semibold text-green-700 min-w-0 truncate text-center">Photo Approval?</span>
                     <span className="relative group">
                       <button
                         type="button"
