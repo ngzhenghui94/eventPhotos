@@ -1,4 +1,13 @@
--- Initial migration: create all tables as defined in schema.ts
+-- Full schema reset migration for eventPhotos
+-- Drops all tables and recreates them based on the latest schema
+
+DROP TABLE IF EXISTS event_timelines CASCADE;
+DROP TABLE IF EXISTS photos CASCADE;
+DROP TABLE IF EXISTS events CASCADE;
+DROP TABLE IF EXISTS activity_logs CASCADE;
+DROP TABLE IF EXISTS invitations CASCADE;
+DROP TABLE IF EXISTS verification_tokens CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 
 CREATE TABLE users (
   id SERIAL PRIMARY KEY,
@@ -76,3 +85,18 @@ CREATE TABLE verification_tokens (
   expires_at TIMESTAMP NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT now()
 );
+
+CREATE TABLE event_timelines (
+  id SERIAL PRIMARY KEY,
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  title VARCHAR(200) NOT NULL,
+  description TEXT,
+  location VARCHAR(255),
+  time TIMESTAMP NOT NULL,
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_event_timelines_event_id ON event_timelines(event_id);
+CREATE INDEX idx_event_timelines_time ON event_timelines(time);

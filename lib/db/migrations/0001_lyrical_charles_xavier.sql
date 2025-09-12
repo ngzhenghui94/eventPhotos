@@ -1,0 +1,1 @@
+ALTER TABLE "event_timelines" DROP COLUMN "sort_order";

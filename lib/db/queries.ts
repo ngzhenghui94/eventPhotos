@@ -1,7 +1,59 @@
 import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { db } from './drizzle';
-import { activityLogs, users, events, photos, ActivityType } from './schema';
+import { activityLogs, users, events, photos, eventTimelines, ActivityType } from './schema';
+// ============================================================================
+// EVENT TIMELINE MANAGEMENT
+// ============================================================================
+
+import type { EventTimeline, NewEventTimeline } from './schema';
+
+/**
+ * Fetches all timeline entries for an event, ordered by time and sortOrder
+ */
+export async function getEventTimeline(eventId: number): Promise<EventTimeline[]> {
+  return withDatabaseErrorHandling(async () => {
+    return db.query.eventTimelines.findMany({
+      where: eq(eventTimelines.eventId, eventId),
+      orderBy: [eventTimelines.time],
+    });
+  }, 'getEventTimeline');
+}
+
+/**
+ * Creates a new timeline entry for an event
+ */
+export async function createEventTimelineEntry(data: NewEventTimeline): Promise<EventTimeline> {
+  validateRequiredFields(data, ['eventId', 'title', 'time']);
+  // Remove sortOrder from payload if present
+  const { sortOrder, ...rest } = data;
+  return withDatabaseErrorHandling(async () => {
+    const [created] = await db.insert(eventTimelines).values(rest).returning();
+    return created;
+  }, 'createEventTimelineEntry');
+}
+
+/**
+ * Updates an existing timeline entry
+ */
+export async function updateEventTimelineEntry(id: number, data: Partial<NewEventTimeline>): Promise<EventTimeline | null> {
+  return withDatabaseErrorHandling(async () => {
+    const [updated] = await db.update(eventTimelines)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(eventTimelines.id, id))
+      .returning();
+    return updated || null;
+  }, 'updateEventTimelineEntry');
+}
+
+/**
+ * Deletes a timeline entry
+ */
+export async function deleteEventTimelineEntry(id: number): Promise<void> {
+  return withDatabaseErrorHandling(async () => {
+    await db.delete(eventTimelines).where(eq(eventTimelines.id, id));
+  }, 'deleteEventTimelineEntry');
+}
 import { verifyToken } from '@/lib/auth/session';
 import type {
   UserSubscriptionData,

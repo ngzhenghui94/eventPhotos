@@ -31,6 +31,25 @@ export const users = pgTable('users', {
 
 // Teams feature removed
 
+// Timeline table for event flows
+export const eventTimelines = pgTable('event_timelines', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id').notNull().references(() => events.id),
+  title: varchar('title', { length: 200 }).notNull(),
+  description: text('description'),
+  location: varchar('location', { length: 255 }),
+  time: timestamp('time').notNull(), // When this timeline entry occurs
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const eventTimelinesRelations = relations(eventTimelines, ({ one }) => ({
+  event: one(events, {
+    fields: [eventTimelines.eventId],
+    references: [events.id],
+  }),
+}));
+
 // Consolidated Events/Photos schema (access code, approvals, and file-based photo path)
 export const events = pgTable('events', {
   id: serial('id').primaryKey(),
@@ -141,6 +160,10 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+
+export type EventTimeline = typeof eventTimelines.$inferSelect;
+export type NewEventTimeline = typeof eventTimelines.$inferInsert;
+
 export type EventWithPhotos = Event & {
   photos: Photo[];
   createdBy: Pick<User, 'id' | 'name' | 'email'>;
