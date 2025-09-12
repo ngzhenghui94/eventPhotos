@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { Calendar } from 'lucide-react';
 
 export interface TimelineEntry {
@@ -33,7 +35,7 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
     title: '',
     description: '',
     location: '',
-    time: getDefaultDateTime(),
+    time: getDefaultDateTime(), // ISO string for backend
   });
   const [mutationResult, setMutationResult] = useState<{ success?: string; error?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -107,8 +109,21 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
           <Input name="description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" maxLength={1000} />
           <Input name="location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Location" maxLength={255} />
           <div className="flex flex-col gap-1">
-            <Input name="time" value={form.time} onChange={e => setForm(f => ({ ...f, time: e.target.value }))} type="datetime-local" required placeholder="DD/MM/YYYY HH:MM" />
-            <span className="text-xs text-gray-400">Format: MM/DD/YYYY HH:MM</span>
+            <label className="text-xs font-small mb-1">Date & Time</label>
+            <DatePicker
+
+              selected={form.time ? new Date(form.time) : null}
+              onChange={date => {
+                setForm(f => ({ ...f, time: date ? date.toISOString() : '' }));
+              }}
+              showTimeSelect
+              timeFormat="HH:mm"
+              timeIntervals={15}
+              dateFormat="dd/MM/yyyy HH:mm"
+              className="w-full border rounded px-3 py-2 bg-white text-xs"
+              placeholderText="DD/MM/YYYY HH:MM"
+            />
+            <span className="text-xs text-gray-400">Format: DD/MM/YYYY HH:MM</span>
           </div>
           {/* sortOrder removed for user simplicity */}
           <div className="flex gap-2">
