@@ -25,10 +25,8 @@ export async function getEventTimeline(eventId: number): Promise<EventTimeline[]
  */
 export async function createEventTimelineEntry(data: NewEventTimeline): Promise<EventTimeline> {
   validateRequiredFields(data, ['eventId', 'title', 'time']);
-  // Remove sortOrder from payload if present
-  const { sortOrder, ...rest } = data;
   return withDatabaseErrorHandling(async () => {
-    const [created] = await db.insert(eventTimelines).values(rest).returning();
+    const [created] = await db.insert(eventTimelines).values(data).returning();
     return created;
   }, 'createEventTimelineEntry');
 }

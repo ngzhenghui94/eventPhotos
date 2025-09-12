@@ -28,7 +28,6 @@ export const addTimelineEntry = validatedActionWithUser(
       description: data.description,
       location: data.location,
       time: new Date(data.time),
-      sortOrder: data.sortOrder ?? 0,
     });
     console.log('[Timeline Debug] DB insert result:', entry);
     return { success: 'Timeline entry added', entry };
@@ -45,7 +44,6 @@ export const updateTimelineEntry = validatedActionWithUser(
       description: data.description,
       location: data.location,
       time: new Date(data.time),
-      sortOrder: data.sortOrder ?? 0,
     });
     return { success: 'Timeline entry updated', entry };
   }

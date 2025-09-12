@@ -44,15 +44,7 @@ export default function RootLayout({
       <Analytics/>
       <body className="min-h-[100dvh] bg-gray-50">
         <TooltipProvider>
-          <SWRConfig
-            value={{
-              fallback: {
-                // We do NOT await here
-                // Only components that read this data will suspend
-                '/api/user': getUser()
-              }
-            }}
-          >
+          <SWRConfig value={{ fallback: {} }}>
             {children}
             <footer className="mt-12 border-t bg-gray-950 text-gray-300">
               <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center gap-3 text-sm">

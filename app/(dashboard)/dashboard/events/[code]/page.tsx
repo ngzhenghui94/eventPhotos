@@ -203,21 +203,6 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 location: item.location ?? '',
                 time: typeof item.time === 'string' ? item.time : item.time.toISOString(),
               }))}
-              onAdd={async (formData) => {
-                'use server';
-                await addTimelineEntry({}, formData);
-                revalidatePath(`/dashboard/events/${eventCode}`);
-              }}
-              onUpdate={async (formData) => {
-                'use server';
-                await updateTimelineEntry({}, formData);
-                revalidatePath(`/dashboard/events/${eventCode}`);
-              }}
-              onDelete={async (formData) => {
-                'use server';
-                await deleteTimelineEntry({}, formData);
-                revalidatePath(`/dashboard/events/${eventCode}`);
-              }}
             />
           )}
           {/* Timeline component for all users */}
