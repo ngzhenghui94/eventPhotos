@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Upload, Camera, Lock } from 'lucide-react';
 import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
+import { getEventTimeline } from '@/lib/db/queries';
+import { Timeline } from '@/components/event-timeline';
 import { redirect } from 'next/navigation';
 import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { EventQr } from '@/components/event-qr';
@@ -16,10 +18,14 @@ interface GuestEventPageProps { params: Promise<{ code: string }>; }
 export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const { code } = await params;
 
-  // Fetch event and cookies in parallel
-  const [event, cookieStore] = await Promise.all([
+  // Fetch event, cookies, and timeline in parallel
+  const [event, cookieStore, timelineItems] = await Promise.all([
     getEventByEventCode(code.toUpperCase()),
     cookies(),
+    (async () => {
+      const evt = await getEventByEventCode(code.toUpperCase());
+      return evt ? await getEventTimeline(evt.id) : [];
+    })(),
   ]);
 
   if (!event) {
@@ -89,6 +95,16 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-4">
           <div className="lg:col-span-3 space-y-8">
+            {/* Event Timeline */}
+            <div>
+              {timelineItems && timelineItems.length > 0 ? (
+                <div className="mb-8">
+                  <Timeline items={timelineItems} />
+                </div>
+              ) : (
+                <div className="mb-8 rounded-xl border border-gray-200 bg-white px-6 py-6 text-center text-gray-400 italic">No timeline entries yet.</div>
+              )}
+            </div>
             {/* Event Description */}
             {event.description && (
               <Card className={`${pickGradient(event.eventCode, 0)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
