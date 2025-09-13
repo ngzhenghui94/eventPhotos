@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useId } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
@@ -49,6 +49,7 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
   });
   const [mutationResult, setMutationResult] = useState<{ success?: string; error?: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const sectionId = useId();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -65,12 +66,13 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
       <CardHeader className="flex flex-row items-center justify-between">
         <div className="mb-0 flex items-center gap-2">
           <span className="bg-blue-100 rounded-full p-2"><Calendar className="w-6 h-6 text-blue-600" /></span>
-          <span className="font-bold text-2xl text-blue-900">Add Timeline Entry</span>
+          <span role="heading" aria-level={2} className="font-bold text-2xl text-blue-900">Add Timeline Entry</span>
         </div>
         <Button
           variant="ghost"
           size="sm"
           aria-expanded={!collapsed}
+          aria-controls={sectionId}
           onClick={() => {
             setCollapsed((c) => {
               const next = !c;
@@ -92,13 +94,15 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
         </Button>
       </CardHeader>
       {!collapsed && (
-      <CardContent>
-        {mutationResult?.error && (
-          <div className="mb-2 text-red-600 font-semibold">{mutationResult.error}</div>
-        )}
-        {mutationResult?.success && (
-          <div className="mb-2 text-green-600 font-semibold">{mutationResult.success}</div>
-        )}
+      <CardContent id={sectionId}>
+        <div aria-live="polite" aria-atomic="true">
+          {mutationResult?.error && (
+            <div className="mb-2 text-red-600 font-semibold" role="status">{mutationResult.error}</div>
+          )}
+          {mutationResult?.success && (
+            <div className="mb-2 text-green-600 font-semibold" role="status">{mutationResult.success}</div>
+          )}
+        </div>
         <form className="space-y-4" onSubmit={async (e) => {
           e.preventDefault();
           setSubmitting(true);
@@ -146,9 +150,9 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
           <Input name="description" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" maxLength={1000} />
           <Input name="location" value={form.location} onChange={e => setForm(f => ({ ...f, location: e.target.value }))} placeholder="Location" maxLength={255} />
           <div className="flex flex-col gap-1">
-            <label className="text-xs font-small mb-1">Date & Time</label>
+            <label className="text-xs font-small mb-1" htmlFor={`timeline-date-${eventId}`}>Date & Time</label>
             <DatePicker
-
+              id={`timeline-date-${eventId}`}
               selected={form.time ? new Date(form.time) : null}
               onChange={date => {
                 setForm(f => ({ ...f, time: date ? date.toISOString() : '' }));
@@ -183,9 +187,9 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
                 }
               });
               return sorted.map((entry, idx) => (
-                <li key={entry.id} className={`flex items-center gap-2 ${idx === closestIdx ? 'bg-yellow-100 border-yellow-400 border-2 rounded' : ''}`}>
+                <li key={entry.id} className={`flex items-center gap-2 ${idx === closestIdx ? 'bg-yellow-100 border-yellow-400 border-2 rounded' : ''}`} aria-current={idx === closestIdx ? 'true' : undefined}>
                   <span className="font-bold text-blue-800">{entry.title}</span>
-                  <span className="text-xs text-gray-500">{
+                  <time className="text-xs text-gray-500" dateTime={new Date(entry.time).toISOString()}> {
                     (() => {
                       const d = new Date(entry.time);
                       const pad = (n: number) => n.toString().padStart(2, '0');
@@ -196,7 +200,7 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
                       const mins = pad(d.getMinutes());
                       return `${day}/${month}/${year} ${hours}:${mins}`;
                     })()
-                  }</span>
+                  }</time>
                   {entry.location && <span className="text-xs text-blue-600">@ {entry.location}</span>}
                   <Button size="sm" variant="outline" onClick={() => {
                     setForm({

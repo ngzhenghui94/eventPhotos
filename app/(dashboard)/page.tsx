@@ -9,17 +9,49 @@ import { JoinByCode } from '../../components/join-by-code';
 
 export default function HomePage() {
   const [showBanner, setShowBanner] = useState(true);
-  useEffect(() => {
-    try {
-      const dismissed = localStorage.getItem('tcg_beta_banner_dismissed');
-      if (dismissed === '1') setShowBanner(false);
-    } catch {}
-  }, []);
 
   const dismissBanner = () => {
     setShowBanner(false);
-    try { localStorage.setItem('tcg_beta_banner_dismissed', '1'); } catch {}
   };
+
+  const heroImages = [
+    { src: 'https://images.unsplash.com/photo-1529636798458-92182e662485?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1539635278303-d4002c07eae3?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1621857524725-fdfeae3465dc?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center top' },
+    { src: 'https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1628336707631-68131ca720c3?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1602863211753-3c6da5c71c61?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1517456793572-1d8efd6dc135?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+    { src: 'https://images.unsplash.com/photo-1619537901863-9807597cb0b2?auto=format&fit=crop&w=800&h=800&q=80', objectPosition: 'center' },
+  ];
+
+  function handleTileMove(e: React.MouseEvent<HTMLDivElement>) {
+    const tile = e.currentTarget as HTMLDivElement;
+    const rect = tile.getBoundingClientRect();
+    const px = (e.clientX - rect.left) / rect.width; // 0..1
+    const py = (e.clientY - rect.top) / rect.height; // 0..1
+    const rotateY = (px - 0.5) * 6; // deg
+    const rotateX = -(py - 0.5) * 6; // deg
+    const translateX = (px - 0.5) * 8; // px
+    const translateY = (py - 0.5) * 8; // px
+    tile.style.transform = `perspective(800px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateX(${translateX}px) translateY(${translateY}px)`;
+    const img = tile.querySelector('img') as HTMLImageElement | null;
+    if (img) {
+      const imgTranslateX = translateX * -0.35;
+      const imgTranslateY = translateY * -0.35;
+      img.style.transform = `translateX(${imgTranslateX}px) translateY(${imgTranslateY}px) scale(1.06)`;
+    }
+  }
+
+  function handleTileLeave(e: React.MouseEvent<HTMLDivElement>) {
+    const tile = e.currentTarget as HTMLDivElement;
+    tile.style.transform = 'perspective(800px) rotateX(0deg) rotateY(0deg) translateX(0px) translateY(0px)';
+    const img = tile.querySelector('img') as HTMLImageElement | null;
+    if (img) {
+      img.style.transform = '';
+    }
+  }
 
   return (
   <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
@@ -79,14 +111,26 @@ export default function HomePage() {
           <div className="lg:col-span-6">
             {/* Static Product preview grid */}
             <div className="grid grid-cols-3 gap-2 sm:gap-4 fade-in-up">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <div key={i} className="relative aspect-square overflow-hidden rounded-xl shadow-lg bg-gray-200 group transition-all duration-500 hover:scale-105 hover:border-amber-400 border-2 border-transparent">
+              {heroImages.map((item, i) => (
+                <div
+                  key={i}
+                  className={`relative aspect-square overflow-hidden rounded-2xl shadow-[0_6px_30px_rgba(252,211,77,0.15)] group transition-transform duration-300 ease-out border border-transparent bg-gradient-to-br from-amber-50 via-white to-blue-50 transform-gpu ${i % 3 === 0 ? 'delay-75' : i % 3 === 1 ? 'delay-150' : 'delay-200'}`}
+                  style={{ animation: 'fadeInUp 0.9s ease forwards' }}
+                  onMouseMove={handleTileMove}
+                  onMouseLeave={handleTileLeave}
+                >
+                  <div className="absolute inset-0 -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute -inset-6 bg-gradient-to-br from-amber-300/40 via-rose-200/30 to-blue-300/40 blur-2xl"></div>
+                  </div>
                   <img
-                    src={`https://picsum.photos/seed/event-${i}/600/600`}
-                    alt="Event photo preview"
-                    className="h-full w-full object-cover transition-transform duration-500"
+                    src={item.src}
+                    alt={item.alt}
+                    className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06] will-change-transform"
+                    style={{ objectPosition: (item as any).objectPosition || 'center' }}
                     loading="lazy"
                   />
+                  <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-white/50 group-hover:ring-amber-300/60 transition-all duration-500"></div>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                 </div>
               ))}
             </div>

@@ -206,7 +206,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
             />
           )}
           {/* Timeline component for all users */}
-          <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:view:${eventId}`} />
+          <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:view:${eventId}`} canAdjust={isEventOwner} eventId={eventId} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Event Stats - compact */}
             <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-6 py-6 flex flex-col gap-2">

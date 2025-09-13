@@ -52,6 +52,20 @@ export async function deleteEventTimelineEntry(id: number): Promise<void> {
     await db.delete(eventTimelines).where(eq(eventTimelines.id, id));
   }, 'deleteEventTimelineEntry');
 }
+
+/**
+ * Gets a single timeline entry by id
+ */
+export async function getTimelineEntryById(id: number): Promise<EventTimeline | null> {
+  return withDatabaseErrorHandling(async () => {
+    return findFirst(
+      db.query.eventTimelines.findMany({
+        where: eq(eventTimelines.id, id),
+        limit: 1,
+      })
+    );
+  }, 'getTimelineEntryById');
+}
 import { verifyToken } from '@/lib/auth/session';
 import type {
   UserSubscriptionData,

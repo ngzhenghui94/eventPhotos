@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createEventTimelineEntry } from '@/lib/db/queries';
+import { createEventTimelineEntry, getEventById, getUser } from '@/lib/db/queries';
 import { z } from 'zod';
 
 const TimelineEntrySchema = z.object({
@@ -16,6 +16,19 @@ export async function POST(req: Request) {
     const parsed = TimelineEntrySchema.safeParse(data);
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    }
+    // Auth and ownership check
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const event = await getEventById(parsed.data.eventId);
+    if (!event) {
+      return NextResponse.json({ error: 'Event not found' }, { status: 404 });
+    }
+    const isOwner = event.createdBy === user.id || !!user.isOwner;
+    if (!isOwner) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const entry = await createEventTimelineEntry({
       eventId: parsed.data.eventId,

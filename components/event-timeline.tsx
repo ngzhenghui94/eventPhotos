@@ -68,7 +68,7 @@ export function Timeline({ items, storageKey }: TimelineProps) {
               <div className={`absolute -left-2.5 mt-1 w-5 h-5 ${isClosest ? 'bg-yellow-300 border-yellow-500' : 'bg-blue-100 border-blue-300'} border-2 rounded-full flex items-center justify-center`}>
                 <Calendar className={`w-3 h-3 ${isClosest ? 'text-yellow-700' : 'text-blue-600'}`} />
               </div>
-              <div className={`bg-white rounded-lg shadow p-4 ${isClosest ? 'border-2 border-yellow-400' : ''}`}>
+              <div className={`bg-white rounded-lg shadow p-4 ${isClosest ? 'ring-2 ring-yellow-300 ring-offset-1 ring-offset-white' : ''}`}>
                 {/* Highlight only the card, do not change text/font styles */}
                 <div className="flex items-center gap-2 mb-1">
                   <span className="font-semibold text-lg text-blue-800">{item.title}</span>

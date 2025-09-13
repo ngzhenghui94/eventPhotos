@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { events, ActivityType } from '@/lib/db/schema';
+import { events, ActivityType, eventTimelines } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { eq, sql } from 'drizzle-orm';
 // import { canCreateAnotherEvent, getTeamPlanName } from '@/lib/plans'; // Teams feature removed
@@ -105,6 +105,8 @@ export const deleteEvent = validatedActionWithUser(
   // Teams feature removed
 
     try {
+      // Delete related timelines first to satisfy FK constraints
+      await db.delete(eventTimelines).where(eq(eventTimelines.eventId, data.eventId));
       await db.delete(events).where(eq(events.id, data.eventId));
       return { success: 'Event deleted successfully' };
     } catch (error) {

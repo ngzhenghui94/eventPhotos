@@ -137,6 +137,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     references: [users.id],
   }),
   photos: many(photos),
+  timelines: many(eventTimelines),
 }));
 
 export const photosRelations = relations(photos, ({ one }) => ({

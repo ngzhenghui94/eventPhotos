@@ -4,6 +4,8 @@ import {
   updateEventTimelineEntry,
   deleteEventTimelineEntry,
   getUser,
+  getEventById,
+  getTimelineEntryById,
 } from '@/lib/db/queries';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 
@@ -20,7 +22,10 @@ export const addTimelineEntry = validatedActionWithUser(
   TimelineEntrySchema,
   async (data, _formData, user) => {
     // Only event owner can add
-    // TODO: verify ownership
+    const event = await getEventById(data.eventId);
+    if (!event) return { error: 'Event not found' };
+    const isOwner = event.createdBy === user.id || !!user.isOwner;
+    if (!isOwner) return { error: 'You do not have permission to add timeline entries.' };
     console.log('[Timeline Debug] Received data:', data);
     const entry = await createEventTimelineEntry({
       eventId: data.eventId,
@@ -38,7 +43,12 @@ export const updateTimelineEntry = validatedActionWithUser(
   TimelineEntrySchema.extend({ id: z.number() }),
   async (data, _formData, user) => {
     // Only event owner can update
-    // TODO: verify ownership
+    const existing = await getTimelineEntryById(data.id);
+    if (!existing) return { error: 'Timeline entry not found' };
+    const event = await getEventById(existing.eventId);
+    if (!event) return { error: 'Event not found' };
+    const isOwner = event.createdBy === user.id || !!user.isOwner;
+    if (!isOwner) return { error: 'You do not have permission to update timeline entries.' };
     const entry = await updateEventTimelineEntry(data.id, {
       title: data.title,
       description: data.description,
@@ -53,7 +63,12 @@ export const deleteTimelineEntry = validatedActionWithUser(
   z.object({ id: z.number() }),
   async (data, _formData, user) => {
     // Only event owner can delete
-    // TODO: verify ownership
+    const existing = await getTimelineEntryById(data.id);
+    if (!existing) return { error: 'Timeline entry not found' };
+    const event = await getEventById(existing.eventId);
+    if (!event) return { error: 'Event not found' };
+    const isOwner = event.createdBy === user.id || !!user.isOwner;
+    if (!isOwner) return { error: 'You do not have permission to delete timeline entries.' };
     await deleteEventTimelineEntry(data.id);
     return { success: 'Timeline entry deleted' };
   }

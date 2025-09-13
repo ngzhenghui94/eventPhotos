@@ -100,7 +100,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             <div>
               {timelineItems && timelineItems.length > 0 ? (
                 <div className="mb-8">
-                  <Timeline items={timelineItems} />
+                  <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:guest:${event.id}`} />
                 </div>
               ) : (
                 <div className="mb-8 rounded-xl border border-gray-200 bg-white px-6 py-6 text-center text-gray-400 italic">No timeline entries yet.</div>
