@@ -5,6 +5,7 @@ const items = [
   { href: '/dashboard/admin/events', title: 'Events', desc: 'Create, edit, and delete any event' },
   { href: '/dashboard/admin/photos', title: 'Photos', desc: 'Browse and moderate all photos' },
   { href: '/dashboard/admin/users', title: 'Users', desc: 'Manage user accounts and roles' },
+  { href: '/dashboard/admin/storage/orphans', title: 'Storage Orphans', desc: 'Find and delete S3 objects not referenced in DB' },
 ];
 
 export default async function AdminHome() {
