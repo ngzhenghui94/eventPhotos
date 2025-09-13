@@ -159,19 +159,20 @@ export default function EventChat({ eventId, canAccess, gradientClass }: EventCh
                   placeholder="Your name (optional)"
                   value={guestName}
                   onChange={(e) => setGuestName(e.target.value)}
-                  className="w-full"
+                  className="flex-1"
                   disabled={!!userName}
                 />
+                <Button type="submit" disabled={!canSend} className="whitespace-nowrap">
+                  {sending ? 'Sending…' : 'Send'}
+                </Button>
               </div>
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Type a message"
                   value={text}
                   onChange={(e) => setText(e.target.value)}
-                  className="flex-1"
+                  className="w-full"
                 />
-                <Button type="submit" disabled={!canSend}
-                  className="whitespace-nowrap">{sending ? 'Sending…' : 'Send'}</Button>
               </div>
             </form>
           </div>
