@@ -26,6 +26,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
             <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
             <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
+            <Link href="/terms" className="hover:text-amber-600 transition-colors">Terms</Link>
+            <Link href="/faq" className="hover:text-amber-600 transition-colors">FAQ</Link>
             <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
             <UserMenu />
           </nav>
@@ -49,6 +51,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                   <Link href="/dashboard" className="w-full flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-amber-600" />
                     <span>Dashboard</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Link href="/faq" className="w-full flex items-center gap-2">
+                    <PlayCircle className="h-4 w-4 text-amber-600" />
+                    <span>FAQ</span>
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>

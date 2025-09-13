@@ -1,5 +1,5 @@
 "use client";
-import { Calendar, ChevronDown, ChevronUp, PlusCircle, MinusCircle, MapPin } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, PlusCircle, MinusCircle, MapPin, Clock } from 'lucide-react';
 import { useEffect, useState, useId } from 'react';
 import { Button } from './ui/button';
 type TimelineProps = { items: any[]; storageKey?: string; canAdjust?: boolean; eventId?: number };
@@ -182,18 +182,23 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                     </span>
                   )}
                 </div>
-                <time className="text-sm text-gray-600 mb-1 block" dateTime={new Date(item.time).toISOString()}> {
-                  (() => {
-                    const d = new Date(item.time);
-                    const pad = (n: number) => n.toString().padStart(2, '0');
-                    const day = pad(d.getDate());
-                    const month = pad(d.getMonth() + 1);
-                    const year = d.getFullYear();
-                    const hours = pad(d.getHours());
-                    const mins = pad(d.getMinutes());
-                    return `${day}/${month}/${year} ${hours}:${mins}`;
-                  })()
-                }</time>
+                <div className="mb-2">
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-gray-50 text-gray-700 text-xs border border-gray-200">
+                    <Clock className="w-3 h-3" />
+                    <time dateTime={new Date(item.time).toISOString()}>
+                      {(() => {
+                        const d = new Date(item.time);
+                        const pad = (n: number) => n.toString().padStart(2, '0');
+                        const day = pad(d.getDate());
+                        const month = pad(d.getMonth() + 1);
+                        const year = d.getFullYear();
+                        const hours = pad(d.getHours());
+                        const mins = pad(d.getMinutes());
+                        return `${day}/${month}/${year} ${hours}:${mins}`;
+                      })()}
+                    </time>
+                  </span>
+                </div>
                 {canAdjust && item.id && (
                   <div className="mt-2 flex gap-2">
                     <Button
@@ -258,7 +263,11 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                     </Button>
                   </div>
                 )}
-                {item.description && <div className="text-gray-700 text-base mb-1">{item.description}</div>}
+                {item.description && (
+                  <p className="mt-2 text-sm text-gray-700 leading-relaxed">
+                    {item.description}
+                  </p>
+                )}
               </div>
             </li>
           );
