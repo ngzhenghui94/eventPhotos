@@ -203,7 +203,7 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
                     })()
                   }</time>
                   {entry.location && <span className="text-xs text-blue-600">@ {entry.location}</span>}
-                  <Button size="sm" variant="outline" onClick={() => {
+                  <Button size="xs" variant="outline" onClick={() => {
                     setForm({
                       title: entry.title,
                       description: entry.description || '',
@@ -212,7 +212,7 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
                     });
                     setEditingId(entry.id ?? null);
                   }}>Edit</Button>
-                  <Button size="sm" variant="destructive" onClick={async () => {
+                  <Button size="xs" variant="destructive" onClick={async () => {
                     setSubmitting(true);
                     setMutationResult(null);
                     try {

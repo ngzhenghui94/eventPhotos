@@ -61,24 +61,31 @@ export default function HomePage() {
       {showBanner && (
         <section className="px-4 pt-4">
           <div className="max-w-7xl mx-auto">
-            <div className="relative flex items-center justify-center gap-3 rounded-xl border border-amber-200/60 ring-1 ring-white/60 shadow-sm px-4 py-2 text-sm text-slate-800 bg-gradient-to-r from-amber-50 via-rose-50 to-blue-50">
-              <Megaphone className="h-4 w-4 text-amber-600" />
-              <span className="font-medium">Beta test</span>
-              <span className="text-slate-700">— Found a bug or have feedback / suggestion?</span>
-              <a
-                href="mailto:ngzhenghui94@gmail.com?subject=The%20Crowd%20Grid%20Beta%20Feedback&body=Hi%20there%2C%0A%0AFeedback%2Fbug%20details%3A%0A%0A%28Screenshots%2Fsteps%20to%20reproduce%20help%29%0A%0AThanks!"
-                className="inline-flex items-center rounded-full bg-white/70 hover:bg-white px-3 py-1 text-amber-700 font-medium border border-amber-200 transition-colors"
-              >
-                Send feedback
-              </a>
+            <div className="relative rounded-xl border border-amber-200/60 ring-1 ring-white/60 shadow-sm px-4 py-3 text-sm text-slate-800 bg-gradient-to-r from-amber-50 via-rose-50 to-blue-50">
               <button
                 type="button"
                 onClick={dismissBanner}
                 aria-label="Dismiss beta banner"
-                className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-white/70"
+                className="absolute right-2 top-2 sm:top-1/2 sm:-translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded-full text-slate-500 hover:text-slate-700 hover:bg-white/70"
               >
                 <X className="h-4 w-4" />
               </button>
+
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 pr-0 sm:pr-10">
+                <div className="flex items-center justify-center sm:justify-start gap-2">
+                  <Megaphone className="h-4 w-4 text-amber-600" />
+                  <span className="font-medium">Beta test</span>
+                </div>
+                <p className="text-slate-700 text-center sm:text-left sm:whitespace-nowrap">
+                  <span className="hidden sm:inline">— </span>Found a bug or have feedback / suggestion?
+                </p>
+                <a
+                  href="mailto:ngzhenghui94@gmail.com?subject=The%20Crowd%20Grid%20Beta%20Feedback&body=Hi%20there%2C%0A%0AFeedback%2Fbug%20details%3A%0A%0A%28Screenshots%2Fsteps%20to%20reproduce%20help%29%0A%0AThanks!"
+                  className="inline-flex items-center justify-center rounded-full bg-white/70 hover:bg-white px-3 py-1 text-amber-700 font-medium border border-amber-200 transition-colors w-full sm:w-auto"
+                >
+                  Send feedback
+                </a>
+              </div>
             </div>
           </div>
         </section>

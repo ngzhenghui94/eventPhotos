@@ -62,19 +62,19 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
   }
   return (
     <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm px-6 py-6">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="bg-blue-100 rounded-full p-2"><Calendar className="w-6 h-6 text-blue-600" /></span>
           <span role="heading" aria-level={2} className="font-bold text-2xl text-blue-900">Event Timeline</span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           {canAdjust && items.length > 0 && eventId && (
             <>
               <Button
                 type="button"
-                size="sm"
+                size="xs"
                 variant="outline"
-                className="h-7 px-2 text-xs border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
+                className="px-2 text-xs border-red-200 text-red-800 bg-red-50 hover:bg-red-100 w-full sm:w-auto justify-center"
                 onClick={async () => {
                   setAdjustError(null);
                   setAdjusting('delay');
@@ -100,9 +100,9 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
               </Button>
               <Button
                 type="button"
-                size="sm"
+                size="xs"
                 variant="outline"
-                className="h-7 px-2 text-xs border-green-200 text-green-800 bg-green-50 hover:bg-green-100"
+                className="px-2 text-xs border-green-200 text-green-800 bg-green-50 hover:bg-green-100 w-full sm:w-auto justify-center"
                 onClick={async () => {
                   setAdjustError(null);
                   setAdjusting('forward');
@@ -130,7 +130,7 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
           )}
           <button
             type="button"
-            className="inline-flex items-center text-sm text-blue-800 hover:text-blue-900"
+            className="inline-flex items-center text-sm text-blue-800 hover:text-blue-900 w-full sm:w-auto justify-center"
             aria-expanded={!collapsed}
             aria-controls={contentId}
             onClick={() => {
@@ -203,12 +203,12 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                   </span>
                 </div>
                 {canAdjust && item.id && (
-                  <div className="mt-2 flex gap-2">
+                  <div className="mt-2 flex flex-wrap gap-2">
                     <Button
                       type="button"
-                      size="sm"
+                      size="xs"
                       variant="outline"
-                      className="h-7 px-2 text-xs border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
+                      className="px-2 text-xs border-red-200 text-red-800 bg-red-50 hover:bg-red-100 w-full sm:w-auto justify-center"
                       onClick={async () => {
                         setAdjustError(null);
                         setAdjusting('delay');
@@ -236,9 +236,9 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                     </Button>
                     <Button
                       type="button"
-                      size="sm"
+                      size="xs"
                       variant="outline"
-                      className="h-7 px-2 text-xs border-green-200 text-green-800 bg-green-50 hover:bg-green-100"
+                      className="px-2 text-xs border-green-200 text-green-800 bg-green-50 hover:bg-green-100 w-full sm:w-auto justify-center"
                       onClick={async () => {
                         setAdjustError(null);
                         setAdjusting('forward');
