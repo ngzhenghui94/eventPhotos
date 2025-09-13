@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, _Object } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
@@ -109,4 +109,26 @@ export function deriveThumbKey(originalKey: string, size: 'sm' | 'md' = 'sm'): s
   const dir = originalKey.substring(0, lastSlash);
   const file = originalKey.substring(lastSlash + 1);
   return `${dir}/thumbs/${size}-${file}`;
+}
+
+export type S3ObjectInfo = { key: string; size: number; lastModified?: Date };
+
+export async function listAllObjects(prefix?: string): Promise<S3ObjectInfo[]> {
+  const client = getS3Client();
+  let continuationToken: string | undefined = undefined;
+  const out: S3ObjectInfo[] = [];
+  do {
+    const res = await client.send(new ListObjectsV2Command({
+      Bucket: BUCKET_NAME,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+      MaxKeys: 1000,
+    }));
+    (res.Contents || []).forEach((o) => {
+      if (!o || !o.Key) return;
+      out.push({ key: o.Key, size: Number(o.Size || 0), lastModified: o.LastModified });
+    });
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return out;
 }
