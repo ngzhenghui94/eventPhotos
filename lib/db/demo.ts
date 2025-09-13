@@ -53,7 +53,7 @@ export async function ensureDemoEvent(ownerEmail: string) {
     const inserted = await db
       .insert(events)
       .values({
-        name: 'memoriesVault Demo Event',
+        name: 'The Crowd Grid Demo Event',
         description: 'Public demo event for uploads and gallery preview.',
         date: new Date(),
         location: 'Online',

@@ -1,6 +1,18 @@
-import { Calendar } from 'lucide-react';
+"use client";
+import { Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
+type TimelineProps = { items: any[]; storageKey?: string };
 
-export function Timeline({ items }: { items: any[] }) {
+export function Timeline({ items, storageKey }: TimelineProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try {
+      if (!storageKey) return;
+      const saved = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      if (saved === '1') setCollapsed(true);
+    } catch {}
+  }, [storageKey]);
+
   if (!items?.length) return (
     <div className="rounded-xl border border-gray-200 bg-white px-6 py-6 text-center text-gray-400 italic">No timeline entries yet.</div>
   );
@@ -17,10 +29,27 @@ export function Timeline({ items }: { items: any[] }) {
   });
   return (
     <div className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm px-6 py-6">
-      <div className="mb-4 flex items-center gap-2">
-        <span className="bg-blue-100 rounded-full p-2"><Calendar className="w-6 h-6 text-blue-600" /></span>
-        <span className="font-bold text-2xl text-blue-900">Event Timeline</span>
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="bg-blue-100 rounded-full p-2"><Calendar className="w-6 h-6 text-blue-600" /></span>
+          <span className="font-bold text-2xl text-blue-900">Event Timeline</span>
+        </div>
+        <button
+          type="button"
+          className="inline-flex items-center text-sm text-blue-800 hover:text-blue-900"
+          aria-expanded={!collapsed}
+          onClick={() => {
+            setCollapsed((c) => {
+              const next = !c;
+              try { if (storageKey) localStorage.setItem(storageKey, next ? '1' : '0'); } catch {}
+              return next;
+            });
+          }}
+        >
+          {collapsed ? (<><ChevronDown className="h-4 w-4 mr-1"/> Expand</>) : (<><ChevronUp className="h-4 w-4 mr-1"/> Minimize</>)}
+        </button>
       </div>
+      {!collapsed && (
       <ol className="relative border-l-2 border-blue-200 pl-6">
         {items.map((item, idx) => {
           const isClosest = idx === closestIdx;
@@ -66,6 +95,7 @@ export function Timeline({ items }: { items: any[] }) {
           );
         })}
       </ol>
+      )}
     </div>
   );
 }

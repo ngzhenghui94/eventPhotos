@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Upload, Camera, Lock } from 'lucide-react';
+import { CategoryIcon } from '@/components/category-icon';
 import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
 import { getEventTimeline } from '@/lib/db/queries';
 import { Timeline } from '@/components/event-timeline';
@@ -75,7 +76,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="flex items-center gap-3">
             <div className="bg-amber-100 rounded-full p-3 ring-1 ring-amber-200/60">
-              <Camera className="h-6 w-6 text-amber-600" />
+              <CategoryIcon category={event.category} />
             </div>
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold text-slate-900 truncate">{event.name}</h1>
@@ -146,10 +147,10 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
 
             <Card className={`${pickGradient(event.eventCode, 2)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
-                <CardTitle>Find out more about memoriesVault</CardTitle>
+                <CardTitle>Find out more about The Crowd Grid</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 mb-2">memoriesVault is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
+                <p className="text-sm text-gray-700 mb-2">The Crowd Grid is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
                 <a href={process.env.BASE_URL} target="_blank" rel="noopener noreferrer">
                   <Button variant="default">Learn More</Button>
                 </a>
@@ -238,11 +239,11 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
 
             <Card className={`${pickGradient(event.eventCode, 5)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
-                <CardTitle>Find out more about memoriesVault</CardTitle>
+                <CardTitle>Find out more about The Crowd Grid</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 mb-2">memoriesVault is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
-                <a href="https://memoriesvault.com" target="_blank" rel="noopener noreferrer">
+                <p className="text-sm text-gray-700 mb-2">The Crowd Grid is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
+                <a href={process.env.BASE_URL} target="_blank" rel="noopener noreferrer">
                   <Button variant="default">Learn More</Button>
                 </a>
               </CardContent>

@@ -1,11 +1,11 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { Calendar } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp } from 'lucide-react';
 
 export interface TimelineEntry {
   id?: number;
@@ -25,6 +25,16 @@ interface EventTimelineEditorProps {
 
 export function EventTimelineEditor({ eventId, entries, addAction }: EventTimelineEditorProps) {
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+
+  // Restore collapsed state per event from localStorage
+  useEffect(() => {
+    try {
+      const key = `tcg_timeline_collapsed:${eventId}`;
+      const saved = typeof window !== 'undefined' ? localStorage.getItem(key) : null;
+      if (saved === '1') setCollapsed(true);
+    } catch {}
+  }, [eventId]);
   function getDefaultDateTime() {
     const d = new Date();
     const pad = (n: number) => n.toString().padStart(2, '0');
@@ -51,10 +61,37 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
   // Editing and delete logic removed for now (add-only)
 
   return (
-    <Card className="mb-8">
-      <CardHeader>
-        <CardTitle>Add Timeline Entry</CardTitle>
+    <Card className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm mb-8">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div className="mb-0 flex items-center gap-2">
+          <span className="bg-blue-100 rounded-full p-2"><Calendar className="w-6 h-6 text-blue-600" /></span>
+          <span className="font-bold text-2xl text-blue-900">Add Timeline Entry</span>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-expanded={!collapsed}
+          onClick={() => {
+            setCollapsed((c) => {
+              const next = !c;
+              try { localStorage.setItem(`tcg_timeline_collapsed:${eventId}`, next ? '1' : '0'); } catch {}
+              return next;
+            });
+          }}
+          className="ml-auto"
+        >
+          {collapsed ? (
+            <>
+              <ChevronDown className="h-4 w-4 mr-1" /> Expand
+            </>
+          ) : (
+            <>
+              <ChevronUp className="h-4 w-4 mr-1" /> Minimize
+            </>
+          )}
+        </Button>
       </CardHeader>
+      {!collapsed && (
       <CardContent>
         {mutationResult?.error && (
           <div className="mb-2 text-red-600 font-semibold">{mutationResult.error}</div>
@@ -190,6 +227,7 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
           </ul>
         </div>
       </CardContent>
+      )}
     </Card>
   );
 }

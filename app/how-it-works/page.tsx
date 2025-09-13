@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Calendar, QrCode, Upload, CheckCircle2, Shield, Users, ImageIcon } from "lucide-react";
+import { Calendar, CalendarClock, QrCode, Upload, CheckCircle2, Shield, Users, ImageIcon } from "lucide-react";
 
 export default function HowItWorksPage() {
   return (
@@ -11,7 +11,7 @@ export default function HowItWorksPage() {
         <div className="absolute inset-0 -z-10 animate-gradient bg-gradient-to-br from-orange-200 via-amber-100 to-blue-200 opacity-60"></div>
         <div className="max-w-3xl mx-auto px-4 sm:px-8 text-center">
           <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight text-gray-900 mb-6 drop-shadow-lg">
-            How memoriesVault Works
+            How The Crowd Grid Works
           </h1>
           <p className="mb-8 text-lg sm:text-xl text-gray-700">
             Discover the simple, secure, and beautiful way to collect and share event memories. No apps, no accounts—just instant galleries for everyone.
@@ -33,6 +33,17 @@ export default function HowItWorksPage() {
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Create an event</h3>
                 <p className="mt-3 text-base text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
+              </div>
+            </div>
+            {/* Card 1b: Plan timeline */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-white/30 backdrop-blur-md border-2 border-gradient-to-br from-blue-400 via-amber-400 to-orange-400 shadow-lg flex items-center justify-center">
+                  <CalendarClock className="h-7 w-7 text-white/80 drop-shadow-lg" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Plan your event timeline</h3>
+                <p className="mt-3 text-base text-gray-600">Add schedule items like ceremony, speeches, and first dance so guests know what’s next.</p>
               </div>
             </div>
             {/* Card 2 */}

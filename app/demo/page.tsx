@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
+import BrandMark from '@/components/BrandMark';
 import { EventQr } from '@/components/event-qr';
 import { UserMenu } from '@/components/user-menu';
 import { brand } from '@/lib/brand';
@@ -689,10 +690,10 @@ export default function DemoGallery() {
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-amber-500 to-orange-400 shadow-lg">
-                <img src="/favicon.ico" alt="Logo" className="h-8 w-8" />
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg">
+                <BrandMark size={32} />
               </span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">memories<span className="text-amber-600">Vault</span></span>
+              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">The <span className="text-amber-600">Crowd</span> Grid</span>
             </Link>
           </div>
           <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">

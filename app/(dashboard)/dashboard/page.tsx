@@ -83,7 +83,7 @@ export default function DashboardPage() {
             <div className="flex-1">
               <h1 className="text-3xl lg:text-4xl font-extrabold text-orange-900 mb-2 flex items-center gap-2">
                 <Camera className="h-8 w-8 text-orange-500 animate-bounce" />
-                Memories Vault
+                The Crowd Grid
               </h1>
               <p className="text-lg text-gray-700 mb-4">Capture, share, and relive your event memories in one beautiful dashboard.</p>
               <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white shadow-lg text-base px-6 py-3">
@@ -94,7 +94,22 @@ export default function DashboardPage() {
               </Button>
             </div>
             <div className="flex-shrink-0 hidden md:block">
-              <img src="/favicon.ico" alt="Memories Vault" className="w-32 h-32 rounded-full shadow-lg border-4 border-orange-200" />
+              <div className="w-32 h-32 rounded-full shadow-lg border-4 border-orange-200 bg-white flex items-center justify-center">
+                <svg width="64" height="64" viewBox="0 0 256 256" aria-hidden>
+                  <defs>
+                    <linearGradient id="tcg-hero" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="100%" stopColor="#fb923c" />
+                    </linearGradient>
+                  </defs>
+                  <rect width="256" height="256" rx="48" fill="url(#tcg-hero)" />
+                  <g fill="none" stroke="#fff" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" opacity="0.9">
+                    <path d="M48 64h160M48 128h160M48 192h160" />
+                    <path d="M64 48v160M128 48v160M192 48v160" />
+                  </g>
+                  <circle cx="196" cy="60" r="14" fill="#fff" opacity="0.95" />
+                </svg>
+              </div>
             </div>
           </div>
         </div>
@@ -108,7 +123,7 @@ export default function DashboardPage() {
                   <Calendar className="h-5 w-5 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-orange-900">Your Total Vaults</p>
+                  <p className="text-sm font-medium text-orange-900">Your Total Grids</p>
                   <p className="text-2xl font-bold text-orange-800">{events ? events.length : 0}</p>
                 </div>
               </div>
@@ -134,7 +149,7 @@ export default function DashboardPage() {
                   <Eye className="h-5 w-5 text-white" />
                 </div>
                 <div className="ml-4">
-                  <p className="text-sm font-medium text-green-900">Your Public Vaults</p>
+                  <p className="text-sm font-medium text-green-900">Your Public Grids</p>
                   <p className="text-2xl font-bold text-green-800">{events ? events.filter(event => event.isPublic).length : 0}</p>
                 </div>
               </div>

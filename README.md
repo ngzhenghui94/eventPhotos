@@ -1,18 +1,19 @@
-# Next.js SaaS Starter
+# The Crowd Grid (Next.js Event Photo Sharing)
 
-This is a starter template for building a SaaS application using **Next.js** with support for authentication, Stripe integration for payments, and a dashboard for logged-in users.
+The Crowd Grid is an event photo sharing app built with **Next.js**. It supports Google sign-in, guest uploads via codes, secure galleries, and Stripe subscriptions.
 
-**Demo: [https://next-saas-start.vercel.app/](https://next-saas-start.vercel.app/)**
-
+Demo coming soon.
 
 ## Features
 
 ### Event Management
+
 - Create, update, and delete events
 - Generate unique event codes and guest access codes
 - Dashboard for managing events and viewing analytics
 
 ### Photo Management
+
 - Upload photos as authenticated users or guests
 - Bulk photo upload, download, and deletion
 - Photo approval and rejection (moderation queue)
@@ -22,30 +23,36 @@ This is a starter template for building a SaaS application using **Next.js** wit
 - Photo limit enforcement per event, with notification toasts when limit is reached
 
 ### Guest Access
+
 - Join events via code
 - Guest photo upload with optional name/email
 - Guest access cookies for streamlined experience
 
 ### Gallery & Viewing
+
 - Event-specific galleries for viewing and managing photos
 - Gallery views for guests and authenticated users
 
 ### Payments & Subscriptions
+
 - Stripe integration for payments and subscriptions
 - Pricing page with Stripe Checkout
 - Subscription management via Stripe Customer Portal
 - Free and paid plans with upload/event limits
 
 ### Authentication & Security
+
 - Google SSO authentication
 - JWT-based session management
 - Middleware for route protection (global and local)
 - Role-based access control (admin, organizer, guest)
 
 ### Activity & Logging
+
 - Activity logging for user and event actions
 
 ### Other Features
+
 - Email notifications (via nodemailer)
 - Admin dashboard for user/event/photo management
 - API endpoints for events, photos, users, teams, and more

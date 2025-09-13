@@ -1,6 +1,6 @@
 export const brand = {
-  productName: 'memoriesVault',
-  productShort: 'mv',
+  productName: 'The Crowd Grid',
+  productShort: 'tcg',
   orgName: 'danielninetyfour',
   siteDomain: 'events.danielninetyfour.com',
   siteUrl: process.env.BASE_URL || 'https://events.danielninetyfour.com'

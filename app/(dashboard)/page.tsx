@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { brand } from '@/lib/brand';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Calendar, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X } from 'lucide-react';
+import { Calendar, CalendarClock, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
 
 
@@ -11,14 +11,14 @@ export default function HomePage() {
   const [showBanner, setShowBanner] = useState(true);
   useEffect(() => {
     try {
-      const dismissed = localStorage.getItem('mv_beta_banner_dismissed');
+      const dismissed = localStorage.getItem('tcg_beta_banner_dismissed');
       if (dismissed === '1') setShowBanner(false);
     } catch {}
   }, []);
 
   const dismissBanner = () => {
     setShowBanner(false);
-    try { localStorage.setItem('mv_beta_banner_dismissed', '1'); } catch {}
+    try { localStorage.setItem('tcg_beta_banner_dismissed', '1'); } catch {}
   };
 
   return (
@@ -32,7 +32,7 @@ export default function HomePage() {
               <span className="font-medium">Beta test</span>
               <span className="text-slate-700">— Found a bug or have feedback / suggestion?</span>
               <a
-                href="mailto:ngzhenghui94@gmail.com?subject=memoriesVault%20Beta%20Feedback&body=Hi%20there%2C%0A%0AFeedback%2Fbug%20details%3A%0A%0A%28Screenshots%2Fsteps%20to%20reproduce%20help%29%0A%0AThanks!"
+                href="mailto:ngzhenghui94@gmail.com?subject=The%20Crowd%20Grid%20Beta%20Feedback&body=Hi%20there%2C%0A%0AFeedback%2Fbug%20details%3A%0A%0A%28Screenshots%2Fsteps%20to%20reproduce%20help%29%0A%0AThanks!"
                 className="inline-flex items-center rounded-full bg-white/70 hover:bg-white px-3 py-1 text-amber-700 font-medium border border-amber-200 transition-colors"
               >
                 Send feedback
@@ -58,7 +58,7 @@ export default function HomePage() {
               A warmer, simpler way to gather event photos together
             </h1>
             <p className="mb-8 text-lg sm:text-xl text-gray-700">
-              Create your event, share a friendly code, and let everyone add their favorite moments. You stay in control! Beautiful, secured galleries on any device.
+              Create your event, plan event timeline, share a friendly code, and let everyone add their favorite moments. You stay in control! Beautiful, secured galleries on any device.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 mb-8">
               <Link href="/api/auth/google">
@@ -110,6 +110,17 @@ export default function HomePage() {
                 <p className="mt-3 text-base text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
               </div>
             </div>
+            {/* Card 1b: Plan timeline */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-green-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-green-400 via-amber-400 to-orange-400 text-white flex items-center justify-center shadow-lg">
+                  <CalendarClock className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Plan timeline</h3>
+                <p className="mt-3 text-base text-gray-600">Add schedule items like ceremony, speeches, and first dance so guests know what’s next.</p>
+              </div>
+            </div>
             {/* Card 2 */}
             <div className="relative group">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
@@ -143,15 +154,7 @@ export default function HomePage() {
                 <p className="mt-3 text-base text-gray-600">You stay in control. Approve photos and share the gallery instantly.</p>
               </div>
             </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature highlights Section with fade-in animation */}
-  <section className="py-16 sm:py-24 fade-in-up">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-3">
-            {/* Card 1 */}
+             {/* Card 1 */}
             <div className="relative group">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
@@ -184,17 +187,22 @@ export default function HomePage() {
                 <p className="mt-3 text-base text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
               </div>
             </div>
-          </div>
-          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link href="/api/auth/google">
-              <Button size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 shadow-lg text-lg px-6 py-3">Create free event</Button>
-            </Link>
-            <Link href="/pricing">
-              <Button size="lg" variant="outline" className="rounded-full text-lg px-6 py-3 border-2 border-gray-300">See pricing</Button>
-            </Link>
+
           </div>
         </div>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
+        <Link href="/api/auth/google">
+          <Button size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 shadow-lg text-lg px-6 py-3">Create free event</Button>
+        </Link>
+        <Link href="/pricing">
+          <Button size="lg" variant="outline" className="rounded-full text-lg px-6 py-3 border-2 border-gray-300">See pricing</Button>
+        </Link>
+      </div>
+    </div>
       </section>
+
+
 
       {/* Footer is provided globally in root layout */}
       <style jsx>{`
