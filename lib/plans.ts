@@ -32,7 +32,7 @@ export function uploadLimitBytes(plan: PlanName): number {
 export function eventLimit(plan: PlanName): number | null {
   switch (plan) {
     case 'free':
-      return 5;
+      return 2;
     case 'starter':
       return 10;
     case 'hobby':
@@ -40,6 +40,7 @@ export function eventLimit(plan: PlanName): number | null {
     case 'pro':
       return 100;
     case 'business':
+      return 200;
     default:
       return null; // unlimited
   }
