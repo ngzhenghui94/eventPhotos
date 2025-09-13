@@ -6,6 +6,7 @@ import {
   timestamp,
   integer,
   boolean,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 import { pgTable as table } from 'drizzle-orm/pg-core';
@@ -151,12 +152,38 @@ export const photosRelations = relations(photos, ({ one }) => ({
   }),
 }));
 
+// Event chat messages
+export const eventMessages = pgTable('event_messages', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  senderUserId: integer('sender_user_id').references(() => users.id),
+  guestName: varchar('guest_name', { length: 100 }),
+  body: text('body').notNull(),
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  deletedAt: timestamp('deleted_at'),
+}, (t) => ({
+  eventIdIdIdx: index('event_messages_event_id_id_idx').on(t.eventId, t.id),
+}));
+
+export const eventMessagesRelations = relations(eventMessages, ({ one }) => ({
+  event: one(events, {
+    fields: [eventMessages.eventId],
+    references: [events.id],
+  }),
+  sender: one(users, {
+    fields: [eventMessages.senderUserId],
+    references: [users.id],
+  }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Event = typeof events.$inferSelect;
 export type NewEvent = typeof events.$inferInsert;
 export type Photo = typeof photos.$inferSelect;
 export type NewPhoto = typeof photos.$inferInsert;
+export type EventMessage = typeof eventMessages.$inferSelect;
+export type NewEventMessage = typeof eventMessages.$inferInsert;
 export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;

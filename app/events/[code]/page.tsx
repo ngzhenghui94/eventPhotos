@@ -13,6 +13,7 @@ import { env } from 'process';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
+import EventChat from '@/components/EventChat';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
@@ -144,6 +145,9 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Event Chat */}
+            <EventChat eventId={event.id} canAccess={hasAccess} />
 
             <Card className={`${pickGradient(event.eventCode, 2)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>

@@ -1,7 +1,7 @@
 import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { db } from './drizzle';
-import { activityLogs, users, events, photos, eventTimelines, ActivityType } from './schema';
+import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages } from './schema';
 // ============================================================================
 // EVENT TIMELINE MANAGEMENT
 // ============================================================================
@@ -332,4 +332,54 @@ export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
       },
     });
   }, 'getPhotosForEvent');
+}
+
+// ============================================================================
+// EVENT CHAT
+// ============================================================================
+
+export async function getEventMessages(
+  eventId: number,
+  options: { limit?: number; beforeId?: number } = {}
+) {
+  const { limit = 50, beforeId } = options;
+  return withDatabaseErrorHandling(async () => {
+    return db.query.eventMessages.findMany({
+      where: beforeId
+        ? and(eq(eventMessages.eventId, eventId), isNull(eventMessages.deletedAt), sql`${eventMessages.id} < ${beforeId}`)
+        : and(eq(eventMessages.eventId, eventId), isNull(eventMessages.deletedAt)),
+      orderBy: [desc(eventMessages.id)],
+      limit,
+      columns: {
+        id: true,
+        eventId: true,
+        senderUserId: true,
+        guestName: true,
+        body: true,
+        createdAt: true,
+      },
+    });
+  }, 'getEventMessages');
+}
+
+export async function createEventMessage(
+  data: { eventId: number; senderUserId?: number | null; guestName?: string | null; body: string }
+) {
+  return withDatabaseErrorHandling(async () => {
+    const cleanedBody = (data.body || '').toString().trim();
+    if (!cleanedBody) {
+      throw new Error('Message body is required');
+    }
+    const [created] = await db
+      .insert(eventMessages)
+      .values({
+        eventId: data.eventId,
+        senderUserId: data.senderUserId ?? null,
+        // Preserve provided guestName regardless of auth; UI may still choose what to display
+        guestName: data.guestName || null,
+        body: cleanedBody,
+      })
+      .returning();
+    return created;
+  }, 'createEventMessage');
 }
