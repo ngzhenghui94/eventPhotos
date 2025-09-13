@@ -74,7 +74,7 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-7 px-2 text-xs"
+                className="h-7 px-2 text-xs border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
                 onClick={async () => {
                   setAdjustError(null);
                   setAdjusting('delay');
@@ -102,7 +102,7 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                 type="button"
                 size="sm"
                 variant="outline"
-                className="h-7 px-2 text-xs"
+                className="h-7 px-2 text-xs border-green-200 text-green-800 bg-green-50 hover:bg-green-100"
                 onClick={async () => {
                   setAdjustError(null);
                   setAdjusting('forward');
@@ -208,7 +208,7 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-2 text-xs border-red-200 text-red-800 bg-red-50 hover:bg-red-100"
                       onClick={async () => {
                         setAdjustError(null);
                         setAdjusting('delay');
@@ -238,7 +238,7 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-7 px-2 text-xs"
+                      className="h-7 px-2 text-xs border-green-200 text-green-800 bg-green-50 hover:bg-green-100"
                       onClick={async () => {
                         setAdjustError(null);
                         setAdjusting('forward');
