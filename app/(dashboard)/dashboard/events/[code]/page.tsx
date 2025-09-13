@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, MapPin, Users, QrCode } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
 import { getEventByEventCode, getPhotosForEvent, getUser, getEventTimeline } from '@/lib/db/queries';
@@ -206,7 +207,14 @@ export default async function Page({ params }: { params: Promise<{ code: string 
             />
           )}
           {/* Timeline component for all users */}
-          <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:view:${eventId}`} canAdjust={isEventOwner} eventId={eventId} />
+          <div className="mb-2">
+            <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:view:${eventId}`} canAdjust={isEventOwner} eventId={eventId} />
+          </div>
+          <div className="flex items-center gap-2 mb-6">
+            <a href={`/api/events/${eventId}/ics`} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 bg-white text-amber-800 hover:bg-amber-50 text-sm">
+              <CalendarIcon className="h-4 w-4" /> Subscribe (ICS)
+            </a>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Event Stats - compact */}
             <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-6 py-6 flex flex-col gap-2">

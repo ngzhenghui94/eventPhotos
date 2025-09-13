@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { Calendar, ChevronDown, ChevronUp } from 'lucide-react';
+import Link from 'next/link';
 
 export interface TimelineEntry {
   id?: number;
@@ -201,6 +202,9 @@ export function EventTimelineEditor({ eventId, entries, addAction }: EventTimeli
                       return `${day}/${month}/${year} ${hours}:${mins}`;
                     })()
                   }</time>
+                  {entry.id && (
+                    <a href={`/api/timeline/${entry.id}/ics`} className="ml-2 text-xs px-2 py-0.5 rounded border border-amber-300 text-amber-800 bg-white hover:bg-amber-50">Add to calendar</a>
+                  )}
                   {entry.location && <span className="text-xs text-blue-600">@ {entry.location}</span>}
                   <Button size="sm" variant="outline" onClick={() => {
                     setForm({
