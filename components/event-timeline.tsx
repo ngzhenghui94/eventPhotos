@@ -171,6 +171,9 @@ export function Timeline({ items, storageKey, canAdjust, eventId }: TimelineProp
                       {item.location}
                     </span>
                   )}
+                  {item.id && (
+                    <a href={`/api/timeline/${item.id}/ics`} className="ml-1 inline-flex items-center px-2 py-0.5 rounded border border-amber-300 bg-white text-amber-800 text-[11px] hover:bg-amber-50">Add to calendar</a>
+                  )}
                   {showOngoing && (
                     <span className="ml-2 px-3 py-1 rounded-full text-xs font-semibold bg-orange-200 text-orange-900">
                       {`Ongoing${isClient ? ` • ${formatDuration(nowTick - itemTs)} elapsed` : ''}`}
