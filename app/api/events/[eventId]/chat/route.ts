@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { events } from '@/lib/db/schema';
 import { getEventById, getEventMessages, createEventMessage, getUser } from '@/lib/db/queries';
 import { cookies } from 'next/headers';
+import { redis } from '@/lib/upstash';
 
 export async function GET(
   request: NextRequest,
@@ -35,6 +36,17 @@ export async function GET(
   return Response.json({ messages: ordered });
 }
 
+function getRequestIp(req: NextRequest): string {
+  let ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+  if (!ip || ip === '' || ip === '::1' || ip === '127.0.0.1') {
+    ip = req.headers.get('x-real-ip')?.trim() || '';
+  }
+  if (!ip && (req as any).ip) {
+    ip = (req as any).ip;
+  }
+  return ip || 'unknown-ip';
+}
+
 export async function POST(
   request: NextRequest,
   context: { params: Promise<{ eventId: string }> }
@@ -51,6 +63,21 @@ export async function POST(
       return Response.json({ error: 'Access denied' }, { status: 403 });
     }
   }
+
+  // Simple IP-based rate limit: 20 messages per 5 minutes per IP per event
+  const ip = getRequestIp(request);
+  try {
+    const rlKey = `chat:rl:${eventId}:${ip}`;
+    const count = await redis.incr(rlKey);
+    if (count === 1) {
+      await redis.expire(rlKey, 5 * 60);
+    }
+    if (count > 20) {
+      const ttl = await redis.ttl(rlKey);
+      const waitMins = Math.max(1, Math.ceil(ttl / 60));
+      return Response.json({ error: `Rate limit exceeded. Try again in ~${waitMins} min.` }, { status: 429 });
+    }
+  } catch {}
 
   const user = await getUser();
   let body: string = '';
