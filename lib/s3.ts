@@ -132,3 +132,13 @@ export async function listAllObjects(prefix?: string): Promise<S3ObjectInfo[]> {
   } while (continuationToken);
   return out;
 }
+
+// Internal helpers for admin routes
+export function getS3ClientInternal() {
+  return getS3Client();
+}
+
+export function getBucketName(): string {
+  ensureConfigured();
+  return BUCKET_NAME!;
+}

@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/sonner';
 
-export default function AdminOrphansTable({ orphaned }: { orphaned: { key: string; size: number; lastModified?: string }[] }) {
+export default function AdminOrphansTable({ orphaned }: { orphaned: { key: string; size: number; lastModified?: string | Date }[] }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [loading, setLoading] = useState(false);
 
@@ -48,11 +48,46 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
     }
   }
 
+  async function onDownloadAll() {
+    const keys = orphaned.map((o) => o.key);
+    if (keys.length === 0) {
+      toast.info('No objects to download');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/storage/download', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ keys }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data?.error || 'Download failed');
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `orphans-${Date.now()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      toast.error(e?.message || 'Download failed');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Card>
       <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <CardTitle>Orphaned S3 Objects</CardTitle>
         <div className="flex items-center gap-2">
+          <Button variant="secondary" onClick={onDownloadAll} disabled={loading || orphaned.length === 0}>Download All</Button>
           <Button variant="secondary" onClick={() => toggleAll(true)}>Select All</Button>
           <Button variant="secondary" onClick={() => toggleAll(false)}>Clear</Button>
           <Button onClick={onDeleteSelected} disabled={loading || selectedKeys.length === 0}>
@@ -81,7 +116,7 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
                   </td>
                   <td className="py-2 pr-4 font-mono break-all">{o.key}</td>
                   <td className="py-2 pr-4">{o.size}</td>
-                  <td className="py-2 pr-4">{o.lastModified ? new Date(o.lastModified).toLocaleString() : '-'}</td>
+                  <td className="py-2 pr-4">{o.lastModified ? new Date(o.lastModified as any).toLocaleString() : '-'}</td>
                 </tr>
               ))}
             </tbody>

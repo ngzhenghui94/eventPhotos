@@ -39,6 +39,12 @@ export default async function AdminOrphansPage() {
     orphanedObjects,
     photosWithMissingEvent,
   };
+
+  const orphanedForUi = orphanedObjects.map((o) => ({
+    key: o.key,
+    size: o.size,
+    lastModified: o.lastModified ? o.lastModified.toISOString() : undefined,
+  }));
   return (
     <div className="space-y-6">
       <Card>
@@ -55,7 +61,7 @@ export default async function AdminOrphansPage() {
         </CardContent>
       </Card>
 
-      <AdminOrphansTable orphaned={data.orphanedObjects} />
+      <AdminOrphansTable orphaned={orphanedForUi} />
 
       {data.photosWithMissingEvent?.length > 0 && (
         <Card>
