@@ -6,6 +6,15 @@ import { db } from '@/lib/db/drizzle';
 import { photos, events } from '@/lib/db/schema';
 import { inArray } from 'drizzle-orm';
 
+function originalKeyForThumb(key: string): string | null {
+  // Match .../thumbs/(sm|md)-FILENAME and return .../FILENAME
+  const m = key.match(/^(.*)\/thumbs\/(sm|md)-(.+)$/);
+  if (!m) return null;
+  const baseDir = m[1];
+  const filename = m[3];
+  return `${baseDir}/${filename}`;
+}
+
 export default async function AdminOrphansPage() {
   await requireSuperAdmin();
   // Build data directly on the server to preserve cookies and avoid API roundtrip
@@ -27,7 +36,16 @@ export default async function AdminOrphansPage() {
     existingEventIds = new Set(existing.map((e) => e.id));
   }
   const photosWithMissingEvent = dbPhotos.filter((p) => !existingEventIds.has(p.eventId));
-  const orphanedObjects = objects.filter((o) => !referencedKeys.has(o.key));
+  // Exclude thumbs when their original exists either in DB references or in S3 listing
+  const allS3Keys = new Set(objects.map((o) => o.key));
+  const orphanedObjects = objects.filter((o) => {
+    if (referencedKeys.has(o.key)) return false;
+    const original = originalKeyForThumb(o.key);
+    if (original && (referencedKeys.has(original) || allS3Keys.has(original))) {
+      return false;
+    }
+    return true;
+  });
 
   const data = {
     counts: {
