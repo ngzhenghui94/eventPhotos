@@ -5,10 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/sonner';
+import { Loader2 } from 'lucide-react';
 
 export default function AdminOrphansTable({ orphaned }: { orphaned: { key: string; size: number; lastModified?: string | Date }[] }) {
   const [selected, setSelected] = useState<Record<string, boolean>>({});
-  const [loading, setLoading] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const selectedKeys = useMemo(() => Object.keys(selected).filter((k) => selected[k]), [selected]);
 
@@ -20,7 +22,7 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
 
   async function onDeleteSelected() {
     if (selectedKeys.length === 0) return;
-    setLoading(true);
+    setDeleting(true);
     try {
       const res = await fetch('/api/admin/storage/delete', {
         method: 'POST',
@@ -44,7 +46,7 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
     } catch (e: any) {
       toast.error(e?.message || 'Delete failed');
     } finally {
-      setLoading(false);
+      setDeleting(false);
     }
   }
 
@@ -54,7 +56,7 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
       toast.info('No objects to download');
       return;
     }
-    setLoading(true);
+    setDownloading(true);
     try {
       const res = await fetch('/api/admin/storage/download', {
         method: 'POST',
@@ -78,7 +80,7 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
     } catch (e: any) {
       toast.error(e?.message || 'Download failed');
     } finally {
-      setLoading(false);
+      setDownloading(false);
     }
   }
 
@@ -87,11 +89,18 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
       <CardHeader className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <CardTitle>Orphaned S3 Objects</CardTitle>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={onDownloadAll} disabled={loading || orphaned.length === 0}>Download All</Button>
+          <Button variant="secondary" onClick={onDownloadAll} disabled={downloading || orphaned.length === 0}>
+            {downloading ? (
+              <span className="inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Downloading…
+              </span>
+            ) : 'Download All'}
+          </Button>
           <Button variant="secondary" onClick={() => toggleAll(true)}>Select All</Button>
           <Button variant="secondary" onClick={() => toggleAll(false)}>Clear</Button>
-          <Button onClick={onDeleteSelected} disabled={loading || selectedKeys.length === 0}>
-            {loading ? 'Deleting…' : `Delete Selected (${selectedKeys.length})`}
+          <Button onClick={onDeleteSelected} disabled={deleting || downloading || selectedKeys.length === 0}>
+            {deleting ? 'Deleting…' : `Delete Selected (${selectedKeys.length})`}
           </Button>
         </div>
       </CardHeader>
