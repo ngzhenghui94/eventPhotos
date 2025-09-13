@@ -59,8 +59,11 @@ export function EventsGrid({ items }: { items: EventItem[] }) {
             let hash = 0;
             for (let i = 0; i < event.eventCode.length; i++) hash = (hash * 31 + event.eventCode.charCodeAt(i)) % gradients.length;
             const gradient = gradients[Math.abs(hash) % gradients.length];
+            const isDemo = (event.name || '').toLowerCase() === 'demo event' || (event.eventCode || '').toUpperCase().includes('DEMO');
+            const cardGradient = isDemo ? 'from-orange-50 via-white to-blue-100' : gradient;
+            const borderClass = isDemo ? 'border-orange-200' : 'border-gray-200';
             return (
-              <Card key={event.id} className={`border border-gray-200 shadow-sm hover:shadow-md transition-shadow flex flex-col h-full bg-gradient-to-br ${gradient} rounded-xl`}>
+              <Card key={event.id} className={`border ${borderClass} shadow-sm hover:shadow-md transition-shadow flex flex-col h-full bg-gradient-to-br ${cardGradient} rounded-xl`}>
                 <CardHeader className="pb-2">
                   <div className="flex flex-col gap-2">
                     <CardTitle className="text-base font-semibold text-gray-900 truncate flex items-center gap-2">

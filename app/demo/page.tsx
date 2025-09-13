@@ -9,9 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
-import BrandMark from '@/components/BrandMark';
 import { EventQr } from '@/components/event-qr';
-import { UserMenu } from '@/components/user-menu';
+import SiteHeader from '@/components/site-header';
 import { brand } from '@/lib/brand';
 
 // Thumbnail child component to avoid hook-in-map error
@@ -407,7 +406,7 @@ function DemoGalleryContent() {
             )}
           </div>
 
-          <div className="relative overflow-hidden rounded-3xl shadow-lg bg-white/60 ring-1 ring-slate-200/60 backdrop-blur-lg">
+          <div className="relative overflow-hidden rounded-3xl shadow-lg bg-gradient-to-br from-orange-50 via-white to-blue-100 border border-orange-200/60 ring-1 ring-white/60 backdrop-blur-lg">
             {/* Subtle image/gradient backdrop */}
             <div className="absolute inset-0 bg-gradient-to-r from-slate-50 to-white" style={heroBg ? { backgroundImage: `${heroBg}`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'blur(30px)', opacity: 0.18 } : {}} />
             <div className="relative grid grid-cols-1 lg:grid-cols-3 gap-0">
@@ -687,24 +686,7 @@ function DemoGalleryContent() {
 export default function DemoGallery() {
   return (
     <>
-      <header className="sticky top-0 z-30 bg-transparent">
-        <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 h-24 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-3">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-lg">
-                <BrandMark size={32} />
-              </span>
-              <span className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight drop-shadow-lg">The <span className="text-amber-600">Crowd</span> Grid</span>
-            </Link>
-          </div>
-          <nav className="hidden sm:flex items-center gap-8 text-base font-medium text-gray-700 bg-white/80 rounded-full px-6 py-3 shadow-md">
-            <Link href="/demo" className="hover:text-amber-600 transition-colors">Demo</Link>
-            <Link href="/pricing" className="hover:text-amber-600 transition-colors">Pricing</Link>
-            <Link href="/dashboard" className="hover:text-amber-600 transition-colors">Dashboard</Link>
-            <UserMenu />
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
       <Suspense fallback={
         <div className="min-h-screen bg-gradient-to-br from-white via-slate-50 to-slate-100 flex items-center justify-center">
           <div className="text-center">
