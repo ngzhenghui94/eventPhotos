@@ -1,5 +1,6 @@
 export const dynamic = 'force-static';
 import Link from 'next/link';
+import SiteHeader from '@/components/site-header';
 
 type QA = { q: string; a: string };
 
@@ -31,39 +32,71 @@ const guests: QA[] = [
 
 export default function FaqPage() {
   return (
-    <main className="mx-auto max-w-4xl px-6 py-10">
-      <h1 className="text-3xl font-semibold text-slate-900 mb-2">Frequently Asked Questions</h1>
-      <p className="text-sm text-slate-500 mb-8">For hosts and guests</p>
+    <main className="relative">
+      {/* Background accents */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-20 -left-24 h-80 w-80 rounded-full bg-amber-300/35 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-rose-300/35 blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-orange-200/25 blur-2xl" />
+      </div>
 
-      <div className="grid md:grid-cols-2 gap-8">
-        <section>
-          <h2 className="text-xl font-semibold mb-4">For Hosts</h2>
-          <ul className="space-y-4">
+      <SiteHeader />
+      <section className="mx-auto max-w-5xl px-6 py-10">
+        {/* Header card */}
+        <div className="mb-8 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-white/70 to-rose-50/80 backdrop-blur-md shadow-lg p-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h1 className="text-3xl font-semibold text-amber-900">Frequently Asked Questions</h1>
+              <p className="text-sm text-amber-700/80 mt-1">For hosts and guests</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-900 border border-amber-200">FAQ</span>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-900 border border-orange-200">Hosts</span>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-900 border border-rose-200">Guests</span>
+            </div>
+          </div>
+          <p className="mt-4 text-amber-900/90">
+            Find quick answers about creating and sharing events, guest uploads, approvals, downloading, limits, privacy, and troubleshooting.
+          </p>
+        </div>
+
+        {/* Hosts grid */}
+        <div className="mb-8">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-200">Section</span>
+            <h2 className="text-lg font-semibold text-orange-900">For Hosts</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {hosts.map((item, i) => (
-              <li key={`h-${i}`}>
-                <p className="font-medium text-slate-900">{item.q}</p>
-                <p className="text-sm text-slate-700 mt-1">{item.a}</p>
-              </li>
+              <article key={`h-${i}`} className="rounded-2xl border border-orange-200/60 bg-gradient-to-br from-orange-50/70 via-white/60 to-amber-50/70 backdrop-blur-md shadow-lg p-5">
+                <p className="font-medium text-orange-900">{item.q}</p>
+                <p className="text-sm text-orange-900/90 mt-1 leading-relaxed">{item.a}</p>
+              </article>
             ))}
-          </ul>
-        </section>
-        <section>
-          <h2 className="text-xl font-semibold mb-4">For Guests</h2>
-          <ul className="space-y-4">
-            {guests.map((item, i) => (
-              <li key={`g-${i}`}>
-                <p className="font-medium text-slate-900">{item.q}</p>
-                <p className="text-sm text-slate-700 mt-1">{item.a}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
+          </div>
+        </div>
 
-      <div className="mt-10 text-sm text-slate-600">
-        <p className="mb-2">Need more help? Check our <Link href="/terms" className="underline">Terms & Conditions</Link> or contact your event host.</p>
-        <p>Note: Some features depend on the host’s subscription plan.</p>
-      </div>
+        {/* Guests grid */}
+        <div className="mb-8">
+          <div className="mb-3 flex items-center gap-2">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-200">Section</span>
+            <h2 className="text-lg font-semibold text-orange-900">For Guests</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {guests.map((item, i) => (
+              <article key={`g-${i}`} className="rounded-2xl border border-orange-200/60 bg-gradient-to-br from-orange-50/70 via-white/60 to-amber-50/70 backdrop-blur-md shadow-lg p-5">
+                <p className="font-medium text-orange-900">{item.q}</p>
+                <p className="text-sm text-orange-900/90 mt-1 leading-relaxed">{item.a}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-6 text-sm text-slate-600">
+          <p className="mb-2">Need more help? Review our <Link href="/terms" className="underline">Terms & Conditions</Link> or contact your event host.</p>
+          <p>Note: Some features depend on the host’s subscription plan.</p>
+        </div>
+      </section>
     </main>
   );
 }

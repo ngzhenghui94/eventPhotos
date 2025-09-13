@@ -60,7 +60,8 @@ export default async function PricingPage() {
   }
 
   return (
-    <main className="min-h-screen relative overflow-hidden bg-[radial-gradient(1200px_600px_at_-10%_-10%,rgba(255,200,150,0.25),transparent),radial-gradient(900px_500px_at_110%_10%,rgba(125,200,255,0.25),transparent)]">
+    <main className="relative min-h-screen overflow-hidden">
+      <div className="fixed inset-0 -z-10 bg-[radial-gradient(1200px_600px_at_-10%_-10%,rgba(255,200,150,0.25),transparent),radial-gradient(900px_500px_at_110%_10%,rgba(125,200,255,0.25),transparent)]" />
       {/* subtle grain */}
       <div className="pointer-events-none absolute inset-0 opacity-[0.08] [background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%224%22 height=%224%22 viewBox=%220 0 4 4%22><path fill=%22%23000%22 d=%22M0 0h1v1H0zM2 2h1v1H2z%22/></svg>')]"></div>
 

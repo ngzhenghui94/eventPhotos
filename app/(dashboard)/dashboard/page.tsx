@@ -68,7 +68,8 @@ export default function DashboardPage() {
   });
 
   return (
-    <section className="flex-1 min-h-screen bg-gradient-to-br from-orange-50 via-white to-blue-50">
+    <section className="relative flex-1 min-h-screen">
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-amber-50 via-amber-50 to-blue-50" />
       <div className="max-w-7xl mx-auto px-4 lg:px-8">
         <UpdateToast />
         {/* Hero Section */}

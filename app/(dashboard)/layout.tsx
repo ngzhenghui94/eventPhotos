@@ -13,7 +13,8 @@ import { Calendar, Tag, PlayCircle } from 'lucide-react';
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-amber-50 via-amber-50 to-blue-50" />
       <header className="sticky top-0 z-50 bg-transparent">
         <div className="max-w-7xl mx-auto px-6 sm:px-10 lg:px-16 h-20 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-3">
@@ -81,6 +82,6 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <section className="flex flex-col min-h-screen">
         {children}
       </section>
-    </>
+    </div>
   );
 }

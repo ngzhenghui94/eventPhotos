@@ -54,7 +54,9 @@ export default function HomePage() {
   }
 
   return (
-  <main className="min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
+  <main className="relative min-h-screen">
+      {/* Full-viewport background to keep header area consistent */}
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-amber-50 via-white to-blue-50" />
       {/* Beta banner */}
       {showBanner && (
         <section className="px-4 pt-4">
@@ -124,7 +126,7 @@ export default function HomePage() {
                   </div>
                   <img
                     src={item.src}
-                    alt={item.alt}
+                    alt="Event preview"
                     className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.06] will-change-transform"
                     style={{ objectPosition: (item as any).objectPosition || 'center' }}
                     loading="lazy"

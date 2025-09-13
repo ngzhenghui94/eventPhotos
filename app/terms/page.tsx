@@ -1,9 +1,16 @@
 export const dynamic = 'force-static';
 import Link from 'next/link';
+import SiteHeader from '@/components/site-header';
 
 export default function TermsPage() {
   const updated = new Date().toISOString().slice(0, 10);
   const brand = 'The Crowd Grid';
+  const cardGradients = [
+    'from-amber-50/70 via-white/60 to-rose-50/70 border-amber-200/60',
+    'from-rose-50/70 via-white/60 to-orange-50/70 border-rose-200/60',
+    'from-orange-50/70 via-white/60 to-amber-50/70 border-orange-200/60',
+    'from-yellow-50/70 via-white/60 to-rose-50/70 border-yellow-200/60',
+  ];
   const sections = [
     {
       key: 'accounts',
@@ -148,25 +155,27 @@ export default function TermsPage() {
     <main className="relative">
       {/* Background accents */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute -top-20 -left-24 h-80 w-80 rounded-full bg-amber-200/30 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-blue-200/30 blur-3xl" />
+        <div className="absolute -top-20 -left-24 h-80 w-80 rounded-full bg-amber-300/35 blur-3xl" />
+        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-rose-300/35 blur-3xl" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 h-72 w-72 rounded-full bg-orange-200/25 blur-2xl" />
       </div>
 
+      <SiteHeader />
       <section className="mx-auto max-w-5xl px-6 py-10">
         {/* Header card */}
-        <div className="mb-8 rounded-2xl border border-white/40 bg-white/60 backdrop-blur-md shadow-lg p-6">
+        <div className="mb-8 rounded-2xl border border-amber-200/60 bg-gradient-to-br from-amber-50/80 via-white/70 to-rose-50/80 backdrop-blur-md shadow-lg p-6">
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
-              <h1 className="text-3xl font-semibold text-slate-900">Terms & Conditions</h1>
-              <p className="text-sm text-slate-500 mt-1">Last updated: {updated}</p>
+              <h1 className="text-3xl font-semibold text-amber-900">Terms & Conditions</h1>
+              <p className="text-sm text-amber-700/80 mt-1">Last updated: {updated}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-900 border border-amber-200">Legal</span>
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-900 border border-blue-200">User Agreement</span>
-              <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-900 border border-emerald-200">Hosting</span>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-900 border border-orange-200">User Agreement</span>
+              <span className="px-3 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-900 border border-rose-200">Hosting</span>
             </div>
           </div>
-          <p className="mt-4 text-slate-700">
+          <p className="mt-4 text-amber-900/90">
             These Terms & Conditions ("Terms") govern your access to and use of {brand}, including any services, websites, mobile apps,
             and related offerings (collectively, the "Service"). By accessing or using the Service, you agree to be bound by these Terms.
           </p>
@@ -174,13 +183,13 @@ export default function TermsPage() {
 
         {/* Sections grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {sections.map((s) => (
-            <article key={s.key} className="rounded-2xl border border-white/40 bg-white/60 backdrop-blur-md shadow-lg p-5">
+          {sections.map((s, i) => (
+            <article key={s.key} className={`rounded-2xl border bg-gradient-to-br ${cardGradients[i % cardGradients.length]} backdrop-blur-md shadow-lg p-5`}>
               <div className="mb-3 flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-100 text-slate-800 border border-slate-200">Section</span>
-                <h2 className="text-lg font-semibold text-slate-900">{s.title}</h2>
+                <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-900 border border-amber-200">Section</span>
+                <h2 className="text-lg font-semibold text-orange-900">{s.title}</h2>
               </div>
-              <div className="text-slate-800 text-sm leading-relaxed">
+              <div className="text-orange-900/90 text-sm leading-relaxed">
                 {s.content}
               </div>
             </article>

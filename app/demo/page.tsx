@@ -383,7 +383,8 @@ function DemoGalleryContent() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-br from-amber-50 via-white to-blue-50">
+    <div className="relative min-h-screen">
+      <div className="fixed inset-0 -z-10 bg-gradient-to-br from-amber-50 via-white to-blue-50" />
       {/* Decorative animated gradient backdrop */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-orange-200/30 blur-3xl animate-pulse" />
