@@ -42,7 +42,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
 
   const cookieKey = `evt:${event.eventCode}:access`;
   const accessCodeCookie = cookieStore.get(cookieKey)?.value || '';
-  const hasAccess = event.isPublic || (accessCodeCookie && accessCodeCookie.toUpperCase() === event.accessCode.toUpperCase());
+  const hasAccess = event.isPublic || (!!accessCodeCookie && accessCodeCookie.toUpperCase() === event.accessCode.toUpperCase());
 
   const photos = (photosRaw || []).filter((p: any) => p.isApproved);
   const eventDate = new Date(event.date);
