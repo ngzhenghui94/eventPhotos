@@ -8,9 +8,11 @@ import { toast } from 'sonner';
 
 interface BulkDownloadProps {
   photos: Photo[];
+  compact?: boolean;
+  fullWidth?: boolean;
 }
 
-export function BulkDownload({ photos }: BulkDownloadProps) {
+export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) {
   const [loading, setLoading] = React.useState(false);
   const [progress, setProgress] = React.useState<number | null>(null);
 
@@ -69,19 +71,29 @@ export function BulkDownload({ photos }: BulkDownloadProps) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 w-full">
       <Button 
         variant="outline" 
         size="sm"
         onClick={handleDownloadAll}
         disabled={loading}
+        className={fullWidth ? 'w-full justify-center' : 'max-w-full'}
       >
         {loading ? (
           <Loader2 className="h-4 w-4 mr-1 animate-spin" />
         ) : (
           <Download className="h-4 w-4 mr-1" />
         )}
-        {loading ? 'Preparing ZIP...' : `Download All (${photos.length})`}
+        {loading ? (
+          <span className="truncate">Preparing…</span>
+        ) : compact ? (
+          <>
+            <span className="sm:hidden truncate">Download</span>
+            <span className="hidden sm:inline truncate">Download All ({photos.length})</span>
+          </>
+        ) : (
+          <span className="truncate">Download All ({photos.length})</span>
+        )}
       </Button>
       {progress !== null && (
         <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">

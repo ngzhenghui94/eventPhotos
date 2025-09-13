@@ -154,9 +154,6 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </CardContent>
             </Card>
 
-            {/* Event Chat */}
-            <EventChat eventId={event.id} canAccess={hasAccess} />
-
             <Card className={`${pickGradient(event.eventCode, 2)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
                 <CardTitle>Find out more about The Crowd Grid</CardTitle>
@@ -202,6 +199,9 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 )}
               </CardContent>
             </Card>
+
+            {/* Event Chat - moved under Event Info */}
+            <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} />
 
             <Card className={`${pickGradient(event.eventCode, 4)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>

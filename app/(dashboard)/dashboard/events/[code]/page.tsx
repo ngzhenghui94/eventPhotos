@@ -526,7 +526,9 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                   {photos?.filter((p: any) => p.isApproved).length || 0} Approved
                 </span>
               </div>
-              <BulkDownload photos={(photos as any[])?.filter((p) => p.isApproved) || []} />
+              <div className="min-w-0 w-full sm:w-auto sm:min-w-[220px]">
+                <BulkDownload photos={(photos as any[])?.filter((p) => p.isApproved) || []} compact fullWidth />
+              </div>
             </div>
             <PhotoGallery
               photos={(photos as any[])?.filter((p) => p.isApproved) || []}

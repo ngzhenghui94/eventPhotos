@@ -18,9 +18,10 @@ type ChatMessage = {
 type EventChatProps = {
   eventId: number;
   canAccess: boolean;
+  gradientClass?: string;
 };
 
-export default function EventChat({ eventId, canAccess }: EventChatProps) {
+export default function EventChat({ eventId, canAccess, gradientClass }: EventChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [sending, setSending] = useState<boolean>(false);
@@ -122,7 +123,7 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
   }
 
   return (
-    <Card className="rounded-xl shadow-lg ring-1 ring-slate-200/60">
+    <Card className={`${gradientClass || 'bg-gradient-to-br from-indigo-50 via-white to-pink-100'} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
       <CardHeader>
         <CardTitle>Event Chat</CardTitle>
       </CardHeader>
@@ -131,7 +132,7 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
           <div className="text-sm text-gray-600">Unlock the event to view and send messages.</div>
         ) : (
           <div className="flex flex-col gap-3">
-            <div ref={listRef} className="max-h-72 overflow-y-auto border rounded-md p-3 bg-white">
+            <div ref={listRef} className="h-64 overflow-y-auto border rounded-md p-3 bg-white/80 backdrop-blur-sm">
               {loading && messages.length === 0 ? (
                 <div className="text-sm text-gray-500">Loading…</div>
               ) : messages.length === 0 ? (
@@ -152,20 +153,26 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
               )}
             </div>
 
-            <form onSubmit={onSend} className="flex items-center gap-2">
-              <Input
-                placeholder="Your name (optional)"
-                value={guestName}
-                onChange={(e) => setGuestName(e.target.value)}
-                className="max-w-[12rem]"
-                disabled={!!userName}
-              />
-              <Input
-                placeholder="Type a message"
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-              />
-              <Button type="submit" disabled={!canSend}>{sending ? 'Sending…' : 'Send'}</Button>
+            <form onSubmit={onSend} className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Your name (optional)"
+                  value={guestName}
+                  onChange={(e) => setGuestName(e.target.value)}
+                  className="w-full"
+                  disabled={!!userName}
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Type a message"
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  className="flex-1"
+                />
+                <Button type="submit" disabled={!canSend}
+                  className="whitespace-nowrap">{sending ? 'Sending…' : 'Send'}</Button>
+              </div>
             </form>
           </div>
         )}
