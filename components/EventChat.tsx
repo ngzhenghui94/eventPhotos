@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { toast } from '@/components/ui/sonner';
 
 type ChatMessage = {
   id: number;
@@ -25,6 +26,7 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
   const [sending, setSending] = useState<boolean>(false);
   const [text, setText] = useState<string>('');
   const [guestName, setGuestName] = useState<string>('');
+  const [userName, setUserName] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
 
   const canSend = canAccess && text.trim().length > 0 && !sending;
@@ -50,6 +52,24 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
     const id = setInterval(load, 4000);
     return () => { cancelled = true; clearInterval(id); };
   }, [eventId, canAccess]);
+
+  // Fetch current user to prefill/lock name if logged in
+  useEffect(() => {
+    let cancelled = false;
+    async function loadUser() {
+      try {
+        const res = await fetch('/api/user', { cache: 'no-store' });
+        if (!res.ok) return;
+        const u = await res.json();
+        if (!cancelled && u && typeof u.name === 'string' && u.name.trim()) {
+          setUserName(u.name.trim());
+          setGuestName(u.name.trim());
+        }
+      } catch {}
+    }
+    loadUser();
+    return () => { cancelled = true; };
+  }, []);
 
   useEffect(() => {
     if (listRef.current) {
@@ -77,6 +97,17 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ body: optimistic.body, guestName: guestName || undefined }),
       });
+      if (res.status === 429) {
+        let msg = 'You are sending messages too quickly. Please wait a bit.';
+        try {
+          const data = await res.json();
+          if (data?.error) msg = data.error;
+        } catch {}
+        toast.error(msg);
+        // Remove optimistic message since server rejected
+        setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
+        return;
+      }
       if (res.ok) {
         const saved = await res.json();
         setMessages((prev) => {
@@ -127,6 +158,7 @@ export default function EventChat({ eventId, canAccess }: EventChatProps) {
                 value={guestName}
                 onChange={(e) => setGuestName(e.target.value)}
                 className="max-w-[12rem]"
+                disabled={!!userName}
               />
               <Input
                 placeholder="Type a message"

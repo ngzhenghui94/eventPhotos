@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, MapPin, Users, Upload, Camera, Lock } from 'lucide-react';
+import { Calendar, MapPin, Users, Upload, Camera, Lock, ArrowLeft } from 'lucide-react';
 import { CategoryIcon } from '@/components/category-icon';
 import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
 import { getEventTimeline } from '@/lib/db/queries';
@@ -14,6 +14,7 @@ import { PhotoGallery } from '@/components/photo-gallery';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
 import EventChat from '@/components/EventChat';
+import Link from 'next/link';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
@@ -75,6 +76,13 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
       {/* Header */}
       <div className="border-b border-slate-200/60 backdrop-blur supports-[backdrop-filter]:bg-white/60">
         <div className="max-w-6xl mx-auto px-4 py-6">
+          <div className="mb-3">
+            <Link href="/">
+              <Button variant="ghost" className="px-2">
+                <ArrowLeft className="mr-1 h-4 w-4" /> Return to main
+              </Button>
+            </Link>
+          </div>
           <div className="flex items-center gap-3">
             <div className="bg-amber-100 rounded-full p-3 ring-1 ring-amber-200/60">
               <CategoryIcon category={event.category} />
