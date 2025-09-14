@@ -115,7 +115,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                     Slideshow
                   </CardTitle>
                   <Link href={`/events/${event.eventCode}/slideshow`}>
-                    <Button size="lg">Start Slideshow</Button>
+                    <Button size="sm">Start Slideshow</Button>
                   </Link>
                 </CardHeader>
                 <CardContent>

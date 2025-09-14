@@ -18,10 +18,11 @@ type AdminPhotoItem = {
   uploader: { id: number; name: string | null; email: string } | null;
 };
 
-export default async function AdminPhotosPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
+export default async function AdminPhotosPage({ searchParams }: { searchParams?: Promise<{ [key: string]: string | string[] | undefined }> }) {
   await requireSuperAdmin();
 
-  const showPendingOnly = (typeof searchParams?.view === 'string' ? searchParams?.view : Array.isArray(searchParams?.view) ? searchParams?.view?.[0] : undefined) === 'pending';
+  const sp = searchParams ? await searchParams : undefined;
+  const showPendingOnly = (typeof sp?.view === 'string' ? sp?.view : Array.isArray(sp?.view) ? sp?.view?.[0] : undefined) === 'pending';
 
   const rows = await db
     .select({
