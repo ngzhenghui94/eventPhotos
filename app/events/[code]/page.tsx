@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
 import EventChat from '@/components/EventChat';
 import Link from 'next/link';
+import InlineSlideshow from '@/components/inline-slideshow';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
@@ -105,6 +106,28 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-4">
           <div className="lg:col-span-3 space-y-8">
+            {/* Inline Slideshow */}
+            {photos.length > 0 && (
+              <Card className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-blue-900 text-2xl">
+                    <span className="bg-blue-100 rounded-full p-2"><Camera className="w-5 h-5 text-blue-600" /></span>
+                    Slideshow
+                  </CardTitle>
+                  <Link href={`/events/${event.eventCode}/slideshow`}>
+                    <Button size="sm">Start Slideshow</Button>
+                  </Link>
+                </CardHeader>
+                <CardContent>
+                  <InlineSlideshow
+                    photos={photos.map(p => ({ id: p.id, name: p.originalFilename }))}
+                    accessCode={hasAccess ? (event.isPublic ? undefined : accessCodeCookie) : undefined}
+                    height={360}
+                    intervalMs={4000}
+                  />
+                </CardContent>
+              </Card>
+            )}
             {/* Event Timeline */}
             <div>
               {timelineItems && timelineItems.length > 0 ? (

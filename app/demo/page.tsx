@@ -466,6 +466,28 @@ function DemoGalleryContent() {
                     </div>
                   )}
                 </div>
+                {/* Inline Slideshow below Add Photos */}
+                {photos.length > 0 && (
+                  <div className="mt-8">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-semibold text-gray-700">Live Slideshow</h3>
+                      {demo && (
+                        <Link href={`${demo.guestPath}/slideshow`} className="text-xs text-amber-700 hover:underline flex items-center gap-1">
+                          Open fullscreen <ExternalLink className="h-3 w-3" />
+                        </Link>
+                      )}
+                    </div>
+                    <div className="rounded-xl overflow-hidden ring-1 ring-slate-200/60 bg-black/5">
+                      <Carousel showThumbs={false} showStatus={false} infiniteLoop autoPlay interval={5000} swipeable emulateTouch>
+                        {photos.map((p) => (
+                          <div key={p.id} className="bg-black">
+                            <img src={`/api/photos/${p.id}`} alt={p.originalFilename || p.filename || 'Slide'} className="max-h-[360px] w-full object-contain bg-black" />
+                          </div>
+                        ))}
+                      </Carousel>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="col-span-1 p-8 sm:p-12 border-t lg:border-l border-slate-200/60 bg-white/40">

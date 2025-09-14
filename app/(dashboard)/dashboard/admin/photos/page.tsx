@@ -1,112 +1,143 @@
 import { requireSuperAdmin } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { photos, events, users } from '@/lib/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { desc, inArray } from 'drizzle-orm';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { S3Client, ListObjectsV2Command } from '@aws-sdk/client-s3';
-import { getSignedDownloadUrl, deleteFromS3 } from '@/lib/s3';
-import React, { useState } from 'react';
 
 
-export default async function AdminPhotosPage() {
+type AdminPhotoItem = {
+  id: number;
+  originalFilename: string;
+  fileSize: number;
+  uploadedAt: Date;
+  isApproved: boolean;
+  event: { id: number; name: string };
+  owner: { id: number; name: string | null; email: string } | null;
+  uploader: { id: number; name: string | null; email: string } | null;
+};
+
+export default async function AdminPhotosPage({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
   await requireSuperAdmin();
 
-  // List all objects in Hetzner S3 bucket
-  const s3Client = new S3Client({
-    region: process.env.HETZNER_S3_REGION,
-    endpoint: process.env.HETZNER_S3_ENDPOINT,
-    credentials: {
-      accessKeyId: process.env.HETZNER_S3_ACCESS_KEY!,
-      secretAccessKey: process.env.HETZNER_S3_SECRET_KEY!,
-    },
-    forcePathStyle: true,
-  });
-  const bucket = process.env.HETZNER_S3_BUCKET;
-  const listCommand = new ListObjectsV2Command({ Bucket: bucket });
-  const s3List = await s3Client.send(listCommand);
-  const objects = s3List.Contents || [];
+  const showPendingOnly = (typeof searchParams?.view === 'string' ? searchParams?.view : Array.isArray(searchParams?.view) ? searchParams?.view?.[0] : undefined) === 'pending';
 
-  // Prefetch signed URLs for all objects
-  const signedUrls: Record<string, string> = {};
-  await Promise.all(objects.map(async (obj) => {
-    if (obj.Key) {
-      signedUrls[obj.Key] = await getSignedDownloadUrl(obj.Key);
-    }
-  }));
+  const rows = await db
+    .select({
+      id: photos.id,
+      originalFilename: photos.originalFilename,
+      fileSize: photos.fileSize,
+      uploadedAt: photos.uploadedAt,
+      isApproved: photos.isApproved,
+      eventId: photos.eventId,
+      uploadedBy: photos.uploadedBy,
+    })
+    .from(photos)
+    .orderBy(desc(photos.uploadedAt));
 
-  // Gallery View toggle state (client only)
-  // Use a simple query param for SSR toggle
-  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
-  const galleryMode = searchParams?.get('view') === 'gallery';
+  const eventIds = Array.from(new Set(rows.map(r => r.eventId)));
+  const allEvents = eventIds.length
+    ? await db.query.events.findMany({
+        where: inArray(events.id, eventIds),
+        with: {
+          createdBy: {
+            columns: { id: true, name: true, email: true },
+          },
+        },
+      })
+    : [];
+  const eventById = new Map(allEvents.map(e => [e.id, e]));
 
-  // Helper to build toggle URL
-  function getToggleUrl() {
-    if (galleryMode) {
-      return '?view=bucket';
-    } else {
-      return '?view=gallery';
-    }
-  }
+  const uploadedByIds = Array.from(new Set(rows.map(r => r.uploadedBy).filter((v): v is number => typeof v === 'number')));
+  const uploaders = uploadedByIds.length
+    ? await db.query.users.findMany({
+        where: inArray(users.id, uploadedByIds),
+        columns: { id: true, name: true, email: true },
+      })
+    : [];
+  const uploaderById = new Map(uploaders.map(u => [u.id, u]));
+
+  const items: AdminPhotoItem[] = rows
+    .filter(r => (showPendingOnly ? !r.isApproved : true))
+    .map(r => {
+      const ev = eventById.get(r.eventId);
+      const owner = ev?.createdBy
+        ? { id: ev.createdBy.id, name: ev.createdBy.name ?? null, email: ev.createdBy.email }
+        : null;
+      const uploader = r.uploadedBy ? uploaderById.get(r.uploadedBy) : null;
+      return {
+        id: r.id,
+        originalFilename: r.originalFilename,
+        fileSize: r.fileSize,
+        uploadedAt: r.uploadedAt,
+        isApproved: r.isApproved,
+        event: { id: ev?.id ?? 0, name: ev?.name ?? 'Unknown Event' },
+        owner: owner ? { id: owner.id, name: owner.name ?? null, email: owner.email } : null,
+        uploader: uploader ? { id: uploader.id, name: uploader.name ?? null, email: uploader.email } : null,
+      };
+    });
 
   return (
-    <div className="max-w-6xl mx-auto">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">Photo {galleryMode ? 'Gallery View' : 'Bucket Manager'}</h1>
-      <div className="mb-4">
-        <Link href={getToggleUrl()}>
-          <Button variant="outline">
-            Switch to {galleryMode ? 'Bucket Manager' : 'Gallery View'}
-          </Button>
-        </Link>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-lg lg:text-2xl font-medium text-gray-900">All Photos</h1>
+        <div className="flex items-center gap-2">
+          {showPendingOnly ? (
+            <Link href="?">
+              <Button variant="outline">Show all</Button>
+            </Link>
+          ) : (
+            <Link href="?view=pending">
+              <Button variant="outline">Pending only</Button>
+            </Link>
+          )}
+          <Link href="/dashboard/admin/storage/orphans">
+            <Button variant="outline">Storage Orphans</Button>
+          </Link>
+        </div>
       </div>
-      {galleryMode ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-          {objects.map((obj) => (
-            <div key={obj.Key} className="relative group border rounded-lg overflow-hidden shadow">
-              <a href={signedUrls[obj.Key!]} target="_blank" rel="noopener noreferrer">
-                <img src={signedUrls[obj.Key!]} alt={obj.Key!} className="w-full h-40 object-cover" />
-              </a>
-              <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition">
-                <form action={`/api/admin/photos/delete?key=${encodeURIComponent(obj.Key!)}`} method="post">
-                  <Button size="icon" variant="destructive" title="Delete" className="p-2">🗑️</Button>
-                </form>
-                <a href={signedUrls[obj.Key!]} target="_blank" rel="noopener noreferrer">
-                  <Button size="icon" variant="outline" title="View" className="p-2">🔍</Button>
-                </a>
-              </div>
-              <div className="p-2 text-xs text-gray-700 bg-white bg-opacity-80 absolute bottom-0 w-full">
-                <div className="truncate">{obj.Key}</div>
-                <div>Size: {obj.Size} bytes</div>
-              </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {items.map((p) => (
+          <Card key={p.id} className="overflow-hidden">
+            <div className="aspect-square bg-gray-50">
+              <img
+                src={`/api/photos/${p.id}/thumb`}
+                alt={p.originalFilename}
+                className="w-full h-full object-cover"
+              />
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {objects.map((obj) => (
-            <Card key={obj.Key}>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="text-base">{obj.Key}</CardTitle>
-                <form action={`/api/admin/photos/delete?key=${encodeURIComponent(obj.Key!)}`} method="post" className="inline">
-                  <Button size="sm" variant="destructive">Delete</Button>
+            <CardHeader className="py-2">
+              <CardTitle className="text-sm truncate">{p.originalFilename}</CardTitle>
+            </CardHeader>
+            <CardContent className="pb-3 pt-0">
+              <div className="text-xs text-gray-600 space-y-1">
+                <div><span className="font-medium">Event:</span> {p.event.name}</div>
+                <div><span className="font-medium">Host:</span> {p.owner?.name || p.owner?.email || 'Unknown'}</div>
+                <div><span className="font-medium">Uploaded by:</span> {p.uploader?.name || p.uploader?.email || 'Guest'}</div>
+                <div>{(p.fileSize / 1024).toFixed(1)} KB • {new Date(p.uploadedAt).toLocaleString()}</div>
+                {!p.isApproved && (
+                  <div className="text-yellow-700">Pending approval</div>
+                )}
+              </div>
+              <div className="mt-2 flex items-center gap-1.5">
+                {!p.isApproved && (
+                  <form action={`/api/admin/photos/${p.id}/approve`} method="post">
+                    <Button size="sm" className="h-7 px-2 text-xs bg-green-600 hover:bg-green-700">Approve</Button>
+                  </form>
+                )}
+                <form action={`/api/admin/photos/${p.id}/delete`} method="post">
+                  <Button size="sm" variant="destructive" className="h-7 px-2 text-xs">Delete</Button>
                 </form>
-              </CardHeader>
-              <CardContent className="text-sm text-gray-600">
-                <div className="flex items-center gap-4">
-                  <a href={signedUrls[obj.Key!]} target="_blank" rel="noopener noreferrer">
-                    <img src={signedUrls[obj.Key!]} alt={obj.Key!} className="w-32 h-32 object-cover rounded shadow" />
-                  </a>
-                  <div>
-                    <div>Size: {obj.Size} bytes</div>
-                    <div>Last Modified: {obj.LastModified?.toLocaleString()}</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                <Link href={`/api/photos/${p.id}/download`}>
+                  <Button size="sm" variant="outline" className="h-7 px-2 text-xs">Download</Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
