@@ -9,7 +9,7 @@ import { Timeline } from '@/components/event-timeline';
 import { redirect } from 'next/navigation';
 import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { EventQr } from '@/components/event-qr';
-import { env } from 'process';
+// import { env } from 'process';
 import { PhotoGallery } from '@/components/photo-gallery';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
@@ -115,7 +115,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                     Slideshow
                   </CardTitle>
                   <Link href={`/events/${event.eventCode}/slideshow`}>
-                    <Button size="sm">Start Slideshow</Button>
+                    <Button size="lg">Start Slideshow</Button>
                   </Link>
                 </CardHeader>
                 <CardContent>
