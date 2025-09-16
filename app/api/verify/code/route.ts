@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server';
 import { getUser } from '@/lib/db/queries';
+import { verifyEmailByCode } from '@/lib/auth/verify';
 
 export async function POST(request: Request) {
   const user = await getUser();
-  // Email verification disabled: always go to dashboard if signed in, otherwise Google SSO.
-  return NextResponse.redirect(new URL(user ? '/dashboard' : '/api/auth/google', request.url));
+  if (!user) return NextResponse.redirect(new URL('/sign-in', request.url));
+  const body = await request.json().catch(() => ({}));
+  const code = typeof body?.code === 'string' ? body.code : '';
+  const ok = code ? await verifyEmailByCode(user.id, code) : false;
+  return NextResponse.redirect(new URL(ok ? '/dashboard?verified=1' : '/dashboard?verify=failed', request.url));
 }

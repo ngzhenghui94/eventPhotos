@@ -188,6 +188,7 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+export type VerificationToken = typeof verificationTokens.$inferSelect;
 
 export type EventTimeline = typeof eventTimelines.$inferSelect;
 export type NewEventTimeline = typeof eventTimelines.$inferInsert;

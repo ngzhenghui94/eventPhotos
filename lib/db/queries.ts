@@ -1,7 +1,7 @@
 import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { db } from './drizzle';
-import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages } from './schema';
+import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages, verificationTokens, type User, type VerificationToken } from './schema';
 // ============================================================================
 // EVENT TIMELINE MANAGEMENT
 // ============================================================================
@@ -107,6 +107,74 @@ export async function getUser() {
       })
     );
   }, 'getUser');
+}
+
+/**
+ * Finds a user by email (case-insensitive)
+ */
+export async function getUserByEmail(email: string): Promise<User | null> {
+  const normalized = email.toLowerCase();
+  return withDatabaseErrorHandling(async () => {
+    return findFirst(
+      db.query.users.findMany({ where: eq(users.email, normalized), limit: 1 })
+    );
+  }, 'getUserByEmail');
+}
+
+/**
+ * Creates a user with hashed password already provided
+ */
+export async function createUser(data: { name?: string | null; email: string; passwordHash: string }): Promise<User> {
+  validateRequiredFields(data, ['email', 'passwordHash']);
+  return withDatabaseErrorHandling(async () => {
+    const [created] = await db.insert(users).values({
+      name: data.name || null,
+      email: data.email.toLowerCase(),
+      passwordHash: data.passwordHash,
+    }).returning();
+    return created;
+  }, 'createUser');
+}
+
+/**
+ * Updates a user's password
+ */
+export async function setUserPassword(userId: number, passwordHash: string): Promise<void> {
+  validateRequiredFields({ userId, passwordHash }, ['userId', 'passwordHash']);
+  return withDatabaseErrorHandling(async () => {
+    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
+  }, 'setUserPassword');
+}
+
+/**
+ * Creates a one-time token stored in verification_tokens (used for password reset)
+ */
+export async function createPasswordResetToken(userId: number, token: string, expiresAt: Date): Promise<VerificationToken> {
+  return withDatabaseErrorHandling(async () => {
+    await db.delete(verificationTokens).where(eq(verificationTokens.userId, userId));
+    const [row] = await db.insert(verificationTokens).values({ userId, token, expiresAt }).returning();
+    return row;
+  }, 'createPasswordResetToken');
+}
+
+/**
+ * Resets password by a token if valid
+ */
+export async function resetPasswordByToken(token: string, newPasswordHash: string): Promise<boolean> {
+  return withDatabaseErrorHandling(async () => {
+    const record = await findFirst(
+      db.query.verificationTokens.findMany({ where: eq(verificationTokens.token, token), limit: 1 })
+    );
+    if (!record) return false;
+    if (record.expiresAt < new Date()) {
+      // Expired; remove token
+      await db.delete(verificationTokens).where(eq(verificationTokens.id, record.id));
+      return false;
+    }
+    await db.update(users).set({ passwordHash: newPasswordHash, updatedAt: new Date() }).where(eq(users.id, record.userId));
+    await db.delete(verificationTokens).where(eq(verificationTokens.id, record.id));
+    return true;
+  }, 'resetPasswordByToken');
 }
 
 /**
