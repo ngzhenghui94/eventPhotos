@@ -5,6 +5,7 @@ import SiteHeader from '@/components/site-header';
 type QA = { q: string; a: string };
 
 const hosts: QA[] = [
+  { q: 'Is the system secured', a: 'User Authentication is handled by Google Sign-In. All data is stored in a secured database.' },
   { q: 'How do I create an event?', a: 'Go to Dashboard → New Event, fill in the details, and save. A unique Event Code and Access Code will be generated.' },
   { q: 'What is the difference between Event Code and Access Code?', a: 'Event Code is a public identifier guests use to find your event; Access Code is a private code that restricts viewing/uploading for private events.' },
   { q: 'How do I enable or disable guest uploads?', a: 'Open your event in Dashboard and toggle Guest Uploads in Event Settings.' },
