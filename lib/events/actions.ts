@@ -2,7 +2,8 @@ import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
 import { events, ActivityType, eventTimelines } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and, desc } from 'drizzle-orm';
+import { redis } from '@/lib/upstash';
 // import { canCreateAnotherEvent, getTeamPlanName } from '@/lib/plans'; // Teams feature removed
 
 // Teams feature removed
@@ -21,6 +22,21 @@ const createEventSchema = z.object({
 export const createEvent = validatedActionWithUser(
   createEventSchema,
   async (data, _, user) => {
+    // Idempotency guard (5s) per user + name + date
+    const safeName = (data.name || '').trim().toUpperCase();
+    const safeDate = new Date(data.date).toISOString();
+    const idemKey = `idem:event:create:${user.id}:${safeName}:${safeDate}`;
+    const acquired = await redis.set(idemKey, '1', { nx: true, ex: 5 });
+    if (!acquired) {
+      const existing = await db.query.events.findFirst({
+        where: and(eq(events.name, data.name), eq(events.createdBy, user.id)),
+        orderBy: (e, { desc }) => desc(e.createdAt),
+        columns: { id: true },
+      });
+      if (existing) return { success: 'Event already created', eventId: existing.id };
+      return { error: 'Event creation already in progress. Please wait.' };
+    }
+
     // Generate codes
     const eventCode = generateEventCode();
     const accessCode = generateAccessCode();

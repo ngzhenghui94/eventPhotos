@@ -7,6 +7,7 @@ import { events } from '@/lib/db/schema';
 import { getUser } from '@/lib/db/queries';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { eventLimit, normalizePlanName } from '@/lib/plans';
+import { redis } from '@/lib/upstash';
 
 const createEventSchema = z.object({
   name: z.string().min(1, 'Event name is required').max(200, 'Event name too long'),
@@ -54,6 +55,23 @@ export async function createEventAction(formData: FormData) {
   if (!result.success) {
     throw new Error(result.error.errors[0].message);
   }
+  // Idempotency key based on user + name + date (5s window)
+  const safeName = (result.data.name || '').trim().toUpperCase();
+  const safeDate = new Date(result.data.date).toISOString();
+  const idemKey = `idem:event:create:${user.id}:${safeName}:${safeDate}`;
+  const acquired = await redis.set(idemKey, '1', { nx: true, ex: 5 });
+
+  if (!acquired) {
+    // Another in-flight create with same payload; try to find the latest and redirect
+    const existing = await db.query.events.findFirst({
+      where: and(eq(events.name, result.data.name), eq(events.createdBy, user.id)),
+      orderBy: (e, { desc }) => desc(e.createdAt),
+      columns: { eventCode: true },
+    });
+    if (existing) return redirect(`/dashboard/events/${existing.eventCode}`);
+    throw new Error('Event creation already in progress. Please wait a moment.');
+  }
+
   // Generate unique codes
   const eventCode = generateEventCode(); // 8 chars
   const accessCode = generateAccessCode(); // 6 chars
@@ -66,13 +84,13 @@ export async function createEventAction(formData: FormData) {
       description: (result.data.description ?? '').toString(),
       date: new Date(result.data.date),
       location: (result.data.location ?? '').toString(),
-  eventCode,
-  accessCode,
-  createdBy: user.id,
-  category: result.data.category,
-  isPublic: result.data.isPublic || false,
-  allowGuestUploads: result.data.allowGuestUploads !== false,
-  requireApproval: result.data.requireApproval || false,
+      eventCode,
+      accessCode,
+      createdBy: user.id,
+      category: result.data.category,
+      isPublic: result.data.isPublic || false,
+      allowGuestUploads: result.data.allowGuestUploads !== false,
+      requireApproval: result.data.requireApproval || false,
     })
     .onConflictDoNothing({ target: events.eventCode })
     .returning({ id: events.id, eventCode: events.eventCode })

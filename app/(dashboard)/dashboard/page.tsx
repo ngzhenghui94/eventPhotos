@@ -138,7 +138,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-blue-900">Your Total Photos</p>
-                  <p className="text-2xl font-bold text-blue-800">{events ? events.reduce((total, e) => total + (e.photoCount ?? 0), 0) : 0}</p>
+                  <p className="text-2xl font-bold text-blue-800">{events ? events.reduce((total, e) => total + Number(e.photoCount ?? 0), 0) : 0}</p>
                 </div>
               </div>
             </CardContent>

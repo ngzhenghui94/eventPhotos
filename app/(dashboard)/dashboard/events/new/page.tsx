@@ -14,6 +14,7 @@ import { createEventAction } from '../actions';
 import UpdateToast from '@/components/update-toast';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import { useFormStatus } from 'react-dom';
 
 const NewEventPage = () => {
   const { data: dashboardInfo } = useSWR('/api/dashboard-info', (url) => fetch(url).then(res => res.json()), {
@@ -30,6 +31,15 @@ const NewEventPage = () => {
   const categories = [
       'General', 'Wedding', 'Birthday', 'Party', 'Travel', 'Event', 'Conference', 'Reunion', 'Festival', 'Corporate', 'Sports', 'Holiday', 'Other'
   ];
+
+  function CreateEventSubmitButton({ disabled }: { disabled?: boolean }) {
+    const { pending } = useFormStatus();
+    return (
+      <Button type="submit" disabled={disabled || pending}>
+        {pending ? 'Creating…' : 'Create Event'}
+      </Button>
+    );
+  }
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -134,12 +144,12 @@ const NewEventPage = () => {
                   {/* Shadcn UI Dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button type="button" variant="outline" className="w-full mt-2 border-2 border-amber-200 rounded-lg text-left flex justify-between items-center">
+                      <Button type="button" variant="ghost" className="w-full mt-2 border-2 border-amber-200 rounded-lg text-left flex justify-between items-center bg-amber-50 hover:bg-amber-50">
                         {category}
                         <span className="ml-2 text-gray-400">▼</span>
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-full min-w-[180px]">
+                    <DropdownMenuContent className="w-full min-w-[180px] bg-amber-50 border-amber-200">
                       <DropdownMenuRadioGroup value={category} onValueChange={setCategory}>
                         {categories.map((cat) => (
                           <DropdownMenuRadioItem key={cat} value={cat} className="capitalize">
@@ -179,9 +189,7 @@ const NewEventPage = () => {
                 Cancel
               </Button>
             </Link>
-            <Button type="submit" disabled={eventLimitReached}>
-              Create Event
-            </Button>
+            <CreateEventSubmitButton disabled={eventLimitReached} />
           </div>
         </form>
       </div>
