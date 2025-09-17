@@ -87,15 +87,26 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
             <div className="text-sm text-gray-500">No messages yet.</div>
           ) : (
             <ul className="space-y-2">
-              {messages.map((m) => (
-                <li key={m.id} className="text-sm flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-gray-900">{m.body}</div>
-                    <div className="text-xs text-gray-500">{m.guestName || 'Guest'} · {new Date(m.createdAt).toLocaleTimeString()}</div>
-                  </div>
-                  <Button size="xs" variant="destructive" onClick={() => remove(m.id)}>Delete</Button>
-                </li>
-              ))}
+              {messages.map((m) => {
+                const isHost = m.senderUserId !== null || (m.guestName?.toLowerCase() === 'host') || (/\(host\)/i.test(m.guestName ?? ''));
+                const rawName = m.guestName || (isHost ? 'Host' : 'Guest');
+                const name = rawName.replace(/\s*\(host\)\s*$/i, '').trim();
+                return (
+                  <li key={m.id} className="text-sm flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-gray-900">{m.body}</div>
+                      <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                        <span>{name}</span>
+                        {isHost && (
+                          <span className="inline-flex items-center rounded-full bg-indigo-100 text-red-600 border border-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold  tracking-wide">Host</span>
+                        )}
+                        <span>· {new Date(m.createdAt).toLocaleTimeString()}</span>
+                      </div>
+                    </div>
+                    <Button size="xs" variant="destructive" onClick={() => remove(m.id)}>Delete</Button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
