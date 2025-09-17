@@ -29,6 +29,7 @@ export default function EventChat({ eventId, canAccess, gradientClass }: EventCh
   const [guestName, setGuestName] = useState<string>('');
   const [userName, setUserName] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const canSend = canAccess && text.trim().length > 0 && !sending;
 
@@ -92,6 +93,10 @@ export default function EventChat({ eventId, canAccess, gradientClass }: EventCh
     setSending(true);
     setMessages((prev) => [...prev, optimistic]);
     setText('');
+    // Keep the typing flow smooth
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
     try {
       const res = await fetch(`/api/events/${eventId}/chat`, {
         method: 'POST',
@@ -119,6 +124,10 @@ export default function EventChat({ eventId, canAccess, gradientClass }: EventCh
     } catch {
     } finally {
       setSending(false);
+      // Refocus after network completes
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
     }
   }
 
@@ -172,6 +181,7 @@ export default function EventChat({ eventId, canAccess, gradientClass }: EventCh
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                   className="w-full"
+                  ref={inputRef}
                 />
               </div>
             </form>
