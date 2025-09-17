@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import JSZip from 'jszip';
+import { Readable } from 'node:stream';
 import { getPhotoById, canUserAccessEvent, getUser } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
 
@@ -43,37 +44,43 @@ export async function POST(request: NextRequest) {
     }
     const user = await getUser();
     const zip = new JSZip();
+    let totalBytes = 0;
     for (const photoId of photoIds) {
       const photo = await getPhotoById(photoId);
       if (!photo) continue;
       const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
       if (!canAccess) continue;
-      let fileBuffer;
       let filename = photo.originalFilename || photo.filename;
+      // accumulate expected bytes for progress hints
+      if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
+        totalBytes += photo.fileSize;
+      }
       if (photo.filePath?.startsWith('s3:')) {
         const key = photo.filePath.replace(/^s3:/, '');
         const url = await getSignedDownloadUrl(key, 60, {
           contentDisposition: `attachment; filename=\"${encodeURIComponent(filename)}\"`
         });
         const res = await fetch(url);
-        if (!res.ok) continue;
-        fileBuffer = await res.arrayBuffer();
+        if (!res.ok || !res.body) continue;
+        const nodeReadable = Readable.fromWeb(res.body as any);
+        zip.file(filename, nodeReadable, { binary: true, createFolders: false });
       } else {
         // Local fallback
         const res = await fetch(photo.filePath);
-        if (!res.ok) continue;
-        fileBuffer = await res.arrayBuffer();
+        if (!res.ok || !res.body) continue;
+        const nodeReadable = Readable.fromWeb(res.body as any);
+        zip.file(filename, nodeReadable, { binary: true, createFolders: false });
       }
-      zip.file(filename, fileBuffer);
     }
-    const zipBuffer = await zip.generateAsync({ type: 'uint8array' });
-    // Convert Uint8Array to Buffer for NextResponse
-    const buffer = Buffer.from(zipBuffer);
-    return new NextResponse(buffer, {
+    const nodeZipStream = zip.generateNodeStream({ streamFiles: true, compression: 'STORE' });
+    const webStream = Readable.toWeb(nodeZipStream as any) as ReadableStream;
+    return new NextResponse(webStream, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="photos.zip"',
+        'X-Total-Bytes': String(totalBytes || 0),
+        // no Content-Length since we stream
       },
     });
   } catch (error) {

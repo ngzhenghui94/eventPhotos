@@ -21,6 +21,9 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
     setLoading(true);
     setProgress(0);
     toast.info('Preparing ZIP file. This may take a moment for large events...');
+    // We will only simulate progress if the server doesn't provide total bytes
+    let interval: any | null = null;
+    let fakeProgress = 0;
     try {
       const res = await fetch('/api/photos/bulk-download', {
         method: 'POST',
@@ -40,32 +43,53 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
         }
         setProgress(null);
         setLoading(false);
+        if (interval) clearInterval(interval);
         return;
       }
-      // Simulate progress for user feedback
-      let fakeProgress = 0;
-      const interval = setInterval(() => {
-        fakeProgress += Math.random() * 20;
-        setProgress(Math.min(95, fakeProgress));
-      }, 300);
-      await res.blob().then(blob => {
-        clearInterval(interval);
-        setProgress(100);
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'photos.zip';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
-        toast.success('ZIP file downloaded!');
-      });
+      // Stream response and track progress
+      const totalHeader = res.headers.get('X-Total-Bytes');
+      const total = totalHeader ? parseInt(totalHeader) : 0;
+      const useSimulated = !(Number.isFinite(total) && total > 0);
+      if (useSimulated) {
+        interval = setInterval(() => {
+          fakeProgress += Math.random() * 15;
+          setProgress(Math.min(95, fakeProgress));
+        }, 300);
+      }
+      const reader = res.body?.getReader();
+      const chunks: BlobPart[] = [];
+      let received = 0;
+      if (!reader) throw new Error('No readable stream');
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(new Uint8Array(value));
+          received += value.byteLength;
+          if (!useSimulated && total > 0) {
+            const pct = Math.min(99, Math.floor((received / total) * 100));
+            setProgress(pct);
+          }
+        }
+      }
+      const blob = new Blob(chunks, { type: 'application/zip' });
+      if (interval) clearInterval(interval);
+      setProgress(100);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'photos.zip';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      toast.success('ZIP file downloaded!');
       
     } catch (err) {
       toast.error('Bulk download failed. Please try again.');
       setProgress(null);
     } finally {
+      if (interval) clearInterval(interval);
       setLoading(false);
       setTimeout(() => setProgress(null), 1200);
     }
