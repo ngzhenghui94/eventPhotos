@@ -57,38 +57,47 @@ export async function POST(request: NextRequest) {
       }
       throw lastErr;
     };
-    for (const photoId of photoIds) {
-      const photo = await getPhotoById(photoId);
-      if (!photo) continue;
-      const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
-      if (!canAccess) continue;
-      const filename = photo.originalFilename || photo.filename;
-      if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
-        totalBytes += photo.fileSize;
-      }
-      try {
-        let buffer: ArrayBuffer;
-        if (photo.filePath?.startsWith('s3:')) {
-          const key = photo.filePath.replace(/^s3:/, '');
-          const url = await getSignedDownloadUrl(key, 60, {
-            contentDisposition: `attachment; filename=\"${encodeURIComponent(filename)}\"`
-          });
-          buffer = await fetchWithRetry(url, 2);
-        } else if (photo.filePath) {
-          buffer = await fetchWithRetry(photo.filePath, 2);
-        } else {
-          continue;
+    // Parallel fetch with bounded concurrency
+    const concurrency = 6;
+    let current = 0;
+    async function worker() {
+      while (true) {
+        const i = current++;
+        if (i >= photoIds.length) return;
+        const photoId = photoIds[i];
+        const photo = await getPhotoById(photoId);
+        if (!photo) continue;
+        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
+        if (!canAccess) continue;
+        const filename = photo.originalFilename || photo.filename;
+        if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
+          totalBytes += photo.fileSize;
         }
-        zip.file(filename, Buffer.from(buffer));
-      } catch {}
+        try {
+          let buffer: ArrayBuffer;
+          if (photo.filePath?.startsWith('s3:')) {
+            const key = photo.filePath.replace(/^s3:/, '');
+            const url = await getSignedDownloadUrl(key, 60, {
+              contentDisposition: `attachment; filename=\"${encodeURIComponent(filename)}\"`
+            });
+            buffer = await fetchWithRetry(url, 2);
+          } else if (photo.filePath) {
+            buffer = await fetchWithRetry(photo.filePath, 2);
+          } else {
+            return;
+          }
+          zip.file(filename, Buffer.from(buffer));
+        } catch {}
+      }
     }
-    const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', compression: 'STORE' });
-    return new NextResponse(zipBuffer, {
+    await Promise.all(Array.from({ length: Math.min(concurrency, photoIds.length) }, () => worker()));
+    const zipBuffer = await zip.generateAsync({ type: 'uint8array', compression: 'STORE' });
+    return new NextResponse(zipBuffer as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="photos.zip"',
-        'Content-Length': String(zipBuffer.length),
+        'Content-Length': String((zipBuffer as Uint8Array).byteLength),
         'X-Total-Bytes': String(totalBytes || 0),
       },
     });
