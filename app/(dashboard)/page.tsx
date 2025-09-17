@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { brand } from '@/lib/brand';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarClock, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X } from 'lucide-react';
+import { Calendar, CalendarClock, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X, Eye } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
 
 
@@ -109,7 +109,17 @@ export default function HomePage() {
                 </Button>
               </Link>
               <Link href="/demo">
-                <Button size="lg" variant="outline" className="rounded-full text-lg px-6 py-3 border-2 border-gray-300">View demo</Button>
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="relative group overflow-hidden rounded-full text-lg px-6 py-3 border-white/40 bg-white/10 backdrop-blur-xl text-gray-900 shadow-lg hover:bg-white/20 hover:border-white/60 focus-visible:ring-white/40 transition"
+                >
+                  <span className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-r from-white/30 to-transparent opacity-0 group-hover:opacity-100 transition" />
+                  <span className="relative z-10 flex items-center gap-2">
+                    <Eye className="h-5 w-5" />
+                    <span>View demo</span>
+                  </span>
+                </Button>
               </Link>
             </div>
             <div className="mb-4">
