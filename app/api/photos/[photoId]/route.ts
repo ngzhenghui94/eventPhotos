@@ -47,7 +47,11 @@ export async function GET(
     // If stored on S3 (filePath like 's3:<key>'), redirect to a short-lived signed URL; else redirect to local URL
     const isS3 = !!meta.s3Key;
     if (isS3 && meta.s3Key) {
-      const url = await getSignedDownloadUrl(meta.s3Key, 60);
+      const urlCacheKey = `photo:url:${photoId}`;
+      const cached = await redis.get<string>(urlCacheKey).catch(() => null);
+      if (cached) return NextResponse.redirect(cached);
+      const url = await getSignedDownloadUrl(meta.s3Key, 120);
+      try { await redis.set(urlCacheKey, url, { ex: 110 }); } catch {}
       return NextResponse.redirect(url);
     }
 
