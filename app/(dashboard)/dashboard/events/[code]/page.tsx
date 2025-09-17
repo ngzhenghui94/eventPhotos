@@ -541,7 +541,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
 
           {/* Host Chat Moderation */}
           {isEventOwner && (
-            <div className="rounded-xl border border-slate-200 bg-white shadow-sm px-6 py-6 flex flex-col gap-2 mb-6">
+            <div className="mb-6">
               <AdminEventChat eventId={eventId} />
             </div>
           )}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { MessageSquareText } from 'lucide-react';
 
 type ChatMessage = {
   id: number;
@@ -69,12 +70,17 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
   }
 
   return (
-    <Card className="rounded-xl shadow-sm">
+    <Card className="rounded-xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-pink-50 shadow-sm">
       <CardHeader>
-        <CardTitle>Event Chat (Host moderation)</CardTitle>
+        <CardTitle className="flex items-center gap-3">
+          <span className="bg-indigo-100 rounded-full p-2">
+            <MessageSquareText className="w-6 h-6 text-indigo-600" />
+          </span>
+          <span className="font-bold text-2xl text-indigo-900">Event Chat (Host moderation)</span>
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div ref={listRef} className="h-64 overflow-y-auto border rounded-md p-3 bg-white">
+        <div ref={listRef} className="h-64 overflow-y-auto border border-indigo-100 rounded-md p-3 bg-white/80 backdrop-blur-[1px]">
           {loading && messages.length === 0 ? (
             <div className="text-sm text-gray-500">Loading…</div>
           ) : messages.length === 0 ? (
