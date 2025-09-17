@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +12,7 @@ import { Upload, X, Image as ImageIcon, User } from 'lucide-react';
 
 // Deterministic gradient picker for guest upload card
 const gradients = [
-  'bg-gradient-to-br from-orange-50 via-pink-50 to-rose-100',
+  'bg-gradient-to-br from-orange-100 via-pink-50 to-rose-100',
   'bg-gradient-to-br from-indigo-50 via-white to-pink-100',
   'bg-gradient-to-br from-emerald-50 via-white to-cyan-100',
   'bg-gradient-to-br from-yellow-50 via-white to-orange-100',
@@ -33,6 +34,10 @@ interface GuestPhotoUploadProps {
   eventId: number;
 }
 export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    try { const v = localStorage.getItem(`tcg_upload_collapsed:guest:${eventId}`); if (v === '1') setCollapsed(true); } catch {}
+  }, [eventId]);
   const router = useRouter();
   const [maxFileSizeMB, setMaxFileSizeMB] = useState(10);
   const [eventInfo, setEventInfo] = useState<any>(null);
@@ -194,12 +199,31 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
 
   return (
     <Card className={`${pickGradient(eventId)} rounded-xl shadow-lg ring-1 ring-rose-100/60`}>
-      <CardHeader>
-  <CardTitle className="flex items-center bg-clip-text text-transparent bg-gradient-to-r from-orange-500 via-pink-500 to-rose-500 text-xl font-bold">
-          <Upload className="mr-2 h-5 w-5 text-orange-500" />
-          Share Your Photos
+      <CardHeader className="flex flex-row items-center justify-between">
+        <CardTitle className="flex items-center gap-2">
+          <span className="bg-orange-100 rounded-full p-2">
+            <Upload className="h-5 w-5 text-orange-500" />
+          </span>
+          <span className="font-bold text-2xl bg-clip-text text-transparent bg-gradient-to-r from-orange-600 via-pink-500 to-rose-500">
+            Share Your Photos
+          </span>
         </CardTitle>
+        <button
+          type="button"
+          className="inline-flex items-center text-sm text-rose-700 hover:text-rose-800"
+          aria-expanded={!collapsed}
+          onClick={() => {
+            setCollapsed((c) => {
+              const next = !c;
+              try { localStorage.setItem(`tcg_upload_collapsed:guest:${eventId}`, next ? '1' : '0'); } catch {}
+              return next;
+            });
+          }}
+        >
+          {collapsed ? (<><ChevronDown className="h-4 w-4 mr-1"/> Expand</>) : (<><ChevronUp className="h-4 w-4 mr-1"/> Minimize</>)}
+        </button>
       </CardHeader>
+      {!collapsed && (
       <CardContent className="space-y-6">
         {/* Guest Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -354,6 +378,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
           </div>
         </div>
       </CardContent>
+      )}
     </Card>
   );
 }

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { MessageSquareText } from 'lucide-react';
+import { toast } from '@/components/ui/sonner';
 
 type ChatMessage = {
   id: number;
@@ -65,8 +66,22 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
   }
 
   async function remove(id: number) {
-    const res = await fetch(`/api/events/${eventId}/chat?id=${id}`, { method: 'DELETE' });
-    if (res.ok) setMessages((prev) => prev.filter((m) => m.id !== id));
+    try {
+      const res = await fetch(`/api/events/${eventId}/chat?id=${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setMessages((prev) => prev.filter((m) => m.id !== id));
+        toast.success('Message deleted');
+      } else {
+        let message = 'Failed to delete message';
+        try {
+          const data = await res.json();
+          if (data?.error) message = data.error;
+        } catch {}
+        toast.error(message);
+      }
+    } catch (err) {
+      toast.error('Failed to delete message');
+    }
   }
 
   return (

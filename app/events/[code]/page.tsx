@@ -16,6 +16,7 @@ import { cookies } from 'next/headers';
 import EventChat from '@/components/EventChat';
 import Link from 'next/link';
 import InlineSlideshow from '@/components/inline-slideshow';
+import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
@@ -150,32 +151,33 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </Card>
             )}
 
+            {/* Event Chat - moved to center content */}
+            <div className="mb-8">
+              <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} storageKey={`tcg_chat_collapsed:guest:${event.id}`} />
+            </div>
+
             {/* Photo Upload for Guests */}
             {hasAccess && event.allowGuestUploads && (
               <GuestPhotoUpload eventId={event.id} />
             )}
 
             {/* Photo Gallery */}
-            <Card className={`${pickGradient(event.eventCode, 1)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Users className="mr-2 h-5 w-5" />
-                  Event Photos ({photoCount})
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {hasAccess ? (
-                  <PhotoGallery
-                    photos={photos || []}
-                    eventId={event.id}
-                    canManage={false}
-                    accessCode={event.isPublic ? undefined : accessCodeCookie}
-                  />
-                ) : (
-                  <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />
-                )}
-              </CardContent>
-            </Card>
+            <TimelineCollapsibleCard
+              title={`Event Photos (${photoCount})`}
+              storageKey={`tcg_gallery_collapsed:guest:${event.id}`}
+              icon={<Users className="w-5 h-5 text-blue-600" />}
+            >
+              {hasAccess ? (
+                <PhotoGallery
+                  photos={photos || []}
+                  eventId={event.id}
+                  canManage={false}
+                  accessCode={event.isPublic ? undefined : accessCodeCookie}
+                />
+              ) : (
+                <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />
+              )}
+            </TimelineCollapsibleCard>
 
             <Card className={`${pickGradient(event.eventCode, 2)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
@@ -222,9 +224,6 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 )}
               </CardContent>
             </Card>
-
-            {/* Event Chat - moved under Event Info */}
-            <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} />
 
             <Card className={`${pickGradient(event.eventCode, 4)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
@@ -318,3 +317,5 @@ async function PrivateAccessGate({ eventName, eventCode }: { eventName: string; 
     </Card>
   );
 }
+
+// (moved to client component `components/timeline-collapsible-card.tsx`)
