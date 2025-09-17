@@ -29,7 +29,10 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
       setLoading(true);
       try {
         const res = await fetch(`/api/events/${eventId}/chat?limit=200`, { cache: 'no-store' });
-        if (!res.ok) throw new Error('Failed');
+        if (!res.ok) {
+          // Silently ignore to avoid error overlay; API may be temporarily unavailable or access denied.
+          return;
+        }
         const data = await res.json();
         if (!cancelled) setMessages(Array.isArray(data.messages) ? data.messages : []);
       } finally {
