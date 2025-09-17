@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -250,19 +250,13 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
             <span>Select</span>
           </label>
         )}
-                <img
-                  src={`/api/photos/${photo.id}/thumb${codeQuery}`}
-          alt={photo.originalFilename}
-          className="w-full h-full object-cover cursor-pointer"
-          onClick={onView}
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = '1';
-              img.src = `/api/photos/${photo.id}${codeQuery}`;
-            }
-          }}
-        />
+				<SmartImage
+					thumbSrc={`/api/photos/${photo.id}/thumb${codeQuery}`}
+					fullSrc={`/api/photos/${photo.id}${codeQuery}`}
+					alt={photo.originalFilename}
+					className="w-full h-full object-cover cursor-pointer"
+					onClick={onView}
+				/>
         
         {/* Overlay with actions */}
   <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -317,6 +311,93 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
       </div>
     </div>
   );
+}
+
+// Concurrency-gated, lazy image component
+function SmartImage({ thumbSrc, fullSrc, alt, className, onClick }: { thumbSrc: string; fullSrc: string; alt: string; className?: string; onClick?: () => void; }) {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const [src, setSrc] = useState<string>('');
+  const [hasLoadedFull, setHasLoadedFull] = useState(false);
+
+  // Static gate across instances
+  const gate = (SmartImage as any)._gate || ((SmartImage as any)._gate = createConcurrencyGate(10));
+
+  useEffect(() => {
+    const el = imgRef.current;
+    if (!el) return;
+    // Start with a 1x1 transparent placeholder; we'll set src when visible
+    setSrc('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==');
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          // First load thumbnail under gate
+          gate(() => new Promise<void>((resolve) => {
+            const img = new Image();
+            img.onload = () => { setSrc(thumbSrc); resolve(); };
+            img.onerror = () => { setSrc(fullSrc); resolve(); };
+            img.src = thumbSrc;
+          })).then(() => {
+            // Then schedule full image under gate
+            gate(() => new Promise<void>((resolve) => {
+              const img = new Image();
+              img.onload = () => { setSrc(fullSrc); setHasLoadedFull(true); resolve(); };
+              img.onerror = () => { resolve(); };
+              img.src = fullSrc;
+            }));
+          });
+          io.disconnect();
+        }
+      });
+    }, { rootMargin: '200px 0px' });
+
+    io.observe(el);
+    return () => io.disconnect();
+  }, [thumbSrc, fullSrc]);
+
+  return (
+    <img
+      ref={imgRef}
+      src={src}
+      alt={alt}
+      loading="lazy"
+      className={className}
+      onClick={onClick}
+      onError={(e) => {
+        const img = e.currentTarget as HTMLImageElement;
+        if (!hasLoadedFull) {
+          setSrc(fullSrc);
+        } else if (!img.dataset.fallback) {
+          img.dataset.fallback = '1';
+          img.src = fullSrc;
+        }
+      }}
+    />
+  );
+}
+
+function createConcurrencyGate(maxConcurrent: number) {
+  let inFlight = 0;
+  const queue: Array<() => void> = [];
+  function runNext() {
+    if (inFlight >= maxConcurrent) return;
+    const next = queue.shift();
+    if (!next) return;
+    inFlight++;
+    next();
+  }
+  return function<T>(task: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const wrapped = () => {
+        task().then((v) => resolve(v)).catch(reject).finally(() => {
+          inFlight = Math.max(0, inFlight - 1);
+          runNext();
+        });
+      };
+      queue.push(wrapped);
+      runNext();
+    });
+  };
 }
 
 interface PhotoModalProps {

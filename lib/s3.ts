@@ -1,6 +1,8 @@
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, type ListObjectsV2CommandOutput, _Object } from '@aws-sdk/client-s3';
-import { NodeHttpHandler } from '@aws-sdk/node-http-handler';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { Agent as HttpAgent } from 'http';
+import { Agent as HttpsAgent } from 'https';
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
 
@@ -24,7 +26,8 @@ function getS3Client(): S3Client {
       forcePathStyle: true, // Hetzner requires path-style URLs
       credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
       requestHandler: new NodeHttpHandler({
-        keepAlive: true,
+        httpAgent: new HttpAgent({ keepAlive: true, keepAliveMsecs: 1000 }),
+        httpsAgent: new HttpsAgent({ keepAlive: true, keepAliveMsecs: 1000 }),
       }),
     });
   }
