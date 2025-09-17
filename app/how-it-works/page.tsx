@@ -25,7 +25,7 @@ export default function HowItWorksPage() {
                   <Calendar className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Create an event</h3>
-                <p className="mt-3 text-base text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
+                <p className="mt-3 text-xs text-gray-600">Name it, set the date, pick guest upload and approval options.</p>
               </div>
             </div>
             {/* Card 1b: Plan timeline */}
@@ -36,7 +36,7 @@ export default function HowItWorksPage() {
                   <CalendarClock className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Plan timeline</h3>
-                <p className="mt-3 text-base text-gray-600">Add schedule items like ceremony, speeches, and first dance so guests know what’s next.</p>
+                <p className="mt-3 text-xs text-gray-600">Add schedule items like ceremony, speeches, and first dance so guests know what’s next.</p>
               </div>
             </div>
             {/* Card 2 */}
@@ -47,7 +47,7 @@ export default function HowItWorksPage() {
                   <QrCode className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Share your code</h3>
-                <p className="mt-3 text-base text-gray-600">Guests join via a short code or QR—no app or sign-up required.</p>
+                <p className="mt-3 text-xs text-gray-600">Guests join via a short code or QR—no app or sign-up required.</p>
               </div>
             </div>
             {/* Card 3 */}
@@ -58,7 +58,7 @@ export default function HowItWorksPage() {
                   <Upload className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Guests upload</h3>
-                <p className="mt-3 text-base text-gray-600">Everyone contributes their best shots in real time during the event.</p>
+                <p className="mt-3 text-xs text-gray-600">Everyone contributes their best shots in real time during the event.</p>
               </div>
             </div>
             {/* Card 4 */}
@@ -69,7 +69,7 @@ export default function HowItWorksPage() {
                   <CheckCircle2 className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Approve & share</h3>
-                <p className="mt-3 text-base text-gray-600">You stay in control. Approve photos and share the gallery instantly.</p>
+                <p className="mt-3 text-xs text-gray-600">You stay in control. Approve photos and share the gallery instantly.</p>
               </div>
             </div>
              {/* Card 1 */}
@@ -80,7 +80,7 @@ export default function HowItWorksPage() {
                   <Shield className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Private & secure</h3>
-                <p className="mt-3 text-base text-gray-600">Each event has its own private gallery secured by access codes. Optional approval before anything goes live.</p>
+                <p className="mt-3 text-xs text-gray-600">Each event has its own private gallery secured by access codes. Optional approval before anything goes live.</p>
               </div>
             </div>
             {/* Card 2 */}
@@ -91,7 +91,7 @@ export default function HowItWorksPage() {
                   <Users className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Built for guests</h3>
-                <p className="mt-3 text-base text-gray-600">No accounts needed. Mobile-first upload and viewing that just works for everyone attending.</p>
+                <p className="mt-3 text-xs text-gray-600">No accounts needed. Mobile-first upload and viewing that just works for everyone attending.</p>
               </div>
             </div>
             {/* Card 3 */}
@@ -102,7 +102,19 @@ export default function HowItWorksPage() {
                   <ImageIcon className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Beautiful galleries</h3>
-                <p className="mt-3 text-base text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
+                <p className="mt-3 text-xs text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
+              </div>
+            </div>
+
+            {/* Card 4: Authentication by Google */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-red-400 via-yellow-400 to-blue-500 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 text-white flex items-center justify-center shadow-lg">
+                  <Shield className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Authentication provided by Google</h3>
+                <p className="mt-3 text-xs text-gray-600">Sign in securely with your Google account.</p>
               </div>
             </div>
 
