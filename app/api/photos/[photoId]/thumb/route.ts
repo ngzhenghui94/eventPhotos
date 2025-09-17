@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUser, getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
+import { getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
 import { redis } from '@/lib/upstash';
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
 // derive thumb key locally to avoid module hot-reload issues
 
@@ -29,6 +30,14 @@ export async function GET(
 
   type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
   const cacheKey = `photo:meta:${photoId}`;
+  const urlCacheKey = `photo:thumb:url:${photoId}`;
+  // Fast path: short-lived cached signed URL
+  try {
+    const cachedUrl = await redis.get<string>(urlCacheKey);
+    if (cachedUrl) {
+      return NextResponse.redirect(cachedUrl);
+    }
+  } catch {}
   let meta = await redis.get<PhotoMeta>(cacheKey);
   if (!meta) {
     const photo = await getPhotoById(photoId);
@@ -41,13 +50,9 @@ export async function GET(
     await redis.set(cacheKey, meta, { ex: 60 * 60 * 24 * 7 });
   }
 
-  const user = await getUser();
   const url = new URL(request.url);
   const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
-  const canAccess = await canUserAccessEvent(meta.eventId, { 
-    userId: user?.id, 
-    accessCode: code ?? undefined 
-  });
+  const canAccess = await canUserAccessEvent(meta.eventId, { accessCode: code ?? undefined });
   if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
   if (!meta.s3Key) {
@@ -64,15 +69,10 @@ export async function GET(
   // If thumbnail exists, proxy it from S3 with caching headers.
   try {
     await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
-    const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
-    const body = await obj.Body!.transformToByteArray();
-    return new NextResponse(Buffer.from(body), {
-      headers: {
-        'Content-Type': obj.ContentType || 'image/jpeg',
-        // Cache at the edge for 1 day, allow stale revalidate
-        'Cache-Control': 'public, s-maxage=86400, max-age=3600, stale-while-revalidate=86400',
-      },
-    });
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 600 });
+    // Cache URL briefly (just under the signed URL expiry)
+    try { await redis.set(urlCacheKey, signed, { ex: 590 }); } catch {}
+    return NextResponse.redirect(signed);
   } catch {}
 
   // Generate thumbnail on the fly (max 512px)
@@ -90,13 +90,9 @@ export async function GET(
         CacheControl: 'public, max-age=31536000, immutable',
       }));
     } catch {}
-
-  return new NextResponse(new Uint8Array(resized), {
-      headers: {
-        'Content-Type': 'image/jpeg',
-        'Cache-Control': 'public, s-maxage=86400, max-age=3600, stale-while-revalidate=86400',
-      },
-    });
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 600 });
+    try { await redis.set(urlCacheKey, signed, { ex: 590 }); } catch {}
+    return NextResponse.redirect(signed);
   } catch (err) {
     console.error('thumb generate error', err);
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url));
