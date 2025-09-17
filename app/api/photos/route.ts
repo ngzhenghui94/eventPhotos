@@ -106,6 +106,13 @@ export async function POST(request: NextRequest) {
       isApproved: !event.requireApproval,
     }).returning();
 
+    // Prime Redis metadata cache for fast subsequent access
+    try {
+      const metaKey = `photo:meta:${newPhoto.id}`;
+      const metaVal = { eventId: event.id, s3Key: key, filePath: `s3:${key}` };
+      await redis.set(metaKey, metaVal, { ex: 60 * 60 * 24 * 7 });
+    } catch {}
+
     // Revalidate the guest page so newly uploaded photos appear on refresh
     try {
       if (event.eventCode) {

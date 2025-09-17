@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser, getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
+import { redis } from '@/lib/upstash';
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import sharp from 'sharp';
 // derive thumb key locally to avoid module hot-reload issues
@@ -26,24 +27,35 @@ export async function GET(
   const photoId = parseInt(photoIdStr);
   if (!photoId) return NextResponse.json({ error: 'Invalid photo ID' }, { status: 400 });
 
-  const photo = await getPhotoById(photoId);
-  if (!photo) return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
+  type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
+  const cacheKey = `photo:meta:${photoId}`;
+  let meta = await redis.get<PhotoMeta>(cacheKey);
+  if (!meta) {
+    const photo = await getPhotoById(photoId);
+    if (!photo) return NextResponse.json({ error: 'Photo not found' }, { status: 404 });
+    meta = {
+      eventId: photo.eventId,
+      s3Key: photo.filePath?.startsWith('s3:') ? photo.filePath.replace(/^s3:/, '') : null,
+      filePath: photo.filePath ?? null,
+    };
+    await redis.set(cacheKey, meta, { ex: 60 * 60 * 24 * 7 });
+  }
 
   const user = await getUser();
   const url = new URL(request.url);
   const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
-  const canAccess = await canUserAccessEvent(photo.eventId, { 
+  const canAccess = await canUserAccessEvent(meta.eventId, { 
     userId: user?.id, 
     accessCode: code ?? undefined 
   });
   if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
-  if (!photo.filePath?.startsWith('s3:')) {
+  if (!meta.s3Key) {
     // Fall back to original local file
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url));
   }
 
-  const key = photo.filePath.replace(/^s3:/, '');
+  const key = meta.s3Key;
   const lastSlash = key.lastIndexOf('/');
   const dir = key.substring(0, lastSlash);
   const file = key.substring(lastSlash + 1);

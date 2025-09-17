@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser, getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
+import { redis } from '@/lib/upstash';
+
+type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
+const META_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 export async function GET(
   request: NextRequest,
@@ -13,15 +17,25 @@ export async function GET(
       return Response.json({ error: 'Invalid photo ID' }, { status: 400 });
     }
 
-    const photo = await getPhotoById(photoId);
-    if (!photo) {
-      return Response.json({ error: 'Photo not found' }, { status: 404 });
+    const cacheKey = `photo:meta:${photoId}`;
+    let meta = await redis.get<PhotoMeta>(cacheKey);
+    if (!meta) {
+      const photo = await getPhotoById(photoId);
+      if (!photo) {
+        return Response.json({ error: 'Photo not found' }, { status: 404 });
+      }
+      meta = {
+        eventId: photo.eventId,
+        s3Key: photo.filePath?.startsWith('s3:') ? photo.filePath.replace(/^s3:/, '') : null,
+        filePath: photo.filePath ?? null,
+      };
+      await redis.set(cacheKey, meta, { ex: META_TTL_SECONDS });
     }
 
   const user = await getUser();
   const url = new URL(request.url);
   const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
-  const canAccess = await canUserAccessEvent(photo.eventId, { 
+  const canAccess = await canUserAccessEvent(meta.eventId, { 
     userId: user?.id, 
     accessCode: code ?? undefined 
   });
@@ -31,15 +45,17 @@ export async function GET(
     }
 
     // If stored on S3 (filePath like 's3:<key>'), redirect to a short-lived signed URL; else redirect to local URL
-    const isS3 = photo.filePath?.startsWith('s3:');
-    if (isS3) {
-      const key = photo.filePath.replace(/^s3:/, '');
-      const url = await getSignedDownloadUrl(key, 60);
+    const isS3 = !!meta.s3Key;
+    if (isS3 && meta.s3Key) {
+      const url = await getSignedDownloadUrl(meta.s3Key, 60);
       return NextResponse.redirect(url);
     }
 
     // Local fallback
-    return NextResponse.redirect(new URL(photo.filePath, request.url));
+    if (meta.filePath) {
+      return NextResponse.redirect(new URL(meta.filePath, request.url));
+    }
+    return Response.json({ error: 'File path missing' }, { status: 500 });
   } catch (error) {
     console.error('Error fetching photo:', error);
     return Response.json({ error: 'Failed to fetch photo' }, { status: 500 });
