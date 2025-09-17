@@ -4,6 +4,7 @@ import { cookies } from 'next/headers';
 import { notFound, redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import NoScroll from '@/components/no-scroll';
 import SlideshowClient from '@/components/slideshow-client';
 
 interface SlideshowProps { params: Promise<{ code: string }> }
@@ -26,7 +27,8 @@ export default async function SlideshowPage({ params }: SlideshowProps) {
   const photos = (await getPhotosForEvent(event.id)).filter(p => p.isApproved);
 
   return (
-    <div className="fixed inset-0 w-full h-full bg-black text-white overflow-hidden">
+    <div className="fixed inset-0 w-full h-full bg-black text-white overflow-hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+      <NoScroll />
       <Link
         href={`/events/${event.eventCode}`}
         className="absolute top-4 left-4 z-50 inline-flex items-center gap-2 px-3 py-1.5 rounded bg-white/10 hover:bg-white/20 backdrop-blur text-white text-sm"

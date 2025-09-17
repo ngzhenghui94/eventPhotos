@@ -33,6 +33,7 @@ import { generateAccessCode } from '@/lib/events/actions';
 // ...existing code...
 import DeleteEventModal from '@/components/delete-event-modal';
 import EventSettingsForm from '@/components/event-settings-form';
+import AdminEventChat from '@/components/admin-event-chat';
 
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -537,6 +538,13 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               canManage={true}
             />
           </div>
+
+          {/* Host Chat Moderation */}
+          {isEventOwner && (
+            <div className="rounded-xl border border-slate-200 bg-white shadow-sm px-6 py-6 flex flex-col gap-2 mb-6">
+              <AdminEventChat eventId={eventId} />
+            </div>
+          )}
 
           {/* Danger Zone */}
           {isEventOwner && (

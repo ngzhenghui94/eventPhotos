@@ -1,8 +1,8 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { eq } from 'drizzle-orm';
-import { events } from '@/lib/db/schema';
 import { getEventById, getEventMessages, createEventMessage, getUser } from '@/lib/db/queries';
+import { eventMessages } from '@/lib/db/schema';
 import { cookies } from 'next/headers';
 import { redis } from '@/lib/upstash';
 
@@ -99,6 +99,25 @@ export async function POST(
   });
 
   return Response.json(created, { status: 201 });
+}
+
+export async function DELETE(
+  request: NextRequest,
+  context: { params: Promise<{ eventId: string }> }
+) {
+  const { eventId } = await context.params;
+  const url = new URL(request.url);
+  const id = Number(url.searchParams.get('id'));
+  if (!id) return Response.json({ error: 'Message id required' }, { status: 400 });
+
+  const event = await getEventById(Number(eventId));
+  if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
+  const user = await getUser();
+  if (!user || (user.id !== event.createdBy && !user.isOwner)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
+  await db.delete(eventMessages).where(eq(eventMessages.id, id));
+  return Response.json({ success: true });
 }
 
 
