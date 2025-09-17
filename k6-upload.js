@@ -15,7 +15,7 @@ const filePart = http.file(bin, 'test.jpg', 'image/jpeg');
 
 // Replace with your values
 const EVENT_ID = 9; // numeric DB id
-const URL = 'http://localhost:3000/api/photos'; // omit ?code= if not needed
+const URL = 'http://www.thecrowdgrid.com/api/photos'; // omit ?code= if not needed
 
 export default function () {
   const res = http.post(URL, {

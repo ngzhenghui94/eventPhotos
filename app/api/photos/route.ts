@@ -7,6 +7,9 @@ import { generatePhotoKey, uploadToS3 } from '@/lib/s3';
 import { DEMO_ACCESS_CODE } from '@/lib/db/demo';
 import { redis } from '@/lib/upstash';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 // Redis-based rate limit for demo: 5 uploads per IP per hour
 async function rateLimitDemo(ip: string | null | undefined) {
   if (!ip) return { ok: true };
