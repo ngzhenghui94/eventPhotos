@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trash2, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/modal';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 type DeleteState = {
   error?: string;
   success?: string;

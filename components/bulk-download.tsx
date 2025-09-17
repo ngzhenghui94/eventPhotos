@@ -21,7 +21,18 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
     setLoading(true);
     setProgress(0);
     toast.info('Preparing ZIP file. This may take a moment for large events...');
-    // We will only simulate progress if the server doesn't provide total bytes
+    // Indeterminate preparing phase: show progress creeping up to ~85% until response headers arrive
+    let prepInterval: any | null = null;
+    prepInterval = setInterval(() => {
+      setProgress((prev) => {
+        const base = typeof prev === 'number' ? prev : 0;
+        const next = base + 3 + Math.random() * 6; // 3–9%
+        return Math.min(85, next);
+      });
+      return;
+    }, 350);
+
+    // We will only simulate during download if the server doesn't provide total bytes
     let interval: any | null = null;
     let fakeProgress = 0;
     try {
@@ -43,9 +54,11 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
         }
         setProgress(null);
         setLoading(false);
+        if (prepInterval) clearInterval(prepInterval);
         if (interval) clearInterval(interval);
         return;
       }
+      if (prepInterval) clearInterval(prepInterval);
       // Stream response and track progress
       const totalHeader = res.headers.get('X-Total-Bytes');
       const total = totalHeader ? parseInt(totalHeader) : 0;
@@ -89,6 +102,7 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
       toast.error('Bulk download failed. Please try again.');
       setProgress(null);
     } finally {
+      if (prepInterval) clearInterval(prepInterval);
       if (interval) clearInterval(interval);
       setLoading(false);
       setTimeout(() => setProgress(null), 1200);
