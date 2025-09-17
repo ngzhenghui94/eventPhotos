@@ -13,6 +13,8 @@ function rateLimitBulkDownload(ip: string | null | undefined) {
   return { ok: true } as const;
 }
 import { NextRequest, NextResponse } from 'next/server';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 import JSZip from 'jszip';
 import { getPhotoById, canUserAccessEvent, getUser } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';

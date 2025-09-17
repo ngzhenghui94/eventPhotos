@@ -27,6 +27,21 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ photoIds: photos.map(p => p.id) })
       });
+      // If server returned error, surface message before attempting to read blob
+      if (!res.ok) {
+        try {
+          const data = await res.json();
+          if (data?.error) throw new Error(data.error);
+        } catch {}
+        if (res.status === 429) {
+          toast.error('Rate limit reached. Please try again later.');
+        } else {
+          toast.error(`Failed to start download (${res.status}).`);
+        }
+        setProgress(null);
+        setLoading(false);
+        return;
+      }
       // Simulate progress for user feedback
       let fakeProgress = 0;
       const interval = setInterval(() => {
@@ -46,17 +61,7 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
         window.URL.revokeObjectURL(url);
         toast.success('ZIP file downloaded!');
       });
-      if (res.status === 429) {
-        let message = 'Rate limit reached. Please try again later.';
-        try {
-          const data = await res.json();
-          if (data?.error) message = data.error;
-        } catch {}
-        toast.error(message);
-        setProgress(null);
-        return;
-      }
-      if (!res.ok) throw new Error('Failed to download ZIP');
+      
     } catch (err) {
       toast.error('Bulk download failed. Please try again.');
       setProgress(null);

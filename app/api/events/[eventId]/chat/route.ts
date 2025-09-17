@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { eq } from 'drizzle-orm';
-import { getEventById, getEventMessages, createEventMessage, getUser } from '@/lib/db/queries';
+import { getEventById, getEventMessages, createEventMessage, getUser, canUserAccessEvent } from '@/lib/db/queries';
 import { eventMessages } from '@/lib/db/schema';
 import { cookies } from 'next/headers';
 import { redis } from '@/lib/upstash';
@@ -18,13 +18,17 @@ export async function GET(
   const event = await getEventById(Number(eventId));
   if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
-  // Access check for guests: require cookie code if private
-  if (!event.isPublic) {
-    const cookieKey = `evt:${event.eventCode}:access`;
-    const code = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
-    if (!code || code !== event.accessCode.toUpperCase()) {
-      return Response.json({ error: 'Access denied' }, { status: 403 });
-    }
+  // Access check: allow public, correct access code via cookie/header, or event owner
+  const cookieKey = `evt:${event.eventCode}:access`;
+  const codeFromCookie = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim() || '';
+  const codeFromHeader = request.headers.get('x-access-code')?.toUpperCase().trim() || '';
+  const user = await getUser();
+  const allowed = await canUserAccessEvent(Number(eventId), {
+    userId: user?.id,
+    accessCode: codeFromCookie || codeFromHeader || undefined,
+  });
+  if (!allowed) {
+    return Response.json({ error: 'Access denied' }, { status: 403 });
   }
 
   const messages = await getEventMessages(Number(eventId), {
@@ -55,13 +59,17 @@ export async function POST(
   const event = await getEventById(Number(eventId));
   if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
-  // Access check for guests: require cookie code if private
-  if (!event.isPublic) {
-    const cookieKey = `evt:${event.eventCode}:access`;
-    const code = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
-    if (!code || code !== event.accessCode.toUpperCase()) {
-      return Response.json({ error: 'Access denied' }, { status: 403 });
-    }
+  // Access check: allow public, correct access code via cookie/header, or event owner
+  const cookieKey = `evt:${event.eventCode}:access`;
+  const codeFromCookie = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim() || '';
+  const codeFromHeader = request.headers.get('x-access-code')?.toUpperCase().trim() || '';
+  const user = await getUser();
+  const allowed = await canUserAccessEvent(Number(eventId), {
+    userId: user?.id,
+    accessCode: codeFromCookie || codeFromHeader || undefined,
+  });
+  if (!allowed) {
+    return Response.json({ error: 'Access denied' }, { status: 403 });
   }
 
   // Simple IP-based rate limit: 20 messages per 5 minutes per IP per event
@@ -79,7 +87,6 @@ export async function POST(
     }
   } catch {}
 
-  const user = await getUser();
   let body: string = '';
   let guestName: string | undefined;
   try {
