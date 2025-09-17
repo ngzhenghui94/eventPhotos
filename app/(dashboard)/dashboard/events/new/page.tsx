@@ -16,6 +16,9 @@ import useSWR from 'swr';
 import { Suspense } from 'react';
 import { useFormStatus } from 'react-dom';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const NewEventPage = () => {
   const { data: dashboardInfo } = useSWR('/api/dashboard-info', (url) => fetch(url).then(res => res.json()), {
     dedupingInterval: 60000,

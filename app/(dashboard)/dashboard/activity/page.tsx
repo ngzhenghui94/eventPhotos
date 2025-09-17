@@ -19,6 +19,9 @@ import {
 import { ActivityType } from '@/lib/db/schema';
 import { getActivityLogs } from '@/lib/db/queries';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.SIGN_UP]: UserPlus,
   [ActivityType.SIGN_IN]: UserCog,

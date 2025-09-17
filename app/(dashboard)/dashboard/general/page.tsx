@@ -9,6 +9,9 @@ import { Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { Suspense } from 'react';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 // Shape returned by GET /api/user (see getUser in lib/db/queries.ts)

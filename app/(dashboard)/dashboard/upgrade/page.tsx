@@ -6,6 +6,9 @@ import { getStripeProducts, getStripePrices } from '@/lib/payments/stripe';
 import { SubmitButton } from '../../pricing/submit-button';
 import { brand } from '@/lib/brand';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export default async function UpgradePage() {
 	// Fetch Stripe products/prices dynamically to resolve real price IDs
 	let starterStripeId: string | undefined;

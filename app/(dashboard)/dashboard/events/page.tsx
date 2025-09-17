@@ -10,6 +10,9 @@ import { redirect } from 'next/navigation';
 import UpdateToast from '@/components/update-toast';
 import { EventsGrid } from '@/components/events-grid';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export default async function EventsPage() {
   const user = await getUser();
   let items: import('@/lib/types/common').EventWithPhotoCount[] = [];
