@@ -184,7 +184,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
                       <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
                         <span>{name}</span>
                         {isHost && (
-                          <span className="inline-flex items-center rounded-full bg-indigo-100 text-red-600 border border-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">Host</span>
+                          <span className="inline-flex items-center rounded-full bg-indigo-100 text-green-500 border border-indigo-200 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">Host</span>
                         )}
                         <span>· {new Date(m.createdAt).toLocaleTimeString()}</span>
                       </div>
