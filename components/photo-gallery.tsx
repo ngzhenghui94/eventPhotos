@@ -256,6 +256,7 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
 					alt={photo.originalFilename}
 					className="w-full h-full object-cover cursor-pointer"
 					onClick={onView}
+					preloadFull={false}
 				/>
         
         {/* Overlay with actions */}
@@ -314,9 +315,10 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
 }
 
 // Concurrency-gated, lazy image component
-function SmartImage({ thumbSrc, fullSrc, alt, className, onClick }: { thumbSrc: string; fullSrc: string; alt: string; className?: string; onClick?: () => void; }) {
+function SmartImage({ thumbSrc, fullSrc, alt, className, onClick, preloadFull = false }: { thumbSrc: string; fullSrc: string; alt: string; className?: string; onClick?: () => void; preloadFull?: boolean; }) {
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const [src, setSrc] = useState<string>('');
+  const placeholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
+  const [src, setSrc] = useState<string>(placeholder);
   const [hasLoadedFull, setHasLoadedFull] = useState(false);
 
   // Static gate across instances
@@ -325,8 +327,8 @@ function SmartImage({ thumbSrc, fullSrc, alt, className, onClick }: { thumbSrc: 
   useEffect(() => {
     const el = imgRef.current;
     if (!el) return;
-    // Start with a 1x1 transparent placeholder; we'll set src when visible
-    setSrc('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==');
+    // Ensure placeholder is set (noop if already)
+    setSrc((cur) => cur || placeholder);
 
     const io = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
@@ -338,7 +340,8 @@ function SmartImage({ thumbSrc, fullSrc, alt, className, onClick }: { thumbSrc: 
             img.onerror = () => { setSrc(fullSrc); resolve(); };
             img.src = thumbSrc;
           })).then(() => {
-            // Then schedule full image under gate
+            if (!preloadFull) return;
+            // Optionally schedule full image under gate if preloading is enabled
             gate(() => new Promise<void>((resolve) => {
               const img = new Image();
               img.onload = () => { setSrc(fullSrc); setHasLoadedFull(true); resolve(); };
@@ -365,7 +368,7 @@ function SmartImage({ thumbSrc, fullSrc, alt, className, onClick }: { thumbSrc: 
       onClick={onClick}
       onError={(e) => {
         const img = e.currentTarget as HTMLImageElement;
-        if (!hasLoadedFull) {
+        if (preloadFull && !hasLoadedFull) {
           setSrc(fullSrc);
         } else if (!img.dataset.fallback) {
           img.dataset.fallback = '1';
