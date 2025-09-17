@@ -15,7 +15,7 @@ const fileSizeBytes = (bin && typeof bin.byteLength === 'number') ? bin.byteLeng
 
 // Replace with your values
 const EVENT_ID = 9; // numeric DB id
-const ORIGIN = 'http://localhost:3000';
+const ORIGIN = 'https://events.danielninetyfour.com/';
 const ACCESS_CODE = 'SRSR1B'; // optional: set if event is private (6-char code)
 const FILE_NAME = 'test.jpg';
 const MIME = 'image/jpeg';

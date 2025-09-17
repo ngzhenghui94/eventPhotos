@@ -19,7 +19,7 @@ import { BulkDownload } from '@/components/bulk-download';
 import { EventQr } from '@/components/event-qr';
 import RegenerateCodeButton from '@/components/regenerate-code-button';
 import UpdateToast from '@/components/update-toast';
-import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
+import { uploadLimitBytes, normalizePlanName, photoLimitPerEvent } from '@/lib/plans';
 import { Input } from '@/components/ui/input';
 import { CategoryDropdown } from '@/components/category-dropdown';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu';
@@ -67,17 +67,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   // Use user's planName for limits and caps
   const planName = normalizePlanName(user?.planName ?? 'free');
   const planUploadLimit = uploadLimitBytes(planName);
-  function photoCapPerEvent(plan: string) {
-    switch (plan) {
-      case 'free': return 20;
-      case 'starter': return 50;
-      case 'hobby': return 100;
-      case 'pro': return 500;
-      case 'business':
-      default: return 1000;
-    }
-  }
-  const planPhotoCap = photoCapPerEvent(planName);
+  const planPhotoCap = photoLimitPerEvent(planName) ?? Number.MAX_SAFE_INTEGER;
   const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
   const isEventOwner = user.id === event.createdBy.id || !!user.isOwner;
 
