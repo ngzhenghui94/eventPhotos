@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, ListObjectsV2Command, type ListObjectsV2CommandOutput, _Object } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, ListObjectsV2Command, type ListObjectsV2CommandOutput, _Object } from '@aws-sdk/client-s3';
 import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Agent as HttpAgent } from 'http';
@@ -99,6 +99,20 @@ export async function deleteFromS3(key: string): Promise<void> {
   const command = new DeleteObjectCommand({
     Bucket: BUCKET_NAME,
     Key: key,
+  });
+
+  await client.send(command);
+}
+
+export async function deleteManyFromS3(keys: string[]): Promise<void> {
+  if (keys.length === 0) return;
+  const client = getS3Client();
+  const command = new DeleteObjectsCommand({
+    Bucket: BUCKET_NAME,
+    Delete: {
+      Objects: keys.map(k => ({ Key: k })),
+      Quiet: true,
+    },
   });
 
   await client.send(command);

@@ -63,4 +63,20 @@ export function photoLimitPerEvent(plan: PlanName): number | null {
       return null; // unlimited
   }
 }
-// ...existing code...
+
+export function concurrentUploadLimit(plan: PlanName): number {
+  switch (plan) {
+    case 'free':
+      return 2;
+    case 'starter':
+      return 4;
+    case 'hobby':
+      return 6;
+    case 'pro':
+      return 10;
+    case 'business':
+      return 15;
+    default:
+      return 2;
+  }
+}

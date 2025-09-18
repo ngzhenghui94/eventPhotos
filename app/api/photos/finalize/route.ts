@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { photos, users as usersTable, events as eventsTable } from '@/lib/db/schema';
-import { getEventById } from '@/lib/db/queries';
+import { getEventById, getUser, canUserAccessEvent } from '@/lib/db/queries';
 import { eq, sql } from 'drizzle-orm';
 
 export const runtime = 'nodejs';
@@ -18,6 +18,12 @@ export async function POST(request: NextRequest) {
     const event = await getEventById(eventId);
     if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
+    const user = await getUser();
+    const canAccess = await canUserAccessEvent(eventId, { userId: user?.id });
+    if (!canAccess) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const prefix = `events/${eventId}/photos/`;
     const records = items
       .filter((i) => typeof i.key === 'string' && i.key.startsWith(prefix))
@@ -28,7 +34,7 @@ export async function POST(request: NextRequest) {
         fileSize: u.fileSize,
         filePath: `s3:${u.key}`,
         eventId,
-        uploadedBy: null,
+        uploadedBy: user?.id,
         guestName: null,
         guestEmail: null,
         isApproved: !event.requireApproval,

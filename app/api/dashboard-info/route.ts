@@ -5,6 +5,9 @@ export async function GET() {
 	const { getUser } = await import('@/lib/db/queries');
 	const { eventLimit, normalizePlanName } = await import('@/lib/plans');
 	const user = await getUser();
+	if (!user) {
+		return new Response('Unauthorized', { status: 401 });
+	}
 	const planName = user?.planName || 'free';
 	const normalized = normalizePlanName(planName);
 	const limit = eventLimit(normalized);

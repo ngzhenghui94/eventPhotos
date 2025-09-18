@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, X, Image as ImageIcon } from 'lucide-react';
 import { createSignedUploadUrlsAction, finalizeUploadedPhotosAction } from '@/lib/photos/actions';
-import { uploadLimitBytes, normalizePlanName } from '@/lib/plans';
+import { uploadLimitBytes, normalizePlanName, concurrentUploadLimit } from '@/lib/plans';
 
 interface PhotoUploadProps {
   eventId: number;
@@ -84,7 +84,8 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
       const succeeded: typeof uploads = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
-      const concurrency = Math.min(4, selectedFiles.length);
+      const plan = normalizePlanName(planName);
+      const concurrency = concurrentUploadLimit(plan);
       let cursor = 0;
       async function worker() {
         while (true) {

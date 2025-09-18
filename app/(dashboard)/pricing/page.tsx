@@ -1,5 +1,5 @@
 import { checkoutAction, chooseFreePlanAction } from '@/lib/payments/actions';
-import { eventLimit, photoLimitPerEvent, uploadLimitBytes, PlanName } from '@/lib/plans';
+import { eventLimit, photoLimitPerEvent, uploadLimitBytes, PlanName, concurrentUploadLimit } from '@/lib/plans';
 import { Check, Crown } from 'lucide-react';
 import { getStripeProducts, getStripePrices } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
@@ -131,6 +131,7 @@ export default async function PricingPage() {
                 `${eventLimit(plan) === null ? 'Unlimited' : eventLimit(plan)} Event${eventLimit(plan) === 1 ? '' : 's'}`,
                 `${photoLimitPerEvent(plan) === null ? 'Unlimited' : photoLimitPerEvent(plan)} photos per event`,
                 `${(uploadLimitBytes(plan) / (1024 * 1024)).toFixed(0)}MB per upload`,
+                `${concurrentUploadLimit(plan)} concurrent uploads`,
                 'Guest Photo Sharing',
                 (plan === 'pro' || plan === 'business' ? 'Advanced Photo Gallery' : 'Basic Photo Gallery'),
                 'Photo Download & Export',

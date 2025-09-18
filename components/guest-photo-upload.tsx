@@ -144,7 +144,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
       const succeeded: UploadDescriptor[] = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
-      const concurrency = Math.min(4, selectedFiles.length);
+      const concurrency = 2; // Hard-coded for guests
       let cursor = 0;
       async function worker() {
         while (true) {

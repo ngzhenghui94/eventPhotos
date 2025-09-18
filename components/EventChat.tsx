@@ -36,10 +36,16 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
   const canSend = canAccess && text.trim().length > 0 && !sending;
 
   useEffect(() => {
-    if (!canAccess) return;
+    if (!canAccess || collapsed) {
+      return; // Stop polling if user can't access or chat is collapsed
+    }
+
     let cancelled = false;
     async function load() {
-      setLoading(true);
+      // Don't show loading spinner on background refresh, but do it on initial load
+      if (!messages.length) {
+        setLoading(true);
+      }
       try {
         const res = await fetch(`/api/events/${eventId}/chat`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load messages');
@@ -48,14 +54,20 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
           setMessages(Array.isArray(data.messages) ? data.messages : []);
         }
       } catch {
+        // Errors are ignored in polling
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
-    load();
+
+    load(); // Initial load
     const id = setInterval(load, 4000);
-    return () => { cancelled = true; clearInterval(id); };
-  }, [eventId, canAccess]);
+
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [eventId, canAccess, collapsed]);
 
   // Fetch current user to prefill/lock name if logged in
   useEffect(() => {

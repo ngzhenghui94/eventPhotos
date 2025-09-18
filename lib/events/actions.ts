@@ -1,9 +1,10 @@
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { events, ActivityType, eventTimelines } from '@/lib/db/schema';
+import { events, ActivityType, eventTimelines, photos } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { eq, sql, and, desc } from 'drizzle-orm';
 import { redis } from '@/lib/upstash';
+import { deleteManyFromS3, deriveThumbKey } from '@/lib/s3';
 // import { canCreateAnotherEvent, getTeamPlanName } from '@/lib/plans'; // Teams feature removed
 
 // Teams feature removed
@@ -118,15 +119,49 @@ const deleteEventSchema = z.object({
 export const deleteEvent = validatedActionWithUser(
   deleteEventSchema,
   async (data, _, user) => {
-  // Teams feature removed
+    // Note: `validatedActionWithUser` already verifies user is logged in.
+    // We still need to verify they OWN this event.
+    const existing = await db.query.events.findFirst({
+      where: eq(events.id, data.eventId),
+      columns: { createdBy: true },
+    });
+
+    if (!existing) {
+      return { error: 'Event not found.' };
+    }
+
+    if (existing.createdBy !== user.id) {
+      return { error: 'You do not have permission to delete this event.' };
+    }
 
     try {
-      // Delete related timelines first to satisfy FK constraints
+      // 1. Find all photos associated with the event
+      const eventPhotos = await db.query.photos.findMany({
+        where: eq(photos.eventId, data.eventId),
+        columns: { filePath: true },
+      });
+
+      // 2. Collect all S3 keys for original photos and their thumbnails
+      const s3KeysToDelete = eventPhotos.flatMap(p => [
+        p.filePath,
+        deriveThumbKey(p.filePath, 'sm'),
+        deriveThumbKey(p.filePath, 'md'),
+      ]);
+
+      // 3. Delete photos from S3 in a batch
+      if (s3KeysToDelete.length > 0) {
+        await deleteManyFromS3(s3KeysToDelete);
+      }
+
+      // 4. Delete all related DB records (photos, timelines, and the event itself)
+      // Drizzle doesn't have cascade deletes, so we do it manually.
+      await db.delete(photos).where(eq(photos.eventId, data.eventId));
       await db.delete(eventTimelines).where(eq(eventTimelines.eventId, data.eventId));
       await db.delete(events).where(eq(events.id, data.eventId));
-      return { success: 'Event deleted successfully' };
+
+      return { success: 'Event and all associated photos have been deleted successfully.' };
     } catch (error) {
-      console.error('Error deleting event:', error);
+      console.error('Error deleting event and its assets:', error);
       return { error: 'Failed to delete event. Please try again.' };
     }
   }

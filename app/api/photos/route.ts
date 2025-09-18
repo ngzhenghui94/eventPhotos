@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { db } from '@/lib/db/drizzle';
 import { photos, ActivityType } from '@/lib/db/schema';
-import { getUser, getEventById } from '@/lib/db/queries';
+import { getUser, getEventById, canUserAccessEvent } from '@/lib/db/queries';
 import { generatePhotoKey, uploadToS3 } from '@/lib/s3';
 import { DEMO_ACCESS_CODE } from '@/lib/db/demo';
 import { redis } from '@/lib/upstash';
@@ -49,6 +49,13 @@ export async function POST(request: NextRequest) {
     const event = await getEventById(eventId);
     if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
+    const user = await getUser();
+    const canAccess = await canUserAccessEvent(eventId, { userId: user?.id });
+
+    if (!canAccess) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const key = generatePhotoKey(eventId, file.name);
     const fileBuffer = Buffer.from(await file.arrayBuffer());
     await uploadToS3(key, fileBuffer, file.type);
@@ -60,7 +67,7 @@ export async function POST(request: NextRequest) {
       mimeType: file.type,
       fileSize: file.size,
       filePath: `s3:${key}`,
-      uploadedBy: null,
+      uploadedBy: user?.id,
       guestName: null,
       guestEmail: null,
       isApproved: !event.requireApproval,

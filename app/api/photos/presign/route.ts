@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db/drizzle';
 import { photos, events as eventsTable, users as usersTable } from '@/lib/db/schema';
-import { getEventById } from '@/lib/db/queries';
+import { getEventById, getUser, canUserAccessEvent } from '@/lib/db/queries';
 import { getSignedUploadUrl, generatePhotoKey } from '@/lib/s3';
 import { uploadLimitBytes, normalizePlanName, photoLimitPerEvent } from '@/lib/plans';
 import { sql, eq } from 'drizzle-orm';
@@ -27,16 +27,12 @@ export async function POST(request: NextRequest) {
     const event = await getEventById(eventId);
     if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
-    // Access control for private events: allow via cookie or x-access-code header/body
-    if (!event.isPublic) {
-      const cookieKey = `evt:${event.eventCode}:access`;
-      const accessFromCookie = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
-      const accessFromHeader = request.headers.get('x-access-code')?.toUpperCase().trim();
-      const accessFromBody = typeof payload?.accessCode === 'string' ? payload.accessCode.toUpperCase().trim() : '';
-      const provided = accessFromCookie || accessFromHeader || accessFromBody;
-      if (!provided || provided !== event.accessCode.toUpperCase()) {
-        return Response.json({ error: 'Access denied' }, { status: 403 });
-      }
+    const user = await getUser();
+    const accessCode = typeof payload?.accessCode === 'string' ? payload.accessCode : undefined;
+    const canAccess = await canUserAccessEvent(eventId, { userId: user?.id, accessCode });
+
+    if (!canAccess) {
+      return Response.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Determine size and count limits by host plan
