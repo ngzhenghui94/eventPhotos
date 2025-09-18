@@ -139,43 +139,51 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
       type UploadDescriptor = { key: string; url: string; originalFilename: string; mimeType: string; fileSize: number };
       const { uploads }: { uploads: UploadDescriptor[] } = await presignRes.json();
 
-      // 2) PUT files directly to S3 with progress
+      // 2) PUT files directly to S3 with bounded concurrency and progress
       const remaining = [...uploads];
       const succeeded: UploadDescriptor[] = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
-      await Promise.all(selectedFiles.map((file, idx) => {
-        return new Promise<void>((resolve) => {
+      const concurrency = Math.min(4, selectedFiles.length);
+      let cursor = 0;
+      async function worker() {
+        while (true) {
+          const idx = cursor++;
+          if (idx >= selectedFiles.length) return;
+          const file = selectedFiles[idx];
           const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
-          if (uIdx === -1) return resolve();
+          if (uIdx === -1) continue;
           const u = remaining.splice(uIdx, 1)[0];
-          const xhr = new XMLHttpRequest();
-          xhr.open('PUT', u.url);
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) {
-              setUploadProgress((prev) => {
-                const next = [...prev];
-                next[idx] = Math.round((e.loaded / e.total) * 100);
-                return next;
-              });
-            }
-          };
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-              succeeded.push(u);
-            } else {
-              failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
-            }
-            resolve();
-          };
-          xhr.onerror = () => {
-            failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
-            resolve();
-          };
-          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-          xhr.send(file);
-        });
-      }));
+          await new Promise<void>((resolve) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('PUT', u.url);
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) {
+                setUploadProgress((prev) => {
+                  const next = [...prev];
+                  next[idx] = Math.round((e.loaded / e.total) * 100);
+                  return next;
+                });
+              }
+            };
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                succeeded.push(u);
+              } else {
+                failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
+              }
+              resolve();
+            };
+            xhr.onerror = () => {
+              failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
+              resolve();
+            };
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            xhr.send(file);
+          });
+        }
+      }
+      await Promise.all(Array.from({ length: concurrency }, () => worker()));
 
       // 3) Finalize successful uploads to create DB records
       if (succeeded.length > 0) {

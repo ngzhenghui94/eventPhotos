@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import JSZip from 'jszip';
+import { Readable } from 'stream';
 import { getPhotoById, canUserAccessEvent, getUser } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
 
@@ -44,21 +45,8 @@ export async function POST(request: NextRequest) {
     const user = await getUser();
     const zip = new JSZip();
     let totalBytes = 0;
-    const fetchWithRetry = async (url: string, tries = 2) => {
-      let lastErr: any;
-      for (let i = 0; i < tries; i++) {
-        try {
-          const res = await fetch(url);
-          if (res.ok) return await res.arrayBuffer();
-          lastErr = new Error(`HTTP ${res.status}`);
-        } catch (e) {
-          lastErr = e;
-        }
-      }
-      throw lastErr;
-    };
-    // Parallel fetch with bounded concurrency
-    const concurrency = 6;
+    // Parallel fetch with bounded concurrency; add file streams to zip
+    const concurrency = 4;
     let current = 0;
     async function worker() {
       while (true) {
@@ -74,31 +62,34 @@ export async function POST(request: NextRequest) {
           totalBytes += photo.fileSize;
         }
         try {
-          let buffer: ArrayBuffer;
+          let url: string | null = null;
           if (photo.filePath?.startsWith('s3:')) {
             const key = photo.filePath.replace(/^s3:/, '');
-            const url = await getSignedDownloadUrl(key, 60, {
+            url = await getSignedDownloadUrl(key, 60, {
               contentDisposition: `attachment; filename=\"${encodeURIComponent(filename)}\"`
             });
-            buffer = await fetchWithRetry(url, 2);
           } else if (photo.filePath) {
-            buffer = await fetchWithRetry(photo.filePath, 2);
-          } else {
-            return;
+            url = photo.filePath;
           }
-          zip.file(filename, Buffer.from(buffer));
+          if (!url) continue;
+          const res = await fetch(url);
+          if (!res.ok || !res.body) continue;
+          // Convert Web ReadableStream to Node Readable for JSZip
+          const nodeReadable = Readable.fromWeb(res.body as any);
+          zip.file(filename, nodeReadable as any);
         } catch {}
       }
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, photoIds.length) }, () => worker()));
-    const zipBuffer = await zip.generateAsync({ type: 'uint8array', compression: 'STORE' });
-    return new NextResponse(zipBuffer as any, {
+    // Stream the zip to the client to avoid buffering in memory
+    const nodeStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'STORE' });
+    return new NextResponse(nodeStream as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="photos.zip"',
-        'Content-Length': String((zipBuffer as Uint8Array).byteLength),
         'X-Total-Bytes': String(totalBytes || 0),
+        // No Content-Length because we are streaming
       },
     });
   } catch (error) {

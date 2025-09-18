@@ -36,6 +36,14 @@ interface Photo {
   createdAt: string;
 }
 
+interface PresignedUpload {
+  key: string;
+  url: string;
+  originalFilename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
 interface PublicGalleryProps {
   params: Promise<{ eventId: string }>;
 }
@@ -104,10 +112,11 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
         const data = await presignRes.json().catch(() => ({}));
         throw new Error(data?.error || 'Failed to create upload URLs');
       }
-      const { uploads } = await presignRes.json();
+      const presignData: { uploads: PresignedUpload[] } = await presignRes.json();
+      const uploads: PresignedUpload[] = presignData.uploads;
 
-      const remaining = [...uploads];
-      const succeeded: typeof uploads = [];
+      const remaining: PresignedUpload[] = [...uploads];
+      const succeeded: PresignedUpload[] = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
       await Promise.all(Array.from(files).map((file) => {
