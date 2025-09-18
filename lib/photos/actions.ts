@@ -85,15 +85,59 @@ export async function uploadPhotosAction(formData: FormData) {
 
       const photoRecord = await db.query.photos.findFirst({ where: eq(photos.id, photoId) });
       if (!photoRecord) throw new Error('Photo not found');
-      if (photoRecord.uploadedBy !== user.id) {
-        throw new Error('You do not have permission to delete this photo');
-      }
+        // Fetch event to validate ownership / permissions
+        const eventRecord = await db.query.events.findFirst({ where: eq(events.id, photoRecord.eventId) });
+        if (!eventRecord) throw new Error('Event not found');
+
+        // Determine permission: uploader, event owner, or super admin
+        const { isSuperAdminUser } = await import('@/lib/auth/admin');
+        const isUploader = photoRecord.uploadedBy === user.id;
+        const isEventOwner = eventRecord.createdBy === user.id;
+        const isSuperAdmin = isSuperAdminUser(user as any);
+        if (!(isUploader || isEventOwner || isSuperAdmin)) {
+          throw new Error('You do not have permission to delete this photo');
+        }
 
       // Delete the physical file
       await FileOperationUtils.deleteFile(photoRecord.filePath);
 
+        // Also attempt to delete derived thumbnail if it exists
+        try {
+          const key = photoRecord.filePath.startsWith('s3:') ? photoRecord.filePath.slice(3) : photoRecord.filePath;
+          const thumbKey = deriveThumbKey(key);
+          if (thumbKey) {
+            await FileOperationUtils.deleteFile(`s3:${thumbKey}`);
+          }
+        } catch (err) {
+          // Non-fatal; log for observability but don't block deletion
+          console.warn('Thumbnail deletion failed (non-fatal):', err);
+        }
+
       // Delete the database record
       await db.delete(photos).where(eq(photos.id, photoId));
+
+        // Log activity
+        try {
+          const { logActivity } = await import('@/lib/db/queries');
+          await logActivity({
+            userId: user.id,
+            action: 'DELETE_PHOTO',
+            detail: `Deleted photo '${photoRecord.originalFilename || photoRecord.filename}' (id ${photoId}) from event ${photoRecord.eventId}`,
+          });
+        } catch (e) {
+          console.warn('Failed to log DELETE_PHOTO activity:', e);
+        }
+
+        // Revalidate affected pages (best-effort)
+        try {
+          const { revalidatePath } = await import('next/cache');
+          if (eventRecord.eventCode) {
+            revalidatePath(`/dashboard/events/${eventRecord.eventCode}`);
+            revalidatePath(`/events/${eventRecord.eventCode}`);
+          }
+        } catch (e) {
+          // Ignore revalidation failures
+        }
       
       return { success: true };
     }, 'deletePhotoAction');
