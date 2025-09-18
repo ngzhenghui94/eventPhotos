@@ -131,12 +131,24 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             )}
             {/* Event Timeline */}
             <div>
-              {timelineItems && timelineItems.length > 0 ? (
-                <div className="mb-8">
-                  <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:guest:${event.id}`} />
-                </div>
+              {(event.isPublic || hasAccess) ? (
+                (timelineItems && timelineItems.length > 0 ? (
+                  <div className="mb-8">
+                    <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:guest:${event.id}`} />
+                  </div>
+                ) : (
+                  <div className="mb-8 rounded-xl border border-gray-200 bg-white px-6 py-6 text-center text-gray-400 italic">No timeline entries yet.</div>
+                ))
               ) : (
-                <div className="mb-8 rounded-xl border border-gray-200 bg-white px-6 py-6 text-center text-gray-400 italic">No timeline entries yet.</div>
+                <div className="mb-8 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm px-6 py-6">
+                  <div className="mb-4 flex items-center gap-2">
+                    <span className="bg-blue-100 rounded-full p-2"><Calendar className="w-6 h-6 text-blue-600" /></span>
+                    <span className="font-bold text-2xl text-blue-900">Event Timeline</span>
+                  </div> 
+                  <div className="text-sm text-gray-300">
+                    Unlock the event to view timeline of event.
+                  </div>
+                </div>
               )}
             </div>
             {/* Event Description */}

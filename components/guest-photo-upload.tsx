@@ -107,7 +107,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
     setIsUploading(true);
     setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
-      // Get event code and access cookie in parallel
+      // Access code from cookie (if private event)
       let eventCode = '';
       try {
         const parts = window.location.pathname.split('/');
@@ -122,21 +122,35 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         .reduce((acc, [k, v]) => { if (k) acc[k] = decodeURIComponent(v || ''); return acc; }, {} as Record<string, string>);
       const accessCode = cookieName ? (cookieMap[cookieName] || '') : '';
 
-      let successCount = 0;
-      const failures: { name: string; message: string }[] = [];
+      // 1) Request presigned URLs for all files
+      const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
+      const presignRes = await fetch('/api/photos/guest/presign', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessCode ? { 'x-access-code': accessCode } : {}),
+        },
+        body: JSON.stringify({ eventId, files: meta, accessCode: accessCode || undefined }),
+      });
+      if (!presignRes.ok) {
+        const data = await presignRes.json().catch(() => ({}));
+        throw new Error(data?.error || 'Failed to create upload URLs');
+      }
+      type UploadDescriptor = { key: string; url: string; originalFilename: string; mimeType: string; fileSize: number };
+      const { uploads }: { uploads: UploadDescriptor[] } = await presignRes.json();
+
+      // 2) PUT files directly to S3 with progress
+      const remaining = [...uploads];
+      const succeeded: UploadDescriptor[] = [];
+      const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
       await Promise.all(selectedFiles.map((file, idx) => {
         return new Promise<void>((resolve) => {
-          const fd = new FormData();
-          fd.append('eventId', eventId.toString());
-          fd.append('guestName', guestName.trim());
-          if (guestEmail.trim()) fd.append('guestEmail', guestEmail.trim());
-          fd.append('file', file);
-
-          // Progress tracking
+          const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
+          if (uIdx === -1) return resolve();
+          const u = remaining.splice(uIdx, 1)[0];
           const xhr = new XMLHttpRequest();
-          xhr.open('POST', '/api/photos');
-          if (accessCode) xhr.setRequestHeader('x-access-code', accessCode);
+          xhr.open('PUT', u.url);
           xhr.upload.onprogress = (e) => {
             if (e.lengthComputable) {
               setUploadProgress((prev) => {
@@ -148,42 +162,59 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
           };
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
-              successCount += 1;
+              succeeded.push(u);
             } else {
-              let data: any = {};
-              try { data = JSON.parse(xhr.responseText); } catch {}
-              if (data?.error && typeof data.error === 'string' && data.error.includes('Photo limit for this event has been reached')) {
-                toast.error('You have reached the maximum number of photos allowed for this event.');
-              }
-              failures.push({ name: file.name, message: data?.error || 'Upload failed' });
+              failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
             }
             resolve();
           };
           xhr.onerror = () => {
-            failures.push({ name: file.name, message: 'Network error' });
+            failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
             resolve();
           };
-          xhr.send(fd);
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          xhr.send(file);
         });
       }));
 
-      if (successCount > 0) {
-        toast.success('Photos uploaded', { description: `${successCount} photo${successCount > 1 ? 's' : ''} uploaded.` });
-        router.refresh();
-      }
-      if (failures.length > 0) {
-        const first = failures[0];
-        const more = failures.length > 1 ? ` (+${failures.length - 1} more)` : '';
-        toast.error('Some uploads failed', { description: `${first.name}: ${first.message}${more}` });
+      // 3) Finalize successful uploads to create DB records
+      if (succeeded.length > 0) {
+        const finalizeRes = await fetch('/api/photos/guest/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId,
+            guestName: guestName.trim(),
+            guestEmail: guestEmail.trim() || null,
+            items: succeeded.map((u: UploadDescriptor) => ({
+              key: u.key,
+              originalFilename: u.originalFilename,
+              mimeType: u.mimeType,
+              fileSize: u.fileSize,
+            })),
+          }),
+        });
+        if (!finalizeRes.ok) {
+          const data = await finalizeRes.json().catch(() => ({}));
+          throw new Error(data?.error || 'Failed to finalize uploads');
+        }
       }
 
       setSelectedFiles([]);
       setGuestName('');
       setGuestEmail('');
       setUploadProgress([]);
-    } catch (error) {
+      router.refresh();
+
+      if (failures.length) {
+        const first = failures[0];
+        toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
+      } else {
+        toast.success('Photos uploaded');
+      }
+    } catch (error: any) {
       console.error('Upload error:', error);
-      toast.error('Failed to upload photos. Please try again.');
+      toast.error('Failed to upload photos', { description: String(error?.message || error) });
     } finally {
       setIsUploading(false);
     }

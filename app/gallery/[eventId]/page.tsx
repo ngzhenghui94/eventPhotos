@@ -93,30 +93,78 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
     setError(null);
 
     try {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('eventId', eventId);
-        if (uploaderName) formData.append('uploaderName', uploaderName);
-        if (uploaderEmail) formData.append('uploaderEmail', uploaderEmail);
+      // Build metadata and request presigned URLs
+      const meta = Array.from(files).map(f => ({ name: f.name, type: f.type, size: f.size }));
+      const presignRes = await fetch('/api/photos/guest/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventId: Number(eventId), files: meta }),
+      });
+      if (!presignRes.ok) {
+        const data = await presignRes.json().catch(() => ({}));
+        throw new Error(data?.error || 'Failed to create upload URLs');
+      }
+      const { uploads } = await presignRes.json();
 
-        const response = await fetch('/api/photos', {
-          method: 'POST',
-          body: formData,
+      const remaining = [...uploads];
+      const succeeded: typeof uploads = [];
+      const failures: Array<{ name: string; status?: number; detail?: string }> = [];
+
+      await Promise.all(Array.from(files).map((file) => {
+        return new Promise<void>((resolve) => {
+          const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
+          if (uIdx === -1) return resolve();
+          const u = remaining.splice(uIdx, 1)[0];
+          const xhr = new XMLHttpRequest();
+          xhr.open('PUT', u.url);
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              succeeded.push(u);
+            } else {
+              failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
+            }
+            resolve();
+          };
+          xhr.onerror = () => {
+            failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
+            resolve();
+          };
+          xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+          xhr.send(file);
         });
+      }));
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Failed to upload photo');
+      if (succeeded.length > 0) {
+        const finalizeRes = await fetch('/api/photos/guest/finalize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            eventId: Number(eventId),
+            guestName: uploaderName || null,
+            guestEmail: uploaderEmail || null,
+            items: succeeded.map(u => ({
+              key: u.key,
+              originalFilename: u.originalFilename,
+              mimeType: u.mimeType,
+              fileSize: u.fileSize,
+            })),
+          }),
+        });
+        if (!finalizeRes.ok) {
+          const data = await finalizeRes.json().catch(() => ({}));
+          throw new Error(data?.error || 'Failed to finalize uploads');
         }
       }
 
-      // Refresh photos after upload
       await fetchEventPhotos();
       setShowUploadModal(false);
       setUploaderName('');
       setUploaderEmail('');
+
+      if (failures.length) {
+        const first = failures[0];
+        setError(`Some uploads failed: ${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}`);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload photos');
     } finally {
