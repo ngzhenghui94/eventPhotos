@@ -9,20 +9,40 @@ export async function POST(request: Request) {
   } catch {
     return Response.json({ error: 'Invalid JSON' }, { status: 400 });
   }
-  const keys = Array.isArray(body?.keys) ? body.keys.filter((k: any) => typeof k === 'string') : [];
+  const keys = Array.isArray(body?.keys) ? body.keys.filter((k: any) => typeof k === 'string' && k.trim().length > 0) : [];
   if (!keys.length) {
     return Response.json({ error: 'No keys provided' }, { status: 400 });
   }
-  const results: { key: string; ok: boolean; error?: string }[] = [];
-  for (const key of keys) {
-    try {
-      await deleteFromS3(key);
-      results.push({ key, ok: true });
-    } catch (e: any) {
-      results.push({ key, ok: false, error: e?.message || 'Delete failed' });
+
+  // Fallback implementation: delete each key individually with bounded concurrency.
+  const concurrency = 8;
+  let cursor = 0;
+  const deleted: string[] = [];
+  const errors: { key: string; error: string }[] = [];
+
+  async function worker() {
+    while (true) {
+      const idx = cursor++;
+      if (idx >= keys.length) return;
+      const key = keys[idx];
+      try {
+        await deleteFromS3(key);
+        deleted.push(key);
+      } catch (err: any) {
+        errors.push({ key, error: err?.message || 'Delete failed' });
+      }
     }
   }
-  return Response.json({ deleted: results.filter(r => r.ok).length, results });
+
+  await Promise.all(Array.from({ length: Math.min(concurrency, keys.length) }, () => worker()));
+
+  return Response.json({
+    success: errors.length === 0,
+    deleted: deleted.length,
+    failed: errors.length,
+    errors,
+  }, { status: errors.length ? 207 : 200 });
 }
+
 
 

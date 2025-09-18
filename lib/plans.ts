@@ -69,13 +69,13 @@ export function concurrentUploadLimit(plan: PlanName): number {
     case 'free':
       return 2;
     case 'starter':
-      return 4;
-    case 'hobby':
-      return 6;
-    case 'pro':
       return 10;
-    case 'business':
+    case 'hobby':
       return 15;
+    case 'pro':
+      return 20;
+    case 'business':
+      return 25;
     default:
       return 2;
   }

@@ -16,7 +16,9 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
 
   const toggleAll = (value: boolean) => {
     const next: Record<string, boolean> = {};
-    for (const o of orphaned) next[o.key] = value;
+    if (value) {
+      for (const o of orphaned) next[o.key] = value;
+    }
     setSelected(next);
   };
 
@@ -30,15 +32,12 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
         body: JSON.stringify({ keys: selectedKeys }),
       });
       const data = await res.json();
-      if (res.ok) {
-        toast.success(`Deleted ${data.deleted} object(s)`);
-        // Remove deleted keys from local list
-        const deletedSet = new Set<string>(data.results.filter((r: any) => r.ok).map((r: any) => r.key));
-        setSelected((prev) => {
-          const copy = { ...prev };
-          for (const key of deletedSet) delete copy[key];
-          return copy;
-        });
+      if (res.ok || res.status === 207) {
+        if (data.deleted) toast.success(`Deleted ${data.deleted} object(s)`);
+        if (data.failed) {
+          toast.error(`${data.failed} object(s) failed to delete`);
+          console.warn('Delete failures:', data.errors);
+        }
         window.location.reload();
       } else {
         toast.error(data?.error || 'Delete failed');
@@ -71,7 +70,7 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+a.href = url;
       a.download = `orphans-${Date.now()}.zip`;
       document.body.appendChild(a);
       a.click();
@@ -81,6 +80,43 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
       toast.error(e?.message || 'Download failed');
     } finally {
       setDownloading(false);
+    }
+  }
+
+  // Delete ALL orphaned objects without requiring selection (with confirmation)
+  async function onDeleteAll() {
+    if (orphaned.length === 0) return;
+    const proceed = window.confirm(`Delete all ${orphaned.length} orphaned object(s)? This cannot be undone.`);
+    if (!proceed) return;
+    setDeleting(true);
+    try {
+      const allKeys = orphaned.map(o => o.key);
+      const batchSize = 200; // Avoid very large payloads
+      let totalDeleted = 0;
+      let totalFailed = 0;
+      for (let i = 0; i < allKeys.length; i += batchSize) {
+        const slice = allKeys.slice(i, i + batchSize);
+        const res = await fetch('/api/admin/storage/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ keys: slice }),
+        });
+        const data = await res.json();
+        if (res.ok || res.status === 207) {
+          totalDeleted += data.deleted || 0;
+          totalFailed += data.failed || 0;
+        } else {
+            toast.error(data?.error || `Batch delete failed at ${i}/${allKeys.length}`);
+            break;
+        }
+      }
+      if (totalDeleted) toast.success(`Deleted ${totalDeleted} object(s)`);
+      if (totalFailed) toast.error(`${totalFailed} object(s) failed to delete`);
+      window.location.reload();
+    } catch (e: any) {
+      toast.error(e?.message || 'Delete failed');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -96,6 +132,9 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
                 Downloading…
               </span>
             ) : 'Download All'}
+          </Button>
+          <Button variant="destructive" onClick={onDeleteAll} disabled={deleting || downloading || orphaned.length === 0}>
+            {deleting ? 'Deleting…' : `Delete All (${orphaned.length})`}
           </Button>
           <Button variant="secondary" onClick={() => toggleAll(true)}>Select All</Button>
           <Button variant="secondary" onClick={() => toggleAll(false)}>Clear</Button>
@@ -121,7 +160,12 @@ export default function AdminOrphansTable({ orphaned }: { orphaned: { key: strin
               ) : orphaned.map((o) => (
                 <tr key={o.key} className="border-b last:border-0">
                   <td className="py-2 pr-4 align-top">
-                    <Checkbox checked={!!selected[o.key]} onChange={(e) => setSelected((s) => ({ ...s, [o.key]: (e.target as HTMLInputElement).checked }))} />
+                    <Checkbox
+                      checked={!!selected[o.key]}
+                      onChange={(e) => {
+                        setSelected((s) => ({ ...s, [o.key]: e.target.checked }));
+                      }}
+                    />
                   </td>
                   <td className="py-2 pr-4 font-mono break-all">{o.key}</td>
                   <td className="py-2 pr-4">{o.size}</td>

@@ -107,15 +107,65 @@ export async function deleteFromS3(key: string): Promise<void> {
 export async function deleteManyFromS3(keys: string[]): Promise<void> {
   if (keys.length === 0) return;
   const client = getS3Client();
-  const command = new DeleteObjectsCommand({
-    Bucket: BUCKET_NAME,
-    Delete: {
-      Objects: keys.map(k => ({ Key: k })),
-      Quiet: true,
-    },
-  });
+  const chunkSize = 1000; // S3 deleteObjects limit
 
-  await client.send(command);
+  for (let i = 0; i < keys.length; i += chunkSize) {
+    const chunk = keys.slice(i, i + chunkSize);
+    const command = new DeleteObjectsCommand({
+      Bucket: BUCKET_NAME,
+      Delete: {
+        Objects: chunk.map(k => ({ Key: k })),
+        Quiet: true,
+      },
+    });
+    await client.send(command);
+  }
+}
+
+// Enhanced bulk delete with granular error capture & per-key fallback if a chunk fails
+export async function deleteManyFromS3Detailed(keys: string[]): Promise<{ deleted: string[]; errors: { key: string; error: string }[] }> {
+  const deleted: string[] = [];
+  const errors: { key: string; error: string }[] = [];
+  if (!keys.length) return { deleted, errors };
+
+  // Normalize keys: trim & dedupe
+  const uniqueKeys = Array.from(new Set(keys.map(k => k.trim()).filter(k => k.length > 0)));
+  const client = getS3Client();
+  const chunkSize = 500; // a bit smaller than limit for safety
+
+  for (let i = 0; i < uniqueKeys.length; i += chunkSize) {
+    const chunk = uniqueKeys.slice(i, i + chunkSize);
+    const command = new DeleteObjectsCommand({
+      Bucket: BUCKET_NAME,
+      Delete: {
+        Objects: chunk.map(k => ({ Key: k })),
+        Quiet: false, // we want the Deleted / Errors arrays
+      },
+    });
+    try {
+      const res: any = await client.send(command);
+      if (Array.isArray(res?.Deleted)) {
+        for (const d of res.Deleted) if (d?.Key) deleted.push(d.Key);
+      }
+      if (Array.isArray(res?.Errors) && res.Errors.length) {
+        // If we got specific errors, record them and continue
+        for (const er of res.Errors) {
+          if (er?.Key) errors.push({ key: er.Key, error: er?.Message || 'Unknown error' });
+        }
+      }
+    } catch (chunkErr: any) {
+      // Fallback to per-key deletes for this chunk to identify offenders
+      for (const key of chunk) {
+        try {
+          await client.send(new DeleteObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+          deleted.push(key);
+        } catch (singleErr: any) {
+          errors.push({ key, error: singleErr?.message || 'Delete failed' });
+        }
+      }
+    }
+  }
+  return { deleted, errors };
 }
 
 export function generatePhotoKey(eventId: number, fileName: string): string {
