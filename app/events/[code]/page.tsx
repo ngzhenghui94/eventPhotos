@@ -109,7 +109,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
         <div className="grid gap-8 lg:grid-cols-4">
           <div className="lg:col-span-3 space-y-8">
             {/* Inline Slideshow (hidden until unlocked for private events) */}
-            {photos.length > 0 && (event.isPublic || hasAccess) && (
+            {photos.length > 0 && (event.isPublic || hasAccess) && event.slideshowEnabled !== false && (
               <Card className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-blue-900 text-2xl">

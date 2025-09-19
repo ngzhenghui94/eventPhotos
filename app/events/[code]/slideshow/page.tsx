@@ -13,6 +13,9 @@ export default async function SlideshowPage({ params }: SlideshowProps) {
   const { code } = await params;
   const event = await getEventByEventCode(code.toUpperCase());
   if (!event) return notFound();
+  if (event.slideshowEnabled === false) {
+    return redirect(`/events/${event.eventCode}`);
+  }
 
   const cookieKey = `evt:${event.eventCode}:access`;
   const cookieStore = await cookies();

@@ -29,6 +29,7 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
   formData.set('allowGuestUploads', form.allowGuestUploads?.checked ? 'true' : 'false');
   formData.set('requireApproval', form.requireApproval?.checked ? 'true' : 'false');
   formData.set('chatEnabled', form.chatEnabled?.checked ? 'true' : 'false');
+  formData.set('slideshowEnabled', form.slideshowEnabled?.checked ? 'true' : 'false');
     await fetch('/api/events/update', {
       method: 'POST',
       body: formData,
@@ -72,6 +73,11 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
             <input type="checkbox" id="chatEnabled" name="chatEnabled" defaultChecked={event.chatEnabled !== false} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="chatEnabled" className="font-medium">Event chat</Label>
             <span className="text-xs text-gray-400 font-medium min-w-0">Enable chat for this event</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="slideshowEnabled" name="slideshowEnabled" defaultChecked={event.slideshowEnabled !== false} className="accent-purple-600 h-4 w-4" />
+            <Label htmlFor="slideshowEnabled" className="font-medium">Slideshow</Label>
+            <span className="text-xs text-gray-400 font-medium min-w-0">Enable slideshows for this event</span>
           </div>
         </div>
         <div className="flex justify-end pt-2 gap-2">
