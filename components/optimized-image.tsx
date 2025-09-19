@@ -56,21 +56,37 @@ class ConcurrencyGate {
 
 const imageGate = new ConcurrencyGate(6);
 
-// Generate blur placeholder
+// Generate blur placeholder (SSR-safe)
 function generateBlurDataURL(width: number = 10, height: number = 10): string {
+  // If running on the server, return a tiny SVG data URL instead of using canvas
+  if (typeof document === 'undefined') {
+    const svg = encodeURIComponent(
+      `<svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'>` +
+        `<defs>` +
+          `<linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>` +
+            `<stop offset='0%' stop-color='#f3f4f6'/>` +
+            `<stop offset='100%' stop-color='#e5e7eb'/>` +
+          `</linearGradient>` +
+        `</defs>` +
+        `<rect width='100%' height='100%' fill='url(#g)'/>` +
+      `</svg>`
+    );
+    return `data:image/svg+xml;charset=utf-8,${svg}`;
+  }
+
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return '';
-  
+
   // Create a subtle gradient
   const gradient = ctx.createLinearGradient(0, 0, width, height);
   gradient.addColorStop(0, '#f3f4f6');
   gradient.addColorStop(1, '#e5e7eb');
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, width, height);
-  
+
   return canvas.toDataURL();
 }
 
@@ -210,7 +226,8 @@ export function OptimizedImage({
       {/* Main image */}
       <img
         ref={imgRef}
-        src={currentSrc || (priority ? thumbnailSrc : '')}
+        // Avoid passing empty string to src; leave it undefined until we have a URL
+        src={currentSrc || (priority ? thumbnailSrc : undefined)}
         alt={alt}
         className={`w-full h-full object-cover transition-opacity duration-300 ${
           isLoaded ? 'opacity-100' : 'opacity-0'

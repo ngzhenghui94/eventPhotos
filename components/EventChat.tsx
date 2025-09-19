@@ -61,7 +61,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
     }
 
     load(); // Initial load
-    const id = setInterval(load, 4000);
+    const id = setInterval(load, 10000);
 
     return () => {
       cancelled = true;

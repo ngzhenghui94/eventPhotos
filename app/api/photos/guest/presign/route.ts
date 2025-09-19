@@ -18,6 +18,7 @@ export async function POST(request: NextRequest) {
     const eventId = Number(payload?.eventId);
     const files: FileMeta[] = Array.isArray(payload?.files) ? payload.files : [];
     const accessFromBody: string = typeof payload?.accessCode === 'string' ? payload.accessCode : '';
+    console.info('[api][guest-presign][start]', { eventId, fileCount: files.length, userAgent: request.headers.get('user-agent'), origin: request.headers.get('origin') });
     if (!eventId || !Number.isFinite(eventId)) return Response.json({ error: 'Invalid event ID' }, { status: 400 });
     if (!files.length) return Response.json({ error: 'No files provided' }, { status: 400 });
 
@@ -31,6 +32,7 @@ export async function POST(request: NextRequest) {
       const accessFromHeader = request.headers.get('x-access-code')?.toUpperCase().trim();
       const provided = (accessFromCookie || accessFromHeader || accessFromBody)?.toUpperCase().trim();
       if (!provided || provided !== event.accessCode.toUpperCase()) {
+        console.warn('[api][guest-presign][access-denied]', { eventId });
         return Response.json({ error: 'Access denied' }, { status: 403 });
       }
     }
@@ -55,11 +57,14 @@ export async function POST(request: NextRequest) {
       const url = await getSignedUploadUrl(key, f.type);
       uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
     }
-    if (uploads.length === 0) return Response.json({ error: 'No valid files to upload' }, { status: 400 });
-
+    if (uploads.length === 0) {
+      console.warn('[api][guest-presign][no-valid-files]', { eventId, files });
+      return Response.json({ error: 'No valid files to upload' }, { status: 400 });
+    }
+    console.info('[api][guest-presign][ok]', { eventId, count: uploads.length, maxFileSize: MAX_FILE_SIZE });
     return Response.json({ uploads, maxFileSize: MAX_FILE_SIZE });
   } catch (err) {
-    console.error('guest presign error', err);
+    console.error('[api][guest-presign][error]', err);
     return Response.json({ error: 'Failed to create presigned URLs' }, { status: 500 });
   }
 }

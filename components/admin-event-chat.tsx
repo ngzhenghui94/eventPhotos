@@ -40,7 +40,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
       }
     }
     load();
-    const id = setInterval(load, 4000);
+    const id = setInterval(load, 10000);
     return () => { cancelled = true; clearInterval(id); };
   }, [eventId]);
 
