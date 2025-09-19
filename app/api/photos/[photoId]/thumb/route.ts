@@ -25,9 +25,11 @@ export async function GET(
   request: NextRequest,
   context: { params: Promise<{ photoId: string }> }
 ) {
+  const t0 = Date.now();
   const { photoId: photoIdStr } = await context.params;
   const photoId = parseInt(photoIdStr);
   if (!photoId) return NextResponse.json({ error: 'Invalid photo ID' }, { status: 400 });
+  try { console.info('[api][thumb][start]', { photoId }); } catch {}
 
   type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
   const cacheKey = `photo:meta:${photoId}`;
@@ -36,6 +38,7 @@ export async function GET(
   try {
     const cachedUrl = await redis.get<string>(urlCacheKey);
     if (cachedUrl) {
+      try { console.info('[api][thumb][cache-hit-url]', { photoId, ms: Date.now() - t0 }); } catch {}
       return NextResponse.redirect(cachedUrl);
     }
   } catch {}
@@ -49,6 +52,9 @@ export async function GET(
       filePath: photo.filePath ?? null,
     };
     await redis.set(cacheKey, meta, { ex: 60 * 60 * 24 * 7 });
+    try { console.info('[api][thumb][meta-cache-store]', { photoId, eventId: meta.eventId, hasS3Key: !!meta.s3Key }); } catch {}
+  } else {
+    try { console.info('[api][thumb][meta-cache-hit]', { photoId, eventId: meta.eventId, hasS3Key: !!meta.s3Key }); } catch {}
   }
 
   const url = new URL(request.url);
@@ -69,6 +75,17 @@ export async function GET(
     userId: user?.id,
     accessCode: providedCode || undefined,
   });
+  try {
+    console.info('[api][thumb][auth]', {
+      photoId,
+      eventId: meta.eventId,
+      hasUser: !!user,
+      hasCodeCookie: !!codeFromCookie,
+      hasCodeHeader: !!codeFromHeader,
+      hasCodeQuery: !!codeFromQuery,
+      allowed: !!canAccess,
+    });
+  } catch {}
   if (!canAccess) {
     try { console.warn('[api][thumb][403]', { photoId, eventId: meta.eventId, hasUser: !!user, hasCode: !!(providedCode) }); } catch {}
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -91,6 +108,10 @@ export async function GET(
     const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 600 });
     // Cache URL briefly (just under the signed URL expiry)
     try { await redis.set(urlCacheKey, signed, { ex: 590 }); } catch {}
+    try {
+      const uo = new URL(signed);
+      console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: thumbKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
+    } catch { console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: thumbKey, ms: Date.now() - t0 }); }
     return NextResponse.redirect(signed);
   } catch {}
 
@@ -99,6 +120,7 @@ export async function GET(
     const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
     const source = Buffer.from(await obj.Body!.transformToByteArray());
     const resized = await sharp(source).rotate().resize(512, 512, { fit: 'inside' }).jpeg({ quality: 80 }).toBuffer();
+    try { console.info('[api][thumb][generate]', { photoId, eventId: meta.eventId, srcBytes: source.length, outBytes: resized.length }); } catch {}
     // Store back to S3 for future requests (best-effort)
     try {
       await s3.send(new PutObjectCommand({
@@ -108,12 +130,18 @@ export async function GET(
         ContentType: 'image/jpeg',
         CacheControl: 'public, max-age=31536000, immutable',
       }));
+      try { console.info('[api][thumb][stored]', { photoId, key: thumbKey }); } catch {}
     } catch {}
     const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 600 });
     try { await redis.set(urlCacheKey, signed, { ex: 590 }); } catch {}
+    try {
+      const uo = new URL(signed);
+      console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
+    } catch { console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, ms: Date.now() - t0 }); }
     return NextResponse.redirect(signed);
   } catch (err) {
-    console.error('thumb generate error', err);
+    console.error('[api][thumb][error]', { photoId, eventId: meta.eventId, err });
+    try { console.info('[api][thumb][fallback-original]', { photoId, eventId: meta.eventId }); } catch {}
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url));
   }
 }
