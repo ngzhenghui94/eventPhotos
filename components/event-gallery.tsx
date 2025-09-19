@@ -6,6 +6,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Upload, Calendar, MapPin, Users, Download, X, Plus } from 'lucide-react';
+import { usePhotos } from '@/lib/hooks/use-photos';
+import { VirtualizedPhotoGrid } from './virtualized-photo-grid';
+import { OptimizedImage } from './optimized-image';
 
 interface Event {
   id: number;
@@ -17,19 +20,6 @@ interface Event {
   allowGuestUploads: boolean;
 }
 
-interface Photo {
-  id: number;
-  originalName: string;
-  url: string;
-  mimeType: string;
-  fileSize: number;
-  width?: number;
-  height?: number;
-  uploaderName?: string;
-  uploaderEmail?: string;
-  createdAt: string;
-}
-
 interface EventGalleryProps {
   event: Event;
   onBack: () => void;
@@ -37,38 +27,32 @@ interface EventGalleryProps {
 }
 
 export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedPhoto, setSelectedPhoto] = useState<Photo | null>(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [useVirtualized, setUseVirtualized] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    fetchEventPhotos();
-  }, [event.id]);
+  const {
+    photos,
+    loading,
+    error,
+    refetch
+  } = usePhotos({
+    eventId: event.id,
+    enableCache: true,
+    filterApproved: false // Show all photos in admin view
+  });
 
-  const fetchEventPhotos = async () => {
-    try {
-      const response = await fetch(`/api/events/${event.id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch photos');
-      }
-      const data = await response.json();
-      setPhotos(data.photos || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch photos');
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Auto-enable virtualization for large photo sets
+  useEffect(() => {
+    setUseVirtualized(photos.length > 100);
+  }, [photos.length]);
 
   const handleFileUpload = async (files: FileList) => {
     if (files.length === 0) return;
 
     setUploading(true);
-    setError(null);
 
     try {
       for (let i = 0; i < files.length; i++) {
@@ -89,13 +73,17 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
       }
 
       // Refresh photos after upload
-      await fetchEventPhotos();
+      await refetch();
       setShowUploadModal(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to upload photos');
+      console.error('Upload error:', err);
     } finally {
       setUploading(false);
     }
+  };
+
+  const handlePhotoClick = (photo: any, index: number) => {
+    setSelectedPhotoIndex(index);
   };
 
   const formatDate = (dateString?: string) => {
@@ -148,13 +136,23 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
           </div>
         </div>
 
-        <Button
-          onClick={() => setShowUploadModal(true)}
-          className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-2 flex items-center gap-2"
-        >
-          <Upload className="h-4 w-4" />
-          Upload Photos
-        </Button>
+        <div className="flex gap-2">
+          {photos.length > 100 && (
+            <Button
+              variant="outline"
+              onClick={() => setUseVirtualized(!useVirtualized)}
+            >
+              {useVirtualized ? 'Standard Grid' : 'Virtual Grid'}
+            </Button>
+          )}
+          <Button
+            onClick={() => setShowUploadModal(true)}
+            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-2 flex items-center gap-2"
+          >
+            <Upload className="h-4 w-4" />
+            Upload Photos
+          </Button>
+        </div>
       </div>
 
       {/* Description */}
@@ -168,11 +166,14 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
           <p className="text-red-800">{error}</p>
+          <Button onClick={refetch} variant="outline" size="sm" className="mt-2">
+            Retry
+          </Button>
         </div>
       )}
 
       {/* Loading State */}
-      {loading && (
+      {loading && photos.length === 0 && (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
         </div>
@@ -181,22 +182,24 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
       {/* Empty State */}
       {!loading && photos.length === 0 && (
         <div className="text-center py-12">
-          <Upload className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
-          <p className="text-gray-600 mb-6">Upload the first photos to get started</p>
-          <Button
-            onClick={() => setShowUploadModal(true)}
-            className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-2"
-          >
-            Upload Photos
-          </Button>
+          <div className="max-w-sm mx-auto">
+            <Upload className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No photos yet</h3>
+            <p className="text-gray-600 mb-6">Upload the first photos to get started</p>
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              className="bg-orange-500 hover:bg-orange-600 text-white rounded-full px-6 py-2"
+            >
+              Upload Photos
+            </Button>
+          </div>
         </div>
       )}
 
       {/* Photo Grid */}
       {!loading && photos.length > 0 && (
         <>
-          {(planName === 'pro' || planName === 'business') ? (
+          {(planName === 'pro' || planName === 'business') && (
             <div className="mb-4 flex flex-wrap gap-2">
               {/* Advanced features: Sorting, Filtering, Bulk Download */}
               <Button variant="outline" size="sm">Sort by Date</Button>
@@ -204,28 +207,40 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
               <Button variant="outline" size="sm">Filter by Uploader</Button>
               <Button variant="outline" size="sm">Bulk Download</Button>
             </div>
-          ) : null}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {photos.map((photo) => (
-              <Card
-                key={photo.id}
-                className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden"
-                onClick={() => setSelectedPhoto(photo)}
-              >
-                <CardContent className="p-0">
-                  <div className="aspect-square relative overflow-hidden">
-                    <img
-                      src={`/api/photos/${photo.id}/thumb`}
-                      alt={photo.originalName}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
-                      loading="lazy"
-                    />
+          )}
+          
+          {useVirtualized ? (
+            <VirtualizedPhotoGrid
+              photos={photos}
+              onPhotoClick={handlePhotoClick}
+              className="h-[600px] border rounded-lg"
+              itemsPerRow={5}
+              itemHeight={200}
+            />
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {photos.map((photo, index) => (
+                <Card
+                  key={photo.id}
+                  className="group cursor-pointer hover:shadow-lg transition-all duration-200 overflow-hidden"
+                  onClick={() => handlePhotoClick(photo, index)}
+                >
+                  <CardContent className="p-0">
+                    <div className="aspect-square relative overflow-hidden">
+                      <OptimizedImage
+                        photoId={photo.id}
+                        alt={photo.originalFilename || `Photo ${photo.id}`}
+                        className="w-full h-full group-hover:scale-105 transition-transform duration-200"
+                        sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, (max-width: 1280px) 25vw, 20vw"
+                        priority={index < 10} // Prioritize first 10 images
+                      />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-opacity duration-200" />
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </>
       )}
 
@@ -277,14 +292,14 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
       )}
 
       {/* Photo Detail Modal */}
-      {selectedPhoto && (
+      {selectedPhotoIndex !== null && photos[selectedPhotoIndex] && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-4 z-50">
           <div className="max-w-4xl w-full h-full flex flex-col">
             <div className="flex justify-between items-center p-4 text-white">
               <div>
-                <h3 className="text-lg font-medium">{selectedPhoto.originalName}</h3>
+                <h3 className="text-lg font-medium">{photos[selectedPhotoIndex].originalFilename}</h3>
                 <p className="text-sm text-gray-300">
-                  {formatFileSize(selectedPhoto.fileSize)} • {formatDate(selectedPhoto.createdAt)}
+                  {photos[selectedPhotoIndex].fileSize && formatFileSize(photos[selectedPhotoIndex].fileSize)} • {new Date(photos[selectedPhotoIndex].uploadedAt).toLocaleDateString()}
                 </p>
               </div>
               <div className="flex gap-2">
@@ -293,8 +308,8 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
                   size="sm"
                   onClick={() => {
                     const link = document.createElement('a');
-                    link.href = `/api/photos/${selectedPhoto.id}/download`;
-                    link.download = selectedPhoto.originalName;
+                    link.href = `/api/photos/${photos[selectedPhotoIndex].id}/download`;
+                    link.download = photos[selectedPhotoIndex].originalFilename || `photo-${photos[selectedPhotoIndex].id}`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -306,7 +321,7 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setSelectedPhoto(null)}
+                  onClick={() => setSelectedPhotoIndex(null)}
                   className="text-white hover:bg-white/20"
                 >
                   <X className="h-4 w-4" />
@@ -314,10 +329,11 @@ export function EventGallery({ event, onBack, planName }: EventGalleryProps) {
               </div>
             </div>
             <div className="flex-1 flex items-center justify-center p-4">
-              <img
-                src={`/api/photos/${selectedPhoto.id}/thumb`}
-                alt={selectedPhoto.originalName}
+              <OptimizedImage
+                photoId={photos[selectedPhotoIndex].id}
+                alt={photos[selectedPhotoIndex].originalFilename || `Photo ${photos[selectedPhotoIndex].id}`}
                 className="max-w-full max-h-full object-contain"
+                priority={true}
               />
             </div>
           </div>

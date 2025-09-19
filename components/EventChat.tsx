@@ -67,25 +67,6 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
 <<<<<<< Updated upstream
     load(); // Initial load
     const id = setInterval(load, 4000);
-=======
-    function schedule() {
-      if (cancelled) return;
-      timer = setTimeout(async () => {
-        if (!inFlight.current) {
-          inFlight.current = true;
-          try {
-            await load();
-          } finally {
-            inFlight.current = false;
-          }
-        }
-        schedule();
-      }, POLL_MS);
-    }
-
-    // Initial load then schedule next
-    load().finally(schedule);
->>>>>>> Stashed changes
 
     return () => {
       cancelled = true;

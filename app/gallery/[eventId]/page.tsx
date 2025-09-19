@@ -49,6 +49,7 @@ interface PublicGalleryProps {
 }
 
 export default function PublicGallery({ params }: PublicGalleryProps) {
+  const [traceId] = useState(() => `gallery-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
   const [eventId, setEventId] = useState<string>('');
   const [event, setEvent] = useState<Event | null>(null);
   const [photos, setPhotos] = useState<Photo[]>([]);
@@ -101,6 +102,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
     setError(null);
 
     try {
+      console.info('[gallery-upload][start]', { traceId, eventId, files: Array.from(files).map(f => ({ name: f.name, size: f.size, type: f.type })) });
       // Build metadata and request presigned URLs
       const meta = Array.from(files).map(f => ({ name: f.name, type: f.type, size: f.size }));
       const presignRes = await fetch('/api/photos/guest/presign', {
@@ -108,12 +110,15 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ eventId: Number(eventId), files: meta }),
       });
+      console.info('[gallery-upload][presign][response]', { traceId, ok: presignRes.ok, status: presignRes.status });
       if (!presignRes.ok) {
         const data = await presignRes.json().catch(() => ({}));
+        console.error('[gallery-upload][presign][error]', { traceId, status: presignRes.status, body: data });
         throw new Error(data?.error || 'Failed to create upload URLs');
       }
       const presignData: { uploads: PresignedUpload[] } = await presignRes.json();
       const uploads: PresignedUpload[] = presignData.uploads;
+      console.info('[gallery-upload][presign][ok]', { traceId, count: uploads.length });
 
       const remaining: PresignedUpload[] = [...uploads];
       const succeeded: PresignedUpload[] = [];
@@ -129,13 +134,19 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
           xhr.onload = () => {
             if (xhr.status >= 200 && xhr.status < 300) {
               succeeded.push(u);
+              console.info('[gallery-upload][put][ok]', { traceId, file: file.name, status: xhr.status });
             } else {
               failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
+              console.error('[gallery-upload][put][fail]', { traceId, file: file.name, status: xhr.status, statusText: xhr.statusText });
             }
             resolve();
           };
           xhr.onerror = () => {
             failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
+            let target = 'unknown';
+            try { const uo = new URL(u.url); target = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
+            const isMixedContent = target.startsWith('http://') && window.location.protocol === 'https:';
+            console.error('[gallery-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, target, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure HETZNER_S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
             resolve();
           };
           xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
@@ -161,8 +172,10 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
         });
         if (!finalizeRes.ok) {
           const data = await finalizeRes.json().catch(() => ({}));
+          console.error('[gallery-upload][finalize][error]', { traceId, status: finalizeRes.status, body: data });
           throw new Error(data?.error || 'Failed to finalize uploads');
         }
+        console.info('[gallery-upload][finalize][ok]', { traceId, count: succeeded.length });
       }
 
       await fetchEventPhotos();
@@ -173,8 +186,11 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
       if (failures.length) {
         const first = failures[0];
         setError(`Some uploads failed: ${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}`);
+        const hasStatus0 = failures.some(f => !f.status || f.status === 0);
+        console.error('[gallery-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and HETZNER_S3_ENDPOINT uses https.' : undefined });
       }
     } catch (err) {
+      console.error('[gallery-upload][exception]', { traceId, err });
       setError(err instanceof Error ? err.message : 'Failed to upload photos');
     } finally {
       setUploading(false);

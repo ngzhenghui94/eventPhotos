@@ -34,6 +34,8 @@ interface GuestPhotoUploadProps {
   eventId: number;
 }
 export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
+  // Correlate logs for a single upload session
+  const [traceId] = useState(() => `guest-${eventId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     try { const v = localStorage.getItem(`tcg_upload_collapsed:guest:${eventId}`); if (v === '1') setCollapsed(true); } catch {}
@@ -107,6 +109,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
     setIsUploading(true);
     setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
+      console.info('[guest-upload][start]', { traceId, eventId, files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })) });
       // Access code from cookie (if private event)
       let eventCode = '';
       try {
@@ -132,12 +135,15 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         },
         body: JSON.stringify({ eventId, files: meta, accessCode: accessCode || undefined }),
       });
+      console.info('[guest-upload][presign][response]', { traceId, ok: presignRes.ok, status: presignRes.status });
       if (!presignRes.ok) {
         const data = await presignRes.json().catch(() => ({}));
+        console.error('[guest-upload][presign][error]', { traceId, status: presignRes.status, body: data });
         throw new Error(data?.error || 'Failed to create upload URLs');
       }
       type UploadDescriptor = { key: string; url: string; originalFilename: string; mimeType: string; fileSize: number };
       const { uploads }: { uploads: UploadDescriptor[] } = await presignRes.json();
+      console.info('[guest-upload][presign][ok]', { traceId, count: uploads.length, destinations: uploads.map(u => ({ key: u.key, host: (() => { try { const uo = new URL(u.url); return `${uo.protocol}//${uo.host}`; } catch { return 'invalid-url'; } })() })) });
 
       // 2) PUT files directly to S3 with bounded concurrency and progress
       const remaining = [...uploads];
@@ -154,6 +160,9 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
           const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
           if (uIdx === -1) continue;
           const u = remaining.splice(uIdx, 1)[0];
+          let uploadTarget = 'unknown';
+          try { const uo = new URL(u.url); uploadTarget = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
+          const startedAt = Date.now();
           await new Promise<void>((resolve) => {
             const xhr = new XMLHttpRequest();
             xhr.open('PUT', u.url);
@@ -169,13 +178,17 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
             xhr.onload = () => {
               if (xhr.status >= 200 && xhr.status < 300) {
                 succeeded.push(u);
+                console.info('[guest-upload][put][ok]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget });
               } else {
                 failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
+                console.error('[guest-upload][put][fail]', { traceId, file: file.name, status: xhr.status, statusText: xhr.statusText, ms: Date.now() - startedAt, target: uploadTarget });
               }
               resolve();
             };
             xhr.onerror = () => {
               failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
+              const isMixedContent = uploadTarget.startsWith('http://') && window.location.protocol === 'https:';
+              console.error('[guest-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure HETZNER_S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
               resolve();
             };
             xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
@@ -202,8 +215,10 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
             })),
           }),
         });
+        console.info('[guest-upload][finalize][response]', { traceId, ok: finalizeRes.ok, status: finalizeRes.status });
         if (!finalizeRes.ok) {
           const data = await finalizeRes.json().catch(() => ({}));
+          console.error('[guest-upload][finalize][error]', { traceId, status: finalizeRes.status, body: data });
           throw new Error(data?.error || 'Failed to finalize uploads');
         }
       }
@@ -217,11 +232,15 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
       if (failures.length) {
         const first = failures[0];
         toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
+        // Log summary with a hint for common prod issues
+        const hasStatus0 = failures.some(f => !f.status || f.status === 0);
+        console.error('[guest-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and HETZNER_S3_ENDPOINT uses https.' : undefined });
       } else {
+        console.info('[guest-upload][done]', { traceId, uploaded: selectedFiles.length });
         toast.success('Photos uploaded');
       }
     } catch (error: any) {
-      console.error('Upload error:', error);
+      console.error('[guest-upload][exception]', { traceId, error });
       toast.error('Failed to upload photos', { description: String(error?.message || error) });
     } finally {
       setIsUploading(false);

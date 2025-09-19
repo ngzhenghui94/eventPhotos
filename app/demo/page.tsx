@@ -537,7 +537,7 @@ function DemoGalleryContent() {
                         src={`/api/photos/${photo.id}/thumb`}
                         alt={photo.originalFilename || photo.filename || 'Event photo'}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        loading="lazy"
+                        loading={photo.id <= (photos[9]?.id || 0) ? 'eager' : 'lazy'} // Priority loading for first 10 images
                         onError={(e) => {
                           const img = e.currentTarget as HTMLImageElement;
                           if (!img.dataset.fallback) {

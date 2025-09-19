@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const payload = await request.json();
     const eventId = Number(payload?.eventId);
     const files: FileMeta[] = Array.isArray(payload?.files) ? payload.files : [];
+    console.info('[api][host-presign][start]', { eventId, fileCount: files.length, origin: request.headers.get('origin'), ua: request.headers.get('user-agent') });
     if (!eventId || !Number.isFinite(eventId)) {
       return Response.json({ error: 'Invalid event ID' }, { status: 400 });
     }
@@ -55,11 +56,15 @@ export async function POST(request: NextRequest) {
       const url = await getSignedUploadUrl(key, f.type);
       uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
     }
-    if (uploads.length === 0) return Response.json({ error: 'No valid files to upload' }, { status: 400 });
+    if (uploads.length === 0) {
+      console.warn('[api][host-presign][no-valid-files]', { eventId, files });
+      return Response.json({ error: 'No valid files to upload' }, { status: 400 });
+    }
 
+    console.info('[api][host-presign][ok]', { eventId, count: uploads.length, maxFileSize: MAX_FILE_SIZE });
     return Response.json({ uploads, maxFileSize: MAX_FILE_SIZE });
   } catch (err) {
-    console.error('presign error', err);
+    console.error('[api][host-presign][error]', err);
     return Response.json({ error: 'Failed to create presigned URLs' }, { status: 500 });
   }
 }

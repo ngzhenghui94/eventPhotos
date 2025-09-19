@@ -45,7 +45,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
     }
 <<<<<<< Updated upstream
     load();
-    const id = setInterval(load, 4000);
+    const id = setInterval(load, 10000);
     return () => { cancelled = true; clearInterval(id); };
 =======
 
