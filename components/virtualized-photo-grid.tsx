@@ -78,17 +78,6 @@ export function VirtualizedPhotoGrid({
   const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     const target = e.currentTarget;
     setScrollTop(target.scrollTop);
-    setIsScrolling(true);
-
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-
-    // Set scrolling to false after scroll stops
-    scrollTimeoutRef.current = setTimeout(() => {
-      setIsScrolling(false);
-    }, 150);
   }, []);
 
   // Handle container resize
@@ -105,12 +94,10 @@ export function VirtualizedPhotoGrid({
     return () => resizeObserver.disconnect();
   }, []);
 
-  // Cleanup scroll timeout
+  // No special cleanup required
   useEffect(() => {
     return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
-      }
+      /* no-op */
     };
   }, []);
 
@@ -161,7 +148,6 @@ export function VirtualizedPhotoGrid({
                     onPhotoClick={onPhotoClick}
                     onPhotoDelete={onPhotoDelete}
                     canDelete={canDelete?.(photo) ?? false}
-                    isScrolling={isScrolling}
                     priority={globalIndex < itemsPerRow * 2} // Prioritize first 2 rows
                   />
                 );
@@ -181,7 +167,6 @@ interface PhotoCardProps {
   onPhotoClick?: (photo: PhotoWithMeta, index: number) => void;
   onPhotoDelete?: (photoId: number) => void;
   canDelete: boolean;
-  isScrolling: boolean;
   priority: boolean;
 }
 
@@ -192,7 +177,6 @@ function PhotoCard({
   onPhotoClick,
   onPhotoDelete,
   canDelete,
-  isScrolling,
   priority
 }: PhotoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
@@ -237,20 +221,15 @@ function PhotoCard({
     >
       {/* Image container */}
       <div className="aspect-square relative">
-        {/* Show skeleton during scrolling for better performance */}
-        {isScrolling && !priority ? (
-          <ImageSkeleton className="w-full h-full" />
-        ) : (
-          <OptimizedImage
-            photoId={photo.id}
-            accessCode={accessCode}
-            alt={photo.originalFilename || `Photo ${photo.id}`}
-            className="w-full h-full"
-            priority={priority}
-            thumbOnly={true}
-            sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-          />
-        )}
+        <OptimizedImage
+          photoId={photo.id}
+          accessCode={accessCode}
+          alt={photo.originalFilename || `Photo ${photo.id}`}
+          className="w-full h-full"
+          priority={priority}
+          thumbOnly={true}
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+        />
 
         {/* Overlay with actions */}
         <div
