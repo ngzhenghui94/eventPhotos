@@ -40,7 +40,11 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
       return; // Stop polling if user can't access or chat is collapsed
     }
 
+    const POLL_MS = 10000;
     let cancelled = false;
+    const inFlight = { current: false } as { current: boolean };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     async function load() {
       // Don't show loading spinner on background refresh, but do it on initial load
       if (!messages.length) {
@@ -60,12 +64,32 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
       }
     }
 
+<<<<<<< Updated upstream
     load(); // Initial load
     const id = setInterval(load, 4000);
+=======
+    function schedule() {
+      if (cancelled) return;
+      timer = setTimeout(async () => {
+        if (!inFlight.current) {
+          inFlight.current = true;
+          try {
+            await load();
+          } finally {
+            inFlight.current = false;
+          }
+        }
+        schedule();
+      }, POLL_MS);
+    }
+
+    // Initial load then schedule next
+    load().finally(schedule);
+>>>>>>> Stashed changes
 
     return () => {
       cancelled = true;
-      clearInterval(id);
+      if (timer) clearTimeout(timer);
     };
   }, [eventId, canAccess, collapsed]);
 

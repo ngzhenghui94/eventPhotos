@@ -25,6 +25,10 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
 
   useEffect(() => {
     let cancelled = false;
+    const POLL_MS = 10000;
+    const inFlight = { current: false } as { current: boolean };
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
     async function load() {
       setLoading(true);
       try {
@@ -39,9 +43,26 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
         if (!cancelled) setLoading(false);
       }
     }
+<<<<<<< Updated upstream
     load();
     const id = setInterval(load, 4000);
     return () => { cancelled = true; clearInterval(id); };
+=======
+
+    function schedule() {
+      if (cancelled) return;
+      timer = setTimeout(async () => {
+        if (!inFlight.current) {
+          inFlight.current = true;
+          try { await load(); } finally { inFlight.current = false; }
+        }
+        schedule();
+      }, POLL_MS);
+    }
+
+    load().finally(schedule);
+    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+>>>>>>> Stashed changes
   }, [eventId]);
 
   useEffect(() => {
