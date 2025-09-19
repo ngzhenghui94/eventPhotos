@@ -43,11 +43,6 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
         if (!cancelled) setLoading(false);
       }
     }
-<<<<<<< Updated upstream
-    load();
-    const id = setInterval(load, 10000);
-    return () => { cancelled = true; clearInterval(id); };
-=======
 
     function schedule() {
       if (cancelled) return;
@@ -62,7 +57,6 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
 
     load().finally(schedule);
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
->>>>>>> Stashed changes
   }, [eventId]);
 
   useEffect(() => {
