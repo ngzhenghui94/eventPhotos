@@ -16,6 +16,8 @@ interface OptimizedImageProps {
   onError?: (error: string) => void;
   placeholder?: 'blur' | 'empty';
   quality?: number;
+  // When true, only load and display the thumbnail; never upgrade to full image
+  thumbOnly?: boolean;
 }
 
 // Create a global concurrency gate to limit concurrent image loads
@@ -101,7 +103,8 @@ export function OptimizedImage({
   onLoad,
   onError,
   placeholder = 'blur',
-  quality = 80
+  quality = 80,
+  thumbOnly = false
 }: OptimizedImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -166,6 +169,12 @@ export function OptimizedImage({
           }
         });
         setCurrentSrc(thumbnailSrc);
+        // If we only want thumbs in this context, stop here
+        if (thumbOnly) {
+          setIsLoaded(true);
+          onLoad?.();
+          return;
+        }
         
         // Track full image loading
         const fullTracker = trackImageLoad(photoId, 'full');
@@ -190,7 +199,7 @@ export function OptimizedImage({
     };
 
     loadImage();
-  }, [isInView, thumbnailSrc, fullSrc, preloadThumbnail, preloadFullImage, onLoad, onError, photoId]);
+  }, [isInView, thumbnailSrc, fullSrc, preloadThumbnail, preloadFullImage, onLoad, onError, photoId, thumbOnly]);
 
   // Handle loading states
   const handleImageLoad = useCallback(() => {

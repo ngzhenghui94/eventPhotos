@@ -247,6 +247,7 @@ function PhotoCard({
             alt={photo.originalFilename || `Photo ${photo.id}`}
             className="w-full h-full"
             priority={priority}
+            thumbOnly={true}
             sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
           />
         )}
