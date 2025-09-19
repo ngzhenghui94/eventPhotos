@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
+import { getPhotoById, canUserAccessEvent, getUser, getEventById } from '@/lib/db/queries';
 import { redis } from '@/lib/upstash';
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
+import { cookies } from 'next/headers';
 // derive thumb key locally to avoid module hot-reload issues
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
@@ -51,9 +52,27 @@ export async function GET(
   }
 
   const url = new URL(request.url);
-  const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
-  const canAccess = await canUserAccessEvent(meta.eventId, { accessCode: code ?? undefined });
-  if (!canAccess) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const codeFromHeader = request.headers.get('x-access-code') || undefined;
+  const codeFromQuery = url.searchParams.get('code') || undefined;
+  const user = await getUser().catch(() => null);
+  // Resolve event to compute cookie key for private events
+  let codeFromCookie: string | undefined;
+  try {
+    const ev = await getEventById(meta.eventId);
+    if (ev?.eventCode) {
+      const cookieKey = `evt:${ev.eventCode}:access`;
+      codeFromCookie = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
+    }
+  } catch {}
+  const providedCode = (codeFromCookie || codeFromHeader || codeFromQuery)?.toUpperCase().trim();
+  const canAccess = await canUserAccessEvent(meta.eventId, {
+    userId: user?.id,
+    accessCode: providedCode || undefined,
+  });
+  if (!canAccess) {
+    try { console.warn('[api][thumb][403]', { photoId, eventId: meta.eventId, hasUser: !!user, hasCode: !!(providedCode) }); } catch {}
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
 
   if (!meta.s3Key) {
     // Fall back to original local file

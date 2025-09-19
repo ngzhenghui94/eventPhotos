@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getUser, getPhotoById, canUserAccessEvent } from '@/lib/db/queries';
+import { getUser, getPhotoById, canUserAccessEvent, getEventById } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
 import { redis } from '@/lib/upstash';
+import { cookies } from 'next/headers';
 
 type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
 const META_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -34,10 +35,20 @@ export async function GET(
 
   const user = await getUser();
   const url = new URL(request.url);
-  const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
+  const codeFromHeader = request.headers.get('x-access-code') || undefined;
+  const codeFromQuery = url.searchParams.get('code') || undefined;
+  let codeFromCookie: string | undefined;
+  try {
+    const ev = await getEventById(meta.eventId);
+    if (ev?.eventCode) {
+      const cookieKey = `evt:${ev.eventCode}:access`;
+      codeFromCookie = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
+    }
+  } catch {}
+  const providedCode = (codeFromCookie || codeFromHeader || codeFromQuery)?.toUpperCase().trim();
   const canAccess = await canUserAccessEvent(meta.eventId, { 
     userId: user?.id, 
-    accessCode: code ?? undefined 
+    accessCode: providedCode || undefined 
   });
     
     if (!canAccess) {
@@ -50,9 +61,9 @@ export async function GET(
       const urlCacheKey = `photo:url:${photoId}`;
       const cached = await redis.get<string>(urlCacheKey).catch(() => null);
       if (cached) return NextResponse.redirect(cached);
-      const url = await getSignedDownloadUrl(meta.s3Key, 120);
-      try { await redis.set(urlCacheKey, url, { ex: 110 }); } catch {}
-      return NextResponse.redirect(url);
+  const signed = await getSignedDownloadUrl(meta.s3Key, 120);
+  try { await redis.set(urlCacheKey, signed, { ex: 110 }); } catch {}
+  return NextResponse.redirect(signed);
     }
 
     // Local fallback
