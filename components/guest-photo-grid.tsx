@@ -1,11 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { OptimizedImage } from './optimized-image';
-import { VirtualizedPhotoGrid } from './virtualized-photo-grid';
 import { GuestPhotoModal } from './guest-photo-modal';
-import { Button } from '@/components/ui/button';
 import type { Photo } from '@/lib/db/schema';
+import { GuestPhotoCard } from './guest-photo-card';
 
 interface GuestPhoto extends Photo {
   uploadedByUser?: { id: number; name?: string | null; email?: string | null } | null;
@@ -22,7 +20,6 @@ export function GuestPhotoGrid({
   accessCode, 
   className = ''
 }: GuestPhotoGridProps) {
-  const [useVirtualized, setUseVirtualized] = useState(photos.length > 50);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
 
   const handlePhotoClick = (photo: GuestPhoto, index: number) => {
@@ -51,41 +48,21 @@ export function GuestPhotoGrid({
           <div className="text-sm text-gray-600">
             {photos.length} photo{photos.length !== 1 ? 's' : ''}
           </div>
-          {photos.length > 50 && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setUseVirtualized(!useVirtualized)}
-            >
-              {useVirtualized ? 'Standard Grid' : 'Virtual Grid'}
-            </Button>
-          )}
         </div>
 
         {/* Photo Grid */}
-        {useVirtualized ? (
-          <VirtualizedPhotoGrid
-            photos={photos}
-            onPhotoClick={handlePhotoClick}
-            accessCode={accessCode}
-            className="h-96 border rounded-lg"
-            itemsPerRow={4}
-            itemHeight={280}
-          />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {photos.map((photo, index) => (
-              <GuestPhotoCard
-                key={photo.id}
-                photo={photo}
-                index={index}
-                accessCode={accessCode}
-                onPhotoClick={handlePhotoClick}
-                priority={index < 10} // Prioritize first 10 images
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {photos.map((photo, index) => (
+            <GuestPhotoCard
+              key={photo.id}
+              photo={photo}
+              index={index}
+              accessCode={accessCode}
+              onPhotoClick={handlePhotoClick}
+              priority={index < 10} // Prioritize first 10 images
+            />
+          ))}
+        </div>
       </div>
 
       {/* Photo Modal */}
@@ -99,60 +76,5 @@ export function GuestPhotoGrid({
         />
       )}
     </>
-  );
-}
-
-interface GuestPhotoCardProps {
-  photo: GuestPhoto;
-  index: number;
-  accessCode?: string;
-  onPhotoClick: (photo: GuestPhoto, index: number) => void;
-  priority?: boolean;
-}
-
-function GuestPhotoCard({ 
-  photo, 
-  index, 
-  accessCode, 
-  onPhotoClick,
-  priority = false 
-}: GuestPhotoCardProps) {
-  const handleClick = () => {
-    onPhotoClick(photo, index);
-  };
-  
-  const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
-  const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
-
-  return (
-    <div 
-      className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
-      onClick={handleClick}
-    >
-      <div className="aspect-square relative">
-        <OptimizedImage
-          photoId={photo.id}
-          accessCode={accessCode}
-          alt={photo.originalFilename || `Photo ${photo.id}`}
-          className="w-full h-full"
-          priority={priority}
-          thumbOnly={true}
-          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-        />
-        
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200" />
-        
-        {/* Hover info */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-          <p className="text-white text-sm font-medium truncate">
-            {photo.originalFilename || `Photo ${photo.id}`}
-          </p>
-          <p className="text-white/80 text-xs">
-            By {uploadedBy} • {uploadDate}
-          </p>
-        </div>
-      </div>
-    </div>
   );
 }
