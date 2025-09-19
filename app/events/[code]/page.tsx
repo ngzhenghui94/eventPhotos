@@ -11,6 +11,7 @@ import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { EventQr } from '@/components/event-qr';
 // import { env } from 'process';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { GuestPhotoGrid } from '@/components/guest-photo-grid';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
 import EventChat from '@/components/EventChat';
@@ -180,11 +181,10 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               icon={<Users className="w-5 h-5 text-blue-600" />}
             >
               {hasAccess ? (
-                <PhotoGallery
+                <GuestPhotoGrid
                   photos={photos || []}
-                  eventId={event.id}
-                  canManage={false}
                   accessCode={event.isPublic ? undefined : accessCodeCookie}
+                  className="mt-4"
                 />
               ) : (
                 <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />
