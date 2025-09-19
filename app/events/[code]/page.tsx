@@ -11,11 +11,12 @@ import { GuestPhotoUpload } from '@/components/guest-photo-upload';
 import { EventQr } from '@/components/event-qr';
 // import { env } from 'process';
 import { PhotoGallery } from '@/components/photo-gallery';
+import { GuestPhotoGrid } from '@/components/guest-photo-grid';
 import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
 import EventChat from '@/components/EventChat';
 import Link from 'next/link';
-import InlineSlideshow from '@/components/inline-slideshow';
+import { OptimizedSlideshow } from '@/components/optimized-slideshow';
 import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
@@ -120,11 +121,13 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                   </Link>
                 </CardHeader>
                 <CardContent>
-                  <InlineSlideshow
+                  <OptimizedSlideshow
                     photos={photos.map(p => ({ id: p.id, name: p.originalFilename }))}
                     accessCode={hasAccess ? (event.isPublic ? undefined : accessCodeCookie) : undefined}
                     height={360}
                     intervalMs={4000}
+                    autoPlay={true}
+                    showControls={true}
                   />
                 </CardContent>
               </Card>
@@ -180,11 +183,10 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               icon={<Users className="w-5 h-5 text-blue-600" />}
             >
               {hasAccess ? (
-                <PhotoGallery
+                <GuestPhotoGrid
                   photos={photos || []}
-                  eventId={event.id}
-                  canManage={false}
                   accessCode={event.isPublic ? undefined : accessCodeCookie}
+                  className="mt-4"
                 />
               ) : (
                 <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />

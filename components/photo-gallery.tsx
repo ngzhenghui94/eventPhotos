@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Upload, Trash2, Download, Eye, X, ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import { deletePhotoAction, deletePhotosBulkAction } from '@/lib/photos/actions';
+import { VirtualizedPhotoGrid } from './virtualized-photo-grid';
+import { OptimizedImage } from './optimized-image';
 import type { Photo, User } from '@/lib/db/schema';
 
 interface PhotoGalleryProps {
@@ -22,8 +24,15 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
   const [multiMode, setMultiMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [downloading, setDownloading] = useState(false);
+  const [useVirtualized, setUseVirtualized] = useState(photos.length > 50);
+  
   const allIds = useMemo(() => photos.map(p => p.id), [photos]);
   const allSelected = selectedIds.size > 0 && selectedIds.size === allIds.length;
+
+  // Switch to virtualized view for large photo sets
+  useEffect(() => {
+    setUseVirtualized(photos.length > 50);
+  }, [photos.length]);
 
   // --- Photo limit logic ---
   // Assume planName is available via props or context, fallback to 'free'
@@ -190,39 +199,64 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
               )}
             </>
           )}
+          {photos.length > 50 && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setUseVirtualized(!useVirtualized)}
+            >
+              {useVirtualized ? 'Standard Grid' : 'Virtual Grid'}
+            </Button>
+          )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {photos.map((photo, idx) => (
-          <PhotoCard
-            key={photo.id}
-            photo={photo}
-            onView={() => setSelectedIndex(idx)}
-            onDelete={() => handleDeletePhoto(photo.id)}
-            canDelete={
-              Boolean(canManage) ||
-              (typeof currentUserId === 'number' && photo.uploadedByUser?.id === currentUserId)
-            }
-            isDeleting={isDeleting === photo.id}
-            accessCode={accessCode}
-            multiMode={multiMode}
-            selected={selectedIds.has(photo.id)}
-            onToggleSelect={() => toggleSelect(photo.id)}
-          />
-        ))}
-      </div>
+      {useVirtualized ? (
+        <VirtualizedPhotoGrid
+          photos={photos}
+          onPhotoClick={(photo, index) => setSelectedIndex(index)}
+          onPhotoDelete={handleDeletePhoto}
+          canDelete={(photo) => 
+            Boolean(canManage) ||
+            (typeof currentUserId === 'number' && photo.uploadedByUser?.id === currentUserId)
+          }
+          accessCode={accessCode}
+          className="h-96 border rounded-lg"
+          itemsPerRow={4}
+          itemHeight={250}
+        />
+      ) : (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          {photos.map((photo, idx) => (
+            <PhotoCard
+              key={photo.id}
+              photo={photo}
+              onView={() => setSelectedIndex(idx)}
+              onDelete={() => handleDeletePhoto(photo.id)}
+              canDelete={
+                Boolean(canManage) ||
+                (typeof currentUserId === 'number' && photo.uploadedByUser?.id === currentUserId)
+              }
+              isDeleting={isDeleting === photo.id}
+              accessCode={accessCode}
+              multiMode={multiMode}
+              selected={selectedIds.has(photo.id)}
+              onToggleSelect={() => toggleSelect(photo.id)}
+            />
+          ))}
+        </div>
+      )}
 
-  {/* Photo Modal with navigation */}
-  {selectedIndex !== null && (
-    <PhotoModalGallery
-      photos={photos}
-      currentIndex={selectedIndex}
-      accessCode={accessCode}
-      onClose={() => setSelectedIndex(null)}
-      onNavigate={setSelectedIndex}
-    />
-  )}
+      {/* Photo Modal with navigation */}
+      {selectedIndex !== null && (
+        <PhotoModalGallery
+          photos={photos}
+          currentIndex={selectedIndex}
+          accessCode={accessCode}
+          onClose={() => setSelectedIndex(null)}
+          onNavigate={setSelectedIndex}
+        />
+      )}
     </>
   );
 }
@@ -239,7 +273,6 @@ interface PhotoCardProps {
 function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode, multiMode, selected, onToggleSelect }: PhotoCardProps & { multiMode?: boolean; selected?: boolean; onToggleSelect?: () => void; }) {
   const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
-  const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
 
   return (
     <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
@@ -250,17 +283,18 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
             <span>Select</span>
           </label>
         )}
-				<SmartImage
-					thumbSrc={`/api/photos/${photo.id}/thumb${codeQuery}`}
-					fullSrc={`/api/photos/${photo.id}${codeQuery}`}
-					alt={photo.originalFilename}
-					className="w-full h-full object-cover cursor-pointer"
-					onClick={onView}
-					preloadFull={false}
-				/>
+        
+        <OptimizedImage
+          photoId={photo.id}
+          accessCode={accessCode}
+          alt={photo.originalFilename || `Photo ${photo.id}`}
+          className="w-full h-full cursor-pointer"
+          onClick={onView}
+          sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+        />
         
         {/* Overlay with actions */}
-  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
           <div className="flex space-x-2">
             <Button
               size="sm"
@@ -276,7 +310,7 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
               asChild
               className="bg-white/90 hover:bg-white"
             >
-              <a href={`/api/photos/${photo.id}/download${codeQuery}`} download={photo.originalFilename}>
+              <a href={`/api/photos/${photo.id}/download${accessCode ? `?code=${encodeURIComponent(accessCode)}` : ''}`} download={photo.originalFilename}>
                 <Download className="h-4 w-4" />
               </a>
             </Button>
@@ -314,94 +348,8 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
   );
 }
 
-// Concurrency-gated, lazy image component
-function SmartImage({ thumbSrc, fullSrc, alt, className, onClick, preloadFull = false }: { thumbSrc: string; fullSrc: string; alt: string; className?: string; onClick?: () => void; preloadFull?: boolean; }) {
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const placeholder = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==';
-  const [src, setSrc] = useState<string>(placeholder);
-  const [hasLoadedFull, setHasLoadedFull] = useState(false);
-
-  // Static gate across instances
-  const gate = (SmartImage as any)._gate || ((SmartImage as any)._gate = createConcurrencyGate(10));
-
-  useEffect(() => {
-    const el = imgRef.current;
-    if (!el) return;
-    // Ensure placeholder is set (noop if already)
-    setSrc((cur) => cur || placeholder);
-
-    const io = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          // First load thumbnail under gate
-          gate(() => new Promise<void>((resolve) => {
-            const img = new Image();
-            img.onload = () => { setSrc(thumbSrc); resolve(); };
-            img.onerror = () => { setSrc(fullSrc); resolve(); };
-            img.src = thumbSrc;
-          })).then(() => {
-            if (!preloadFull) return;
-            // Optionally schedule full image under gate if preloading is enabled
-            gate(() => new Promise<void>((resolve) => {
-              const img = new Image();
-              img.onload = () => { setSrc(fullSrc); setHasLoadedFull(true); resolve(); };
-              img.onerror = () => { resolve(); };
-              img.src = fullSrc;
-            }));
-          });
-          io.disconnect();
-        }
-      });
-    }, { rootMargin: '200px 0px' });
-
-    io.observe(el);
-    return () => io.disconnect();
-  }, [thumbSrc, fullSrc]);
-
-  return (
-    <img
-      ref={imgRef}
-      src={src}
-      alt={alt}
-      loading="lazy"
-      className={className}
-      onClick={onClick}
-      onError={(e) => {
-        const img = e.currentTarget as HTMLImageElement;
-        if (preloadFull && !hasLoadedFull) {
-          setSrc(fullSrc);
-        } else if (!img.dataset.fallback) {
-          img.dataset.fallback = '1';
-          img.src = fullSrc;
-        }
-      }}
-    />
-  );
-}
-
-function createConcurrencyGate(maxConcurrent: number) {
-  let inFlight = 0;
-  const queue: Array<() => void> = [];
-  function runNext() {
-    if (inFlight >= maxConcurrent) return;
-    const next = queue.shift();
-    if (!next) return;
-    inFlight++;
-    next();
-  }
-  return function<T>(task: () => Promise<T>): Promise<T> {
-    return new Promise<T>((resolve, reject) => {
-      const wrapped = () => {
-        task().then((v) => resolve(v)).catch(reject).finally(() => {
-          inFlight = Math.max(0, inFlight - 1);
-          runNext();
-        });
-      };
-      queue.push(wrapped);
-      runNext();
-    });
-  };
-}
+// Concurrency-gated, lazy image component - DEPRECATED: Use OptimizedImage instead
+// Keeping for backward compatibility until fully migrated
 
 interface PhotoModalProps {
   photoId: number;
@@ -422,18 +370,13 @@ function PhotoModal({ photoId, onClose, accessCode }: PhotoModalProps) {
         >
           <X className="h-4 w-4" />
         </Button>
-                <img
-                  src={`/api/photos/${photoId}/thumb${codeQuery}`}
+        <OptimizedImage
+          photoId={photoId}
+          accessCode={accessCode}
           alt="Full size photo"
           className="max-w-full max-h-full object-contain rounded-lg"
-          onClick={(e) => e.stopPropagation()}
-          onError={(e) => {
-            const img = e.currentTarget as HTMLImageElement;
-            if (!img.dataset.fallback) {
-              img.dataset.fallback = '1';
-              img.src = `/api/photos/${photoId}${codeQuery}`;
-            }
-          }}
+          onClick={(e) => e?.stopPropagation()}
+          priority={true}
         />
       </div>
     </div>
@@ -450,7 +393,6 @@ interface PhotoModalGalleryProps {
 
 export function PhotoModalGallery({ photos, currentIndex, accessCode, onClose, onNavigate }: PhotoModalGalleryProps) {
   const photo = photos[currentIndex];
-  const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
 
   // Keyboard navigation
   useEffect(() => {
@@ -471,6 +413,7 @@ export function PhotoModalGallery({ photos, currentIndex, accessCode, onClose, o
   }, [currentIndex, photos.length, onNavigate, onClose]);
 
   // Use the normal photo API endpoint for full-size view
+  const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
   const photoApiSrc = `/api/photos/${photo.id}${codeQuery}`;
 
   return (
@@ -498,11 +441,13 @@ export function PhotoModalGallery({ photos, currentIndex, accessCode, onClose, o
         )}
         {/* Main image centered and sized */}
         <div className="flex flex-col items-center justify-center w-full h-full">
-          <img
-            src={photoApiSrc}
-            alt={photo.originalFilename}
+          <OptimizedImage
+            photoId={photo.id}
+            accessCode={accessCode}
+            alt={photo.originalFilename || `Photo ${photo.id}`}
             className="block max-w-[90vw] max-h-[80vh] object-contain rounded-lg mx-auto shadow-lg"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e?.stopPropagation()}
+            priority={true}
           />
           <div className="flex items-center gap-3 mt-6 mb-2">
             <Button
