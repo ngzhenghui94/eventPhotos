@@ -375,7 +375,7 @@ function PhotoModal({ photoId, onClose, accessCode }: PhotoModalProps) {
           accessCode={accessCode}
           alt="Full size photo"
           className="max-w-full max-h-full object-contain rounded-lg"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(e) => e?.stopPropagation()}
           priority={true}
         />
       </div>
@@ -446,7 +446,7 @@ export function PhotoModalGallery({ photos, currentIndex, accessCode, onClose, o
             accessCode={accessCode}
             alt={photo.originalFilename || `Photo ${photo.id}`}
             className="block max-w-[90vw] max-h-[80vh] object-contain rounded-lg mx-auto shadow-lg"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => e?.stopPropagation()}
             priority={true}
           />
           <div className="flex items-center gap-3 mt-6 mb-2">

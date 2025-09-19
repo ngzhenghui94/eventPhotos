@@ -41,7 +41,7 @@ export function VirtualizedPhotoGrid({
   const [containerHeight, setContainerHeight] = useState(0);
   const [scrollTop, setScrollTop] = useState(0);
   const [isScrolling, setIsScrolling] = useState(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout>();
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate grid dimensions
   const rowHeight = itemHeight + gap;

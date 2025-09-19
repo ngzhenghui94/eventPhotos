@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePhotoLoader } from '@/lib/hooks/use-photos';
+import { trackImageLoad } from '@/lib/utils/frontend-performance';
 
 interface OptimizedImageProps {
   photoId: number;
   accessCode?: string;
   alt: string;
   className?: string;
-  onClick?: () => void;
+  onClick?: (e?: React.MouseEvent) => void;
   priority?: boolean;
   sizes?: string;
   onLoad?: () => void;
@@ -135,12 +136,34 @@ export function OptimizedImage({
 
     const loadImage = async () => {
       try {
+        // Track thumbnail loading
+        const thumbTracker = trackImageLoad(photoId, 'thumbnail');
+        
         // First load thumbnail
-        await imageGate.execute(preloadThumbnail);
+        await imageGate.execute(async () => {
+          try {
+            await preloadThumbnail();
+            thumbTracker.onLoad();
+          } catch (err) {
+            thumbTracker.onError(err instanceof Error ? err.message : 'Unknown error');
+            throw err;
+          }
+        });
         setCurrentSrc(thumbnailSrc);
         
+        // Track full image loading
+        const fullTracker = trackImageLoad(photoId, 'full');
+        
         // Then load full image
-        await imageGate.execute(preloadFullImage);
+        await imageGate.execute(async () => {
+          try {
+            await preloadFullImage();
+            fullTracker.onLoad();
+          } catch (err) {
+            fullTracker.onError(err instanceof Error ? err.message : 'Unknown error');
+            throw err;
+          }
+        });
         setCurrentSrc(fullSrc);
         setIsLoaded(true);
         onLoad?.();
@@ -151,7 +174,7 @@ export function OptimizedImage({
     };
 
     loadImage();
-  }, [isInView, thumbnailSrc, fullSrc, preloadThumbnail, preloadFullImage, onLoad, onError]);
+  }, [isInView, thumbnailSrc, fullSrc, preloadThumbnail, preloadFullImage, onLoad, onError, photoId]);
 
   // Handle loading states
   const handleImageLoad = useCallback(() => {
@@ -192,7 +215,7 @@ export function OptimizedImage({
         className={`w-full h-full object-cover transition-opacity duration-300 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
         }`}
-        onClick={onClick}
+        onClick={(e) => onClick?.(e)}
         onLoad={handleImageLoad}
         onError={handleImageError}
         loading={priority ? 'eager' : 'lazy'}

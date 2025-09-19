@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { cookies } from 'next/headers';
 import EventChat from '@/components/EventChat';
 import Link from 'next/link';
-import InlineSlideshow from '@/components/inline-slideshow';
+import { OptimizedSlideshow } from '@/components/optimized-slideshow';
 import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
@@ -121,11 +121,13 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                   </Link>
                 </CardHeader>
                 <CardContent>
-                  <InlineSlideshow
+                  <OptimizedSlideshow
                     photos={photos.map(p => ({ id: p.id, name: p.originalFilename }))}
                     accessCode={hasAccess ? (event.isPublic ? undefined : accessCodeCookie) : undefined}
                     height={360}
                     intervalMs={4000}
+                    autoPlay={true}
+                    showControls={true}
                   />
                 </CardContent>
               </Card>

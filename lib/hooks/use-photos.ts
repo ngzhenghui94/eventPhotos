@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { trackNetworkRequest } from '@/lib/utils/frontend-performance';
 import type { Photo } from '@/lib/db/schema';
 
 // Enhanced photo data with loading states
@@ -77,6 +78,9 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
         url.searchParams.set('code', accessCode);
       }
 
+      // Track network request performance
+      const networkTracker = trackNetworkRequest(url.toString(), 'GET');
+
       const response = await fetch(url.toString(), {
         cache: 'no-store',
         signal: controller.signal,
@@ -86,8 +90,11 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        networkTracker.onError(response.status, response.statusText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
+
+      networkTracker.onSuccess(response.status);
 
       const data = await response.json();
       let photosData: PhotoWithMeta[] = data.photos || [];
