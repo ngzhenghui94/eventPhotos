@@ -17,6 +17,9 @@ export async function GET(
 
   const event = await getEventById(Number(eventId));
   if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
+  if (event.chatEnabled === false) {
+    return Response.json({ error: 'Event chat is disabled' }, { status: 403 });
+  }
 
   // Access check: allow public, correct access code via cookie/header, or event owner
   const cookieKey = `evt:${event.eventCode}:access`;
@@ -58,6 +61,9 @@ export async function POST(
   const { eventId } = await context.params;
   const event = await getEventById(Number(eventId));
   if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
+  if (event.chatEnabled === false) {
+    return Response.json({ error: 'Event chat is disabled' }, { status: 403 });
+  }
 
   // Access check: allow public, correct access code via cookie/header, or event owner
   const cookieKey = `evt:${event.eventCode}:access`;
@@ -119,6 +125,9 @@ export async function DELETE(
 
   const event = await getEventById(Number(eventId));
   if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
+  if (event.chatEnabled === false) {
+    return Response.json({ error: 'Event chat is disabled' }, { status: 403 });
+  }
   const user = await getUser();
   if (!user || (user.id !== event.createdBy && !user.isOwner)) {
     return Response.json({ error: 'Forbidden' }, { status: 403 });

@@ -166,10 +166,12 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </Card>
             )}
 
-            {/* Event Chat - moved to center content */}
-            <div className="mb-8">
-              <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} storageKey={`tcg_chat_collapsed:guest:${event.id}`} />
-            </div>
+            {/* Event Chat - only when enabled by host */}
+            {event.chatEnabled !== false && (
+              <div className="mb-8">
+                <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} storageKey={`tcg_chat_collapsed:guest:${event.id}`} />
+              </div>
+            )}
 
             {/* Photo Upload for Guests */}
             {hasAccess && event.allowGuestUploads && (

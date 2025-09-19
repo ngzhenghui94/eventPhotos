@@ -22,6 +22,8 @@ export async function POST(req: Request) {
 
   const requireApprovalRaw = formData.get('requireApproval');
   const requireApproval = typeof requireApprovalRaw === 'string' ? requireApprovalRaw === 'true' : false;
+  const chatEnabledRaw = formData.get('chatEnabled');
+  const chatEnabled = typeof chatEnabledRaw === 'string' ? chatEnabledRaw === 'true' : true;
 
     // Auth protection: Only event owner or app owner can update
     const user = await getUser();
@@ -44,6 +46,7 @@ export async function POST(req: Request) {
       isPublic,
       allowGuestUploads,
       requireApproval,
+      chatEnabled,
       updatedAt: new Date(),
     };
     if (formData.get('regenerateCode') === 'true') {

@@ -65,6 +65,7 @@ export const events = pgTable('events', {
   isPublic: boolean('is_public').notNull().default(false),
   allowGuestUploads: boolean('allow_guest_uploads').notNull().default(true),
   requireApproval: boolean('require_approval').notNull().default(false),
+  chatEnabled: boolean('chat_enabled').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
