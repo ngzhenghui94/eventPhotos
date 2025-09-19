@@ -16,6 +16,7 @@ interface PhotoUploadProps {
 }
 
 export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
+  const [traceId] = useState(() => `host-${eventId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -60,6 +61,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
     setIsUploading(true);
     setUploadProgress(Array(selectedFiles.length).fill(0));
     try {
+      console.info('[host-upload][start]', { traceId, eventId, planName, files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })) });
       // 1) Ask server for presigned PUT URLs
       const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
       let uploads, maxFileSize;
@@ -68,7 +70,9 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
         uploads = result.uploads;
         maxFileSize = result.maxFileSize;
         if (!maxBytes) setMaxBytes(maxFileSize);
+        console.info('[host-upload][presign][ok]', { traceId, count: uploads.length, maxFileSize });
       } catch (err) {
+        console.error('[host-upload][presign][error]', { traceId, error: err });
         const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
         if (message.includes('Photo limit for this event has been reached')) {
           toast.error('You have reached the maximum number of photos allowed for this event.');
@@ -95,6 +99,9 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
           const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
           if (uIdx === -1) continue;
           const u = remaining.splice(uIdx, 1)[0];
+          let uploadTarget = 'unknown';
+          try { const uo = new URL(u.url); uploadTarget = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
+          const startedAt = Date.now();
           await new Promise<void>((resolve) => {
             const xhr = new XMLHttpRequest();
             xhr.open('PUT', u.url);
@@ -110,13 +117,17 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
             xhr.onload = () => {
               if (xhr.status >= 200 && xhr.status < 300) {
                 succeeded.push(u);
+                console.info('[host-upload][put][ok]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget });
               } else {
                 failures.push({ name: u.originalFilename, status: xhr.status, detail: xhr.statusText });
+                console.error('[host-upload][put][fail]', { traceId, file: file.name, status: xhr.status, statusText: xhr.statusText, ms: Date.now() - startedAt, target: uploadTarget });
               }
               resolve();
             };
             xhr.onerror = () => {
               failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
+              const isMixedContent = uploadTarget.startsWith('http://') && window.location.protocol === 'https:';
+              console.error('[host-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure HETZNER_S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
               resolve();
             };
             xhr.send(file);
@@ -127,12 +138,14 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
 
       // Finalize all succeeded uploads in one batch
       if (succeeded.length > 0) {
+        console.info('[host-upload][finalize][start]', { traceId, count: succeeded.length });
         await finalizeUploadedPhotosAction(eventId, succeeded.map(u => ({
           key: u.key,
           originalFilename: u.originalFilename,
           mimeType: u.mimeType,
           fileSize: u.fileSize,
         })));
+        console.info('[host-upload][finalize][ok]', { traceId });
       }
 
       setSelectedFiles([]);
@@ -141,11 +154,14 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
       if (failures.length) {
         const first = failures[0];
         toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
+        const hasStatus0 = failures.some(f => !f.status || f.status === 0);
+        console.error('[host-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and HETZNER_S3_ENDPOINT uses https.' : undefined });
       } else {
+        console.info('[host-upload][done]', { traceId, uploaded: succeeded.length });
         toast.success(`Uploaded ${succeeded.length} file${succeeded.length !== 1 ? 's' : ''}`);
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('[host-upload][exception]', { traceId, error });
       const message = error instanceof Error ? error.message : typeof error === 'string' ? error : 'Unknown error';
       toast.error('Failed to upload photos', { description: String(message) });
     } finally {

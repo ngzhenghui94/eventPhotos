@@ -20,6 +20,11 @@ let configValidated = false;
 function getS3Client(): S3Client {
   if (!s3Client) {
     ensureConfigured(); // Only validate config once
+    try {
+      if (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string' && ENDPOINT.startsWith('http://')) {
+        console.warn('[s3][config] Using http endpoint in production may break browser uploads due to mixed content. Consider switching HETZNER_S3_ENDPOINT to https. Current:', ENDPOINT);
+      }
+    } catch {}
     s3Client = new S3Client({
       region: REGION,
       endpoint: ENDPOINT,

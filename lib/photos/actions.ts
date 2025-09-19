@@ -71,7 +71,7 @@ export async function uploadPhotosAction(formData: FormData) {
         detail: `Uploaded photo '${file.name}' to event ${eventId}`,
       });
       } catch (error) {
-        console.error('Error uploading file:', error);
+        console.error('[actions][uploadPhotosAction][upload-error]', { eventId, file: file.name, error });
       }
     }
     if (uploadedPhotos.length === 0) throw new Error('No photos were uploaded successfully');
@@ -203,6 +203,7 @@ export async function uploadPhotosAction(formData: FormData) {
     const MAX_FILE_SIZE = uploadLimitBytes(plan);
     const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
     const currentCount = currentCountRes?.[0]?.count ?? 0;
+    console.info('[actions][createSignedUploadUrlsAction][start]', { eventId, fileCount: files.length, planName: planName ?? null });
     const uploads: UploadDescriptor[] = [];
     for (const f of files) {
       if (!f || f.size === 0) continue;
@@ -212,7 +213,11 @@ export async function uploadPhotosAction(formData: FormData) {
       const url = await getSignedUploadUrl(key, f.type);
       uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
     }
-    if (uploads.length === 0) throw new Error('No valid files to upload');
+    if (uploads.length === 0) {
+      console.warn('[actions][createSignedUploadUrlsAction][no-valid-files]', { eventId, files });
+      throw new Error('No valid files to upload');
+    }
+    console.info('[actions][createSignedUploadUrlsAction][ok]', { eventId, count: uploads.length, maxFileSize: MAX_FILE_SIZE });
     return { uploads, maxFileSize: MAX_FILE_SIZE };
   }
 
@@ -238,6 +243,7 @@ export async function uploadPhotosAction(formData: FormData) {
       remaining = Math.max(0, MAX_PHOTOS - currentCount);
       if (remaining === 0) throw new Error('Photo limit for this event has been reached.');
     }
+    console.info('[actions][finalizeUploadedPhotosAction][start]', { eventId, uploadedCount: uploaded.length });
     const recordsToInsert = uploaded
       .filter((u) => u.key.startsWith(prefix))
       .slice(0, Math.max(0, remaining))
@@ -253,8 +259,12 @@ export async function uploadPhotosAction(formData: FormData) {
         guestEmail: null,
         isApproved: !event.requireApproval,
       }));
-    if (recordsToInsert.length === 0) throw new Error('No uploaded photos to record');
+    if (recordsToInsert.length === 0) {
+      console.warn('[actions][finalizeUploadedPhotosAction][no-valid-records]', { eventId, uploaded });
+      throw new Error('No uploaded photos to record');
+    }
     const inserted = await db.insert(photos).values(recordsToInsert).returning();
+    console.info('[actions][finalizeUploadedPhotosAction][ok]', { eventId, count: inserted.length });
     return { count: inserted.length };
   }
 
