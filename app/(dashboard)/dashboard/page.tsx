@@ -10,8 +10,19 @@ import { EventsGrid } from '@/components/events-grid';
 import UpdateToast from '@/components/update-toast';
 import type { EventWithPhotoCount } from '@/lib/types/common';
 
-// Simple fetcher for SWR
-const fetcher = (url: string) => fetch(url).then(res => res.json());
+// Simple fetcher for SWR that throws on non-OK to surface errors
+const fetcher = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    let info: any = null;
+    try { info = await res.json(); } catch {}
+    const err = new Error(info?.error || `Request failed with ${res.status}`) as any;
+    err.status = res.status;
+    err.info = info;
+    throw err;
+  }
+  return res.json();
+};
 export default function DashboardPage() {
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const { data: events, error, isLoading } = useSWR<EventWithPhotoCount[]>('/api/events', fetcher);
@@ -42,7 +53,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (!events || events.length === 0) {
+  if (!Array.isArray(events) || events.length === 0) {
     return (
       <Card className="text-center py-12">
         <CardContent>
@@ -60,8 +71,9 @@ export default function DashboardPage() {
     );
   }
 
-  // Sort events
-  const sortedEvents = [...events].sort((a, b) => {
+  // Sort events (defensive: ensure array)
+  const list = Array.isArray(events) ? events : [];
+  const sortedEvents = [...list].sort((a, b) => {
     const aDate = a?.date ? new Date(a.date as any).getTime() : (a?.createdAt ? new Date(a.createdAt as any).getTime() : 0);
     const bDate = b?.date ? new Date(b.date as any).getTime() : (b?.createdAt ? new Date(b.createdAt as any).getTime() : 0);
     return sortDir === 'desc' ? bDate - aDate : aDate - bDate;
@@ -125,7 +137,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-orange-900">Your Total Grids</p>
-                  <p className="text-2xl font-bold text-orange-800">{events ? events.length : 0}</p>
+                  <p className="text-2xl font-bold text-orange-800">{Array.isArray(events) ? events.length : 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -138,7 +150,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-blue-900">Your Total Photos</p>
-                  <p className="text-2xl font-bold text-blue-800">{events ? events.reduce((total, e) => total + Number(e.photoCount ?? 0), 0) : 0}</p>
+                  <p className="text-2xl font-bold text-blue-800">{Array.isArray(events) ? events.reduce((total, e) => total + Number((e as any).photoCount ?? 0), 0) : 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -151,7 +163,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-green-900">Your Public Grids</p>
-                  <p className="text-2xl font-bold text-green-800">{events ? events.filter(event => event.isPublic).length : 0}</p>
+                  <p className="text-2xl font-bold text-green-800">{Array.isArray(events) ? events.filter(event => (event as any).isPublic).length : 0}</p>
                 </div>
               </div>
             </CardContent>

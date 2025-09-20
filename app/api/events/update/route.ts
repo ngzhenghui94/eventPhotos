@@ -26,6 +26,8 @@ export async function POST(req: Request) {
   const chatEnabled = typeof chatEnabledRaw === 'string' ? chatEnabledRaw === 'true' : true;
   const slideshowEnabledRaw = formData.get('slideshowEnabled');
   const slideshowEnabled = typeof slideshowEnabledRaw === 'string' ? slideshowEnabledRaw === 'true' : true;
+  const timelineEnabledRaw = formData.get('timelineEnabled');
+  const timelineEnabled = typeof timelineEnabledRaw === 'string' ? timelineEnabledRaw === 'true' : true;
 
     // Auth protection: Only event owner or app owner can update
     const user = await getUser();
@@ -50,6 +52,7 @@ export async function POST(req: Request) {
       requireApproval,
       chatEnabled,
       slideshowEnabled,
+      timelineEnabled,
       updatedAt: new Date(),
     };
     if (formData.get('regenerateCode') === 'true') {

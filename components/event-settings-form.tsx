@@ -30,6 +30,7 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
   formData.set('requireApproval', form.requireApproval?.checked ? 'true' : 'false');
   formData.set('chatEnabled', form.chatEnabled?.checked ? 'true' : 'false');
   formData.set('slideshowEnabled', form.slideshowEnabled?.checked ? 'true' : 'false');
+  formData.set('timelineEnabled', form.timelineEnabled?.checked ? 'true' : 'false');
     await fetch('/api/events/update', {
       method: 'POST',
       body: formData,
@@ -78,6 +79,11 @@ const EventSettingsForm = ({ event, isEventOwner }: EventSettingsFormProps) => {
             <input type="checkbox" id="slideshowEnabled" name="slideshowEnabled" defaultChecked={event.slideshowEnabled !== false} className="accent-purple-600 h-4 w-4" />
             <Label htmlFor="slideshowEnabled" className="font-medium">Slideshow</Label>
             <span className="text-xs text-gray-400 font-medium min-w-0">Enable slideshows for this event</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="checkbox" id="timelineEnabled" name="timelineEnabled" defaultChecked={event.timelineEnabled !== false} className="accent-purple-600 h-4 w-4" />
+            <Label htmlFor="timelineEnabled" className="font-medium">Timeline</Label>
+            <span className="text-xs text-gray-400 font-medium min-w-0">Enable timeline for this event</span>
           </div>
         </div>
         <div className="flex justify-end pt-2 gap-2">
