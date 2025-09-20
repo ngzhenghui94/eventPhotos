@@ -4,6 +4,9 @@ import { useState } from 'react';
 import { GuestPhotoModal } from './guest-photo-modal';
 import type { Photo } from '@/lib/db/schema';
 import { GuestPhotoCard } from './guest-photo-card';
+import { Button } from '@/components/ui/button';
+import { BulkDownload } from './bulk-download';
+import { toast } from 'sonner';
 
 interface GuestPhoto extends Photo {
   uploadedByUser?: { id: number; name?: string | null; email?: string | null } | null;
@@ -21,9 +24,41 @@ export function GuestPhotoGrid({
   className = ''
 }: GuestPhotoGridProps) {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<GuestPhoto[]>([]);
 
   const handlePhotoClick = (photo: GuestPhoto, index: number) => {
-    setSelectedIndex(index);
+    if (isSelectMode) {
+      toggleSelection(photo);
+    } else {
+      setSelectedIndex(index);
+    }
+  };
+
+  const toggleSelection = (photo: GuestPhoto) => {
+    setSelectedPhotos(prev => {
+      const isSelected = prev.some(p => p.id === photo.id);
+      if (isSelected) {
+        return prev.filter(p => p.id !== photo.id);
+      } else {
+        if (prev.length >= 10) {
+          toast.warning('You can select a maximum of 10 photos for bulk download.');
+          return prev;
+        }
+        return [...prev, photo];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPhotos.length === photos.length) {
+      setSelectedPhotos([]);
+    } else {
+      setSelectedPhotos(photos.slice(0, 10));
+      if (photos.length > 10) {
+        toast.warning('Selected the first 10 photos. You can select a maximum of 10.');
+      }
+    }
   };
 
   if (photos.length === 0) {
@@ -46,7 +81,29 @@ export function GuestPhotoGrid({
         {/* Controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm text-gray-600">
-            {photos.length} photo{photos.length !== 1 ? 's' : ''}
+            {isSelectMode
+              ? `${selectedPhotos.length} selected`
+              : `${photos.length} photo${photos.length !== 1 ? 's' : ''}`}
+          </div>
+          <div className="flex items-center gap-2">
+            {isSelectMode && (
+              <>
+                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                  {selectedPhotos.length === photos.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <BulkDownload photos={selectedPhotos} />
+              </>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsSelectMode(!isSelectMode);
+                setSelectedPhotos([]);
+              }}
+            >
+              {isSelectMode ? 'Cancel' : 'Select'}
+            </Button>
           </div>
         </div>
 
@@ -60,13 +117,15 @@ export function GuestPhotoGrid({
               accessCode={accessCode}
               onPhotoClick={handlePhotoClick}
               priority={index < 10} // Prioritize first 10 images
+              isSelected={selectedPhotos.some(p => p.id === photo.id)}
+              isSelectMode={isSelectMode}
             />
           ))}
         </div>
       </div>
 
       {/* Photo Modal */}
-      {selectedIndex !== null && (
+      {selectedIndex !== null && !isSelectMode && (
         <GuestPhotoModal
           photos={photos}
           currentIndex={selectedIndex}
