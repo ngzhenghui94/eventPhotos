@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { photoIds } = await request.json();
+    const { photoIds, accessCode } = await request.json();
     if (!Array.isArray(photoIds) || photoIds.length === 0) {
       return NextResponse.json({ error: 'No photo IDs provided' }, { status: 400 });
     }
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         const photoId = photoIds[i];
         const photo = await getPhotoById(photoId);
         if (!photo) continue;
-        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
+        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id, accessCode });
         if (!canAccess) continue;
         const filename = photo.originalFilename || photo.filename;
         if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {

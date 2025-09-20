@@ -91,7 +91,7 @@ export function GuestPhotoGrid({
                 <Button variant="ghost" size="sm" onClick={handleSelectAll}>
                   {selectedPhotos.length === photos.length ? 'Deselect All' : 'Select All'}
                 </Button>
-                <BulkDownload photos={selectedPhotos} />
+                <BulkDownload photos={selectedPhotos} accessCode={accessCode} />
               </>
             )}
             <Button
