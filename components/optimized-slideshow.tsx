@@ -154,12 +154,12 @@ export function OptimizedSlideshow({
             </Button>
 
             {/* Slide Indicators */}
-            <div className="flex gap-1">
+            <div className="flex gap-1 overflow-x-auto max-w-xs">
               {photos.map((_, index) => (
                 <button
                   key={index}
                   onClick={() => goToSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
+                  className={`w-2 h-2 rounded-full transition-all flex-shrink-0 ${
                     index === currentIndex 
                       ? 'bg-white' 
                       : 'bg-white/50 hover:bg-white/70'
