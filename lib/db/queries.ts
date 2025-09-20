@@ -14,7 +14,7 @@ import { redis } from '@/lib/upstash';
  */
 export async function getEventTimeline(eventId: number): Promise<EventTimeline[]> {
   return withDatabaseErrorHandling(async () => {
-    return cacheWrap(`evt:${eventId}:timeline`, 20, async () =>
+  return cacheWrap(`evt:${eventId}:timeline`, 120, async () =>
       db.query.eventTimelines.findMany({
         where: eq(eventTimelines.eventId, eventId),
         orderBy: [eventTimelines.time],
@@ -194,7 +194,7 @@ export async function getActivityLogs(eventId: number, options: PaginationOption
  */
 export async function getEventById(eventId: number) {
   return withDatabaseErrorHandling(async () => {
-    return cacheWrap(`evt:id:${eventId}`, 30, async () =>
+  return cacheWrap(`evt:id:${eventId}`, 300, async () =>
       findFirst(
         db.query.events.findMany({
           where: eq(events.id, eventId),
@@ -226,7 +226,7 @@ export async function getEventByAccessCode(code: string) {
  */
 export async function getEventByEventCode(code: string) {
   return withDatabaseErrorHandling(async () => {
-    return cacheWrap(`evt:code:${code}`, 30, async () =>
+  return cacheWrap(`evt:code:${code}`, 300, async () =>
       db.query.events.findFirst({
         where: eq(events.eventCode, code),
         with: {
@@ -329,7 +329,7 @@ export async function getPhotoById(photoId: number) {
  */
 export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
   return withDatabaseErrorHandling(async () => {
-    return cacheWrap(`evt:${eventId}:photos`, 20, async () =>
+  return cacheWrap(`evt:${eventId}:photos`, 120, async () =>
       db.query.photos.findMany({
         where: eq(photos.eventId, eventId),
         orderBy: [desc(photos.uploadedAt)],
