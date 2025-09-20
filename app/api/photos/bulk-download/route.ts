@@ -89,7 +89,8 @@ export async function POST(request: NextRequest) {
           let url: string | null = null;
           if (photo.filePath?.startsWith('s3:')) {
             const key = photo.filePath.replace(/^s3:/, '');
-            url = await getSignedDownloadUrl(key, 60, {
+            // Use longer-lived signed URLs to avoid expiring mid-archive
+            url = await getSignedDownloadUrl(key, 3600, {
               contentDisposition: `attachment; filename=\"${encodeURIComponent(filename)}\"`
             });
           } else if (photo.filePath) {
@@ -111,7 +112,9 @@ export async function POST(request: NextRequest) {
     }
     // Stream the zip to the client to avoid buffering in memory
     const nodeStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'STORE' });
-    return new NextResponse(nodeStream as any, {
+    // Convert Node.js Readable to Web ReadableStream for Next.js Response compatibility
+    const webStream = (Readable as any).toWeb ? (Readable as any).toWeb(nodeStream as any) : (nodeStream as any);
+    return new NextResponse(webStream as any, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
