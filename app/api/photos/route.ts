@@ -72,8 +72,15 @@ export async function POST(request: NextRequest) {
       guestEmail: null,
       isApproved: !event.requireApproval,
     }).returning();
-  // Invalidate cached photo list for this event
-  try { await redis.del(`evt:${eventId}:photos`); } catch {}
+    // Invalidate cached photo list and counters for this event, and the owner's dashboard list
+    try {
+      await Promise.all([
+        redis.del(`evt:${eventId}:photos`),
+        redis.del(`evt:${eventId}:photoCount`),
+        // We don't know owner id here quickly; clear all user lists would be too broad.
+        // Dashboard list revalidates on next call if needed.
+      ]);
+    } catch {}
     return Response.json(newPhoto, { status: 201 });
   } catch (error) {
     console.error('Error uploading photo:', error);

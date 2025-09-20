@@ -64,12 +64,14 @@ export async function POST(req: Request) {
       .set(updateObj)
       .where(eq(eventsTable.id, eventId));
 
-    // Invalidate caches for this event
+    // Invalidate caches for this event and user event list
     try {
       await Promise.all([
         redis.del(`evt:id:${eventId}`),
         redis.del(`evt:code:${event.eventCode}`),
         redis.del(`evt:${eventId}:photos`),
+        redis.del(`evt:${eventId}:photoCount`),
+        redis.del(`user:${event.createdBy}:events:list`),
       ]);
     } catch {}
 
