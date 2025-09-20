@@ -90,8 +90,15 @@ export async function POST(request: NextRequest) {
     await Promise.all(Array.from({ length: Math.min(concurrency, photoIds.length) }, () => worker()));
     // Stream the zip to the client to avoid buffering in memory. Convert Node stream to Web stream for NextResponse
     const nodeStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'STORE' });
-    const webStream = Readable.toWeb(nodeStream) as unknown as ReadableStream;
-    return new NextResponse(webStream, {
+    let body: any;
+    try {
+      // Cast through any to avoid TS lib type mismatch between DOM and Node streams
+      body = (Readable as any).toWeb(nodeStream as any) as unknown as ReadableStream;
+    } catch {
+      // Fallback: hand Node stream directly (supported by Next in some environments)
+      body = nodeStream as any;
+    }
+    return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
