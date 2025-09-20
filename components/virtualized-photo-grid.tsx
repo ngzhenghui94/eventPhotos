@@ -17,6 +17,10 @@ interface VirtualizedPhotoGridProps {
   itemsPerRow?: number;
   gap?: number;
   overscan?: number;
+  // Multi-select props
+  multiMode?: boolean;
+  selectedIds?: Set<number>;
+  onToggleSelect?: (photoId: number) => void;
 }
 
 interface VirtualItem {
@@ -35,7 +39,10 @@ export function VirtualizedPhotoGrid({
   itemHeight = 300,
   itemsPerRow = 4,
   gap = 16,
-  overscan = 5
+  overscan = 5,
+  multiMode = false,
+  selectedIds,
+  onToggleSelect,
 }: VirtualizedPhotoGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerHeight, setContainerHeight] = useState(0);
@@ -139,6 +146,7 @@ export function VirtualizedPhotoGrid({
             >
               {item.photos.map((photo, photoIndex) => {
                 const globalIndex = item.index * itemsPerRow + photoIndex;
+                const isSelected = selectedIds ? selectedIds.has(photo.id) : false;
                 return (
                   <PhotoCard
                     key={photo.id}
@@ -149,6 +157,9 @@ export function VirtualizedPhotoGrid({
                     onPhotoDelete={onPhotoDelete}
                     canDelete={canDelete?.(photo) ?? false}
                     priority={globalIndex < itemsPerRow * 2} // Prioritize first 2 rows
+                    multiMode={multiMode}
+                    selected={isSelected}
+                    onToggleSelect={onToggleSelect ? () => onToggleSelect(photo.id) : undefined}
                   />
                 );
               })}
@@ -168,6 +179,9 @@ interface PhotoCardProps {
   onPhotoDelete?: (photoId: number) => void;
   canDelete: boolean;
   priority: boolean;
+  multiMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: () => void;
 }
 
 function PhotoCard({
@@ -177,14 +191,21 @@ function PhotoCard({
   onPhotoClick,
   onPhotoDelete,
   canDelete,
-  priority
+  priority,
+  multiMode = false,
+  selected = false,
+  onToggleSelect
 }: PhotoCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleClick = useCallback(() => {
-    onPhotoClick?.(photo, index);
-  }, [photo, index, onPhotoClick]);
+    if (multiMode) {
+      onToggleSelect?.();
+    } else {
+      onPhotoClick?.(photo, index);
+    }
+  }, [photo, index, onPhotoClick, multiMode, onToggleSelect]);
 
   const handleDelete = useCallback(async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -214,13 +235,22 @@ function PhotoCard({
 
   return (
     <div
-      className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
+      className={`group relative bg-white rounded-lg border overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer ${selected ? 'border-orange-400 ring-2 ring-orange-300' : 'border-gray-200'}`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onClick={handleClick}
     >
       {/* Image container */}
       <div className="aspect-square relative">
+        {multiMode && (
+          <label
+            className="absolute top-2 left-2 z-10 inline-flex items-center gap-2 bg-white/90 px-2 py-1 rounded text-xs cursor-pointer shadow"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <input type="checkbox" className="h-3 w-3" checked={!!selected} onChange={onToggleSelect} />
+            <span>Select</span>
+          </label>
+        )}
         <OptimizedImage
           photoId={photo.id}
           accessCode={accessCode}
@@ -232,41 +262,43 @@ function PhotoCard({
         />
 
         {/* Overlay with actions */}
-        <div
-          className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-200 ${
-            isHovered ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <div className="flex space-x-2">
-            <Button
-              size="sm"
-              variant="secondary"
-              className="bg-white/90 hover:bg-white"
-              onClick={handleClick}
-            >
-              <Eye className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="bg-white/90 hover:bg-white"
-              onClick={handleDownload}
-            >
-              <Download className="h-4 w-4" />
-            </Button>
-            {canDelete && (
+        {!multiMode && (
+          <div
+            className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-200 ${
+              isHovered ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
+            <div className="flex space-x-2">
               <Button
                 size="sm"
-                variant="destructive"
-                className="bg-red-500/90 hover:bg-red-600"
-                onClick={handleDelete}
-                disabled={isDeleting}
+                variant="secondary"
+                className="bg-white/90 hover:bg-white"
+                onClick={handleClick}
               >
-                <Trash2 className="h-4 w-4" />
+                <Eye className="h-4 w-4" />
               </Button>
-            )}
+              <Button
+                size="sm"
+                variant="secondary"
+                className="bg-white/90 hover:bg-white"
+                onClick={handleDownload}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              {canDelete && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="bg-red-500/90 hover:bg-red-600"
+                  onClick={handleDelete}
+                  disabled={isDeleting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Approval status indicator */}
         {!photo.isApproved && (

@@ -4,6 +4,7 @@ import { redis } from '@/lib/upstash';
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
+import { PHOTO_META_TTL_SECONDS, SIGNED_URL_TTL_SECONDS, SIGNED_URL_REDIS_MIRROR_SECONDS, THUMBNAIL_CACHE_CONTROL } from '@/lib/config/cache';
 import { cookies } from 'next/headers';
 // derive thumb key locally to avoid module hot-reload issues
 
@@ -51,7 +52,7 @@ export async function GET(
       s3Key: photo.filePath?.startsWith('s3:') ? photo.filePath.replace(/^s3:/, '') : null,
       filePath: photo.filePath ?? null,
     };
-    await redis.set(cacheKey, meta, { ex: 60 * 60 * 24 * 7 });
+  await redis.set(cacheKey, meta, { ex: PHOTO_META_TTL_SECONDS });
     try { console.info('[api][thumb][meta-cache-store]', { photoId, eventId: meta.eventId, hasS3Key: !!meta.s3Key }); } catch {}
   } else {
     try { console.info('[api][thumb][meta-cache-hit]', { photoId, eventId: meta.eventId, hasS3Key: !!meta.s3Key }); } catch {}
@@ -105,9 +106,9 @@ export async function GET(
   // If thumbnail exists, proxy it from S3 with caching headers.
   try {
     await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
-    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 3600 });
+  const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
     // Cache URL just under the signed URL expiry
-    try { await redis.set(urlCacheKey, signed, { ex: 3500 }); } catch {}
+  try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
     try {
       const uo = new URL(signed);
       console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: thumbKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
@@ -128,12 +129,12 @@ export async function GET(
         Key: thumbKey,
         Body: resized,
         ContentType: 'image/jpeg',
-        CacheControl: 'public, max-age=31536000, immutable',
+        CacheControl: THUMBNAIL_CACHE_CONTROL,
       }));
       try { console.info('[api][thumb][stored]', { photoId, key: thumbKey }); } catch {}
     } catch {}
-    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 3600 });
-    try { await redis.set(urlCacheKey, signed, { ex: 3500 }); } catch {}
+  const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
+  try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
     try {
       const uo = new URL(signed);
       console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });

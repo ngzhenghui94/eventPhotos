@@ -71,7 +71,9 @@ export async function POST(req: Request) {
         redis.del(`evt:code:${event.eventCode}`),
         redis.del(`evt:${eventId}:photos`),
         redis.del(`evt:${eventId}:photoCount`),
-        redis.del(`user:${event.createdBy}:events:list`),
+        redis.del(`user:${event.createdBy}:events:list:v2`),
+        // clear timeline cache if related fields were toggled
+        redis.del(`evt:${eventId}:timeline`),
       ]);
     } catch {}
 

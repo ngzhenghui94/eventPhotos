@@ -2,19 +2,23 @@ import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { db } from './drizzle';
 import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages } from './schema';
+import { verifyToken } from '@/lib/auth/session';
 // ============================================================================
 // EVENT TIMELINE MANAGEMENT
 // ============================================================================
 
 import type { EventTimeline, NewEventTimeline } from './schema';
 import { redis } from '@/lib/upstash';
+import { withDatabaseErrorHandling, findFirst, validateRequiredFields } from '@/lib/utils/database';
+import { cacheWrap } from '@/lib/utils/cache';
+import { EVENT_TIMELINE_TTL_SECONDS, EVENT_BY_ID_TTL_SECONDS, EVENT_BY_CODE_TTL_SECONDS, EVENT_PHOTOS_TTL_SECONDS } from '@/lib/config/cache';
 
 /**
  * Fetches all timeline entries for an event, ordered by time and sortOrder
  */
 export async function getEventTimeline(eventId: number): Promise<EventTimeline[]> {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:${eventId}:timeline`, 120, async () =>
+  return cacheWrap(`evt:${eventId}:timeline`, EVENT_TIMELINE_TTL_SECONDS, async () =>
       db.query.eventTimelines.findMany({
         where: eq(eventTimelines.eventId, eventId),
         orderBy: [eventTimelines.time],
@@ -77,7 +81,7 @@ export async function getTimelineEntryById(id: number): Promise<EventTimeline | 
     );
   }, 'getTimelineEntryById');
 }
-import { verifyToken } from '@/lib/auth/session';
+// removed duplicate import
 import type {
   UserSubscriptionData,
   ActivityLogData,
@@ -86,8 +90,7 @@ import type {
   EventWithPhotoCount,
   PaginationOptions,
 } from '@/lib/types/common';
-import { withDatabaseErrorHandling, findFirst, validateRequiredFields } from '@/lib/utils/database';
-import { cacheWrap } from '@/lib/utils/cache';
+// imports moved to top
 
 // ============================================================================
 // USER MANAGEMENT
@@ -121,6 +124,7 @@ export async function getUser() {
   }, 'getUser');
 }
 
+
 /**
  * Updates user subscription information
  */
@@ -133,7 +137,6 @@ export async function updateUserSubscription(data: UserSubscriptionData): Promis
         planName: data.planName,
         subscriptionStatus: data.subscriptionStatus,
         stripeCustomerId: data.stripeCustomerId,
-        stripeSubscriptionId: data.stripeSubscriptionId,
         subscriptionStart: data.subscriptionStart,
         subscriptionEnd: data.subscriptionEnd,
         updatedAt: new Date()
@@ -167,7 +170,6 @@ export async function logActivity(data: ActivityLogData): Promise<void> {
  */
 export async function getActivityLogs(eventId: number, options: PaginationOptions = {}): Promise<any[]> {
   const { limit = 50, offset = 0 } = options;
-  
   return withDatabaseErrorHandling(async () => {
     return db.query.activityLogs.findMany({
       limit,
@@ -194,7 +196,7 @@ export async function getActivityLogs(eventId: number, options: PaginationOption
  */
 export async function getEventById(eventId: number) {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:id:${eventId}`, 300, async () =>
+  return cacheWrap(`evt:id:${eventId}`, EVENT_BY_ID_TTL_SECONDS, async () =>
       findFirst(
         db.query.events.findMany({
           where: eq(events.id, eventId),
@@ -226,7 +228,7 @@ export async function getEventByAccessCode(code: string) {
  */
 export async function getEventByEventCode(code: string) {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:code:${code}`, 300, async () =>
+  return cacheWrap(`evt:code:${code}`, EVENT_BY_CODE_TTL_SECONDS, async () =>
       db.query.events.findFirst({
         where: eq(events.eventCode, code),
         with: {
@@ -329,7 +331,7 @@ export async function getPhotoById(photoId: number) {
  */
 export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:${eventId}:photos`, 120, async () =>
+  return cacheWrap(`evt:${eventId}:photos`, EVENT_PHOTOS_TTL_SECONDS, async () =>
       db.query.photos.findMany({
         where: eq(photos.eventId, eventId),
         orderBy: [desc(photos.uploadedAt)],

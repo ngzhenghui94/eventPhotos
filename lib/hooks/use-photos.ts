@@ -175,8 +175,13 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
 
 // Hook for individual photo loading state
 export function usePhotoLoader(photoId: number, accessCode?: string) {
-  const [thumbnailLoaded, setThumbnailLoaded] = useState(false);
-  const [fullImageLoaded, setFullImageLoaded] = useState(false);
+  // Module-level caches so remounts don't lose loaded state
+  // Keyed by photoId + accessCode to avoid mixing access contexts
+  // Note: kept inside function body via closure over module singletons below
+  const cacheKey = `${photoId}:${accessCode || 'public'}`;
+
+  const [thumbnailLoaded, setThumbnailLoaded] = useState(() => thumbLoadedCache.has(cacheKey));
+  const [fullImageLoaded, setFullImageLoaded] = useState(() => fullLoadedCache.has(cacheKey));
   const [error, setError] = useState<string | null>(null);
 
   const codeQuery = accessCode ? `?code=${encodeURIComponent(accessCode)}` : '';
@@ -184,11 +189,13 @@ export function usePhotoLoader(photoId: number, accessCode?: string) {
   const fullSrc = `/api/photos/${photoId}${codeQuery}`;
 
   const preloadThumbnail = useCallback(() => {
-    if (thumbnailLoaded) return Promise.resolve();
+    // Short-circuit if we already know it's loaded (from cache or state)
+    if (thumbLoadedCache.has(cacheKey) || thumbnailLoaded) return Promise.resolve();
 
     return new Promise<void>((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
+        thumbLoadedCache.set(cacheKey, true);
         setThumbnailLoaded(true);
         resolve();
       };
@@ -198,14 +205,15 @@ export function usePhotoLoader(photoId: number, accessCode?: string) {
       };
       img.src = thumbnailSrc;
     });
-  }, [thumbnailSrc, thumbnailLoaded]);
+  }, [thumbnailSrc, thumbnailLoaded, cacheKey]);
 
   const preloadFullImage = useCallback(() => {
-    if (fullImageLoaded) return Promise.resolve();
+    if (fullLoadedCache.has(cacheKey) || fullImageLoaded) return Promise.resolve();
 
     return new Promise<void>((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
+        fullLoadedCache.set(cacheKey, true);
         setFullImageLoaded(true);
         resolve();
       };
@@ -215,7 +223,7 @@ export function usePhotoLoader(photoId: number, accessCode?: string) {
       };
       img.src = fullSrc;
     });
-  }, [fullSrc, fullImageLoaded]);
+  }, [fullSrc, fullImageLoaded, cacheKey]);
 
   return {
     thumbnailSrc,
@@ -227,3 +235,7 @@ export function usePhotoLoader(photoId: number, accessCode?: string) {
     preloadFullImage
   };
 }
+
+// Module-level caches (declared at end of module to avoid hoist confusion in edits)
+const thumbLoadedCache: Map<string, true> = new Map();
+const fullLoadedCache: Map<string, true> = new Map();

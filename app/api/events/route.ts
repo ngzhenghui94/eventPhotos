@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { photos } from '@/lib/db/schema';
 import { sql, inArray } from 'drizzle-orm';
 import { cacheWrap } from '@/lib/utils/cache';
+import { EVENT_PHOTO_COUNT_TTL_SECONDS, USER_EVENTS_LIST_TTL_SECONDS } from '@/lib/config/cache';
 import { redis } from '@/lib/upstash';
 
 export async function GET() {
@@ -16,7 +17,7 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-  const data = await cacheWrap(`user:${user.id}:events:list:v2`, 300, async () => {
+  const data = await cacheWrap(`user:${user.id}:events:list:v2`, USER_EVENTS_LIST_TTL_SECONDS, async () => {
       // Fetch events created by the user, explicitly select all columns
       const userEvents = await db
         .select({
@@ -70,16 +71,16 @@ export async function GET() {
           for (const row of rows) {
             const c = Number(row.count) || 0;
             photoCounts[row.eventId] = c;
-            // Prime cache for each event's photoCount (TTL 2 min)
+            // Prime cache for each event's photoCount
             try {
-              await redis.set(`evt:${row.eventId}:photoCount`, c, { ex: 120 });
+              await redis.set(`evt:${row.eventId}:photoCount`, c, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS });
             } catch {}
           }
           // Any events without rows have zero photos
           for (const id of missingIds) {
             if (!(id in photoCounts)) {
               photoCounts[id] = 0;
-              try { await redis.set(`evt:${id}:photoCount`, 0, { ex: 120 }); } catch {}
+              try { await redis.set(`evt:${id}:photoCount`, 0, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS }); } catch {}
             }
           }
         }

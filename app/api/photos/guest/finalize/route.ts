@@ -2,6 +2,7 @@ import { NextRequest } from 'next/server';
 import { db } from '@/lib/db/drizzle';
 import { photos } from '@/lib/db/schema';
 import { getEventById } from '@/lib/db/queries';
+import { redis } from '@/lib/upstash';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -41,6 +42,17 @@ export async function POST(request: NextRequest) {
     }
     const inserted = await db.insert(photos).values(records).returning({ id: photos.id });
     console.info('[api][guest-finalize][ok]', { eventId, count: inserted.length });
+    // Invalidate event photo list and counts, and user event list cache
+    try {
+      await Promise.all([
+        redis.del(`evt:${eventId}:photos`),
+        redis.del(`evt:${eventId}:photoCount`),
+      ]);
+      const ownerId = event.createdBy;
+      if (ownerId) {
+        await redis.del(`user:${ownerId}:events:list:v2`);
+      }
+    } catch {}
     return Response.json({ count: inserted.length });
   } catch (err) {
     console.error('[api][guest-finalize][error]', err);

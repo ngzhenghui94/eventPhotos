@@ -42,10 +42,14 @@ export async function POST(
     await Promise.all([
       redis.del(`evt:${photo.eventId}:photos`),
       redis.incrby(`evt:${photo.eventId}:photoCount`, -1),
+      // clear per-photo caches
+      redis.del(`photo:meta:${photoId}`),
+      redis.del(`photo:url:${photoId}`),
+      redis.del(`photo:thumb:url:${photoId}`),
     ]);
     const event = await getEventById(photo.eventId);
     if (event) {
-      await redis.del(`user:${event.createdBy}:events:list`);
+      await redis.del(`user:${event.createdBy}:events:list:v2`);
     }
   } catch {}
 

@@ -34,10 +34,13 @@ export async function POST(request: Request, context: { params: Promise<{ photoI
       await Promise.all([
         redis.del(`evt:${p.eventId}:photos`),
         redis.incrby(`evt:${p.eventId}:photoCount`, -1),
+        redis.del(`photo:meta:${photoId}`),
+        redis.del(`photo:url:${photoId}`),
+        redis.del(`photo:thumb:url:${photoId}`),
       ]);
       const event = await getEventById(p.eventId);
       if (event) {
-        await redis.del(`user:${event.createdBy}:events:list`);
+        await redis.del(`user:${event.createdBy}:events:list:v2`);
       }
     } catch {}
   }

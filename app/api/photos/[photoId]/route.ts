@@ -3,9 +3,9 @@ import { getUser, getPhotoById, canUserAccessEvent, getEventById } from '@/lib/d
 import { getSignedDownloadUrl } from '@/lib/s3';
 import { redis } from '@/lib/upstash';
 import { cookies } from 'next/headers';
+import { PHOTO_META_TTL_SECONDS, SIGNED_URL_TTL_SECONDS, SIGNED_URL_REDIS_MIRROR_SECONDS } from '@/lib/config/cache';
 
 type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
-const META_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 
 export async function GET(
   request: NextRequest,
@@ -30,7 +30,7 @@ export async function GET(
         s3Key: photo.filePath?.startsWith('s3:') ? photo.filePath.replace(/^s3:/, '') : null,
         filePath: photo.filePath ?? null,
       };
-      await redis.set(cacheKey, meta, { ex: META_TTL_SECONDS });
+  await redis.set(cacheKey, meta, { ex: PHOTO_META_TTL_SECONDS });
     }
 
   const user = await getUser();
@@ -59,10 +59,10 @@ export async function GET(
     const isS3 = !!meta.s3Key;
     if (isS3 && meta.s3Key) {
       const urlCacheKey = `photo:url:${photoId}`;
-      const cached = await redis.get<string>(urlCacheKey).catch(() => null);
+    const cached = await redis.get<string>(urlCacheKey).catch(() => null);
       if (cached) return NextResponse.redirect(cached);
-  const signed = await getSignedDownloadUrl(meta.s3Key, 3600);
-  try { await redis.set(urlCacheKey, signed, { ex: 3500 }); } catch {}
+  const signed = await getSignedDownloadUrl(meta.s3Key, SIGNED_URL_TTL_SECONDS);
+  try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
   return NextResponse.redirect(signed);
     }
 

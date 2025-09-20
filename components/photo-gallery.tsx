@@ -224,6 +224,9 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
           className="h-96 border rounded-lg"
           itemsPerRow={4}
           itemHeight={250}
+          multiMode={multiMode}
+          selectedIds={selectedIds}
+          onToggleSelect={toggleSelect}
         />
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">

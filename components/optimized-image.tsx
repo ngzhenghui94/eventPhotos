@@ -113,6 +113,14 @@ export function OptimizedImage({
     setMounted(true);
   }, []);
 
+  // If we've previously loaded the thumbnail (from global cache), show it immediately
+  useEffect(() => {
+    if (thumbnailLoaded) {
+      setCurrentSrc(thumbnailSrc);
+      setIsLoaded(true);
+    }
+  }, [thumbnailLoaded, thumbnailSrc]);
+
   // Intersection Observer for lazy loading
   useEffect(() => {
     if (priority || isInView) return;
@@ -228,7 +236,10 @@ export function OptimizedImage({
       <img
         ref={imgRef}
         // Avoid passing empty string to src; leave it undefined until we have a URL
-        src={currentSrc || (priority ? thumbnailSrc : undefined)}
+        src={
+          currentSrc ||
+          (thumbnailLoaded ? thumbnailSrc : (priority ? thumbnailSrc : undefined))
+        }
         alt={alt}
         className={`w-full h-full object-cover transition-opacity duration-300 ${
           isLoaded ? 'opacity-100' : 'opacity-0'
