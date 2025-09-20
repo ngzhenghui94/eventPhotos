@@ -13,11 +13,12 @@ function rateLimitBulkDownload(ip: string | null | undefined) {
   return { ok: true } as const;
 }
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import JSZip from 'jszip';
 import { Readable } from 'stream';
-import { getPhotoById, canUserAccessEvent, getUser } from '@/lib/db/queries';
+import { getPhotoById, canUserAccessEvent, getUser, getEventById } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
 
 export async function POST(request: NextRequest) {
@@ -38,13 +39,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { photoIds, accessCode } = await request.json();
+  const { photoIds, accessCode } = await request.json();
     if (!Array.isArray(photoIds) || photoIds.length === 0) {
       return NextResponse.json({ error: 'No photo IDs provided' }, { status: 400 });
     }
     const user = await getUser();
     const zip = new JSZip();
     let totalBytes = 0;
+  let addedCount = 0;
+  const headerAccessCode = request.headers.get('x-access-code')?.toUpperCase().trim();
+  const cookieJar = cookies();
+  const eventMetaCache = new Map<number, { code: string; isPublic: boolean }>();
     // Parallel fetch with bounded concurrency; add file streams to zip
     const concurrency = 4;
     let current = 0;
@@ -55,7 +60,26 @@ export async function POST(request: NextRequest) {
         const photoId = photoIds[i];
         const photo = await getPhotoById(photoId);
         if (!photo) continue;
-        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id, accessCode });
+        // Resolve access code per event: body -> header -> cookie (if private)
+        let providedCode: string | undefined = accessCode || headerAccessCode || undefined;
+        if (!providedCode) {
+          let meta = eventMetaCache.get(photo.eventId);
+          if (!meta) {
+            const ev = await getEventById(photo.eventId);
+            if (ev) {
+              meta = { code: ev.eventCode, isPublic: !!ev.isPublic };
+              eventMetaCache.set(photo.eventId, meta);
+            }
+          }
+          if (meta && !meta.isPublic) {
+            try {
+              const cookieKey = `evt:${meta.code}:access`;
+              const fromCookie = (await cookieJar).get(cookieKey)?.value?.toUpperCase().trim();
+              if (fromCookie) providedCode = fromCookie;
+            } catch {}
+          }
+        }
+        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id, accessCode: providedCode });
         if (!canAccess) continue;
         const filename = photo.originalFilename || photo.filename;
         if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
@@ -77,10 +101,14 @@ export async function POST(request: NextRequest) {
           // Convert Web ReadableStream to Node Readable for JSZip
           const nodeReadable = Readable.fromWeb(res.body as any);
           zip.file(filename, nodeReadable as any);
+          addedCount += 1;
         } catch {}
       }
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, photoIds.length) }, () => worker()));
+    if (addedCount === 0) {
+      return NextResponse.json({ error: 'No authorized files to download' }, { status: 403 });
+    }
     // Stream the zip to the client to avoid buffering in memory
     const nodeStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'STORE' });
     return new NextResponse(nodeStream as any, {
