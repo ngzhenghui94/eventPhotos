@@ -5,6 +5,7 @@ import { events as eventsTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateAccessCode } from '@/lib/events/actions';
 import { getUser, getEventById } from '@/lib/db/queries';
+import { redis } from '@/lib/upstash';
 
 export async function POST(req: Request) {
   try {
@@ -62,6 +63,15 @@ export async function POST(req: Request) {
     await db.update(eventsTable)
       .set(updateObj)
       .where(eq(eventsTable.id, eventId));
+
+    // Invalidate caches for this event
+    try {
+      await Promise.all([
+        redis.del(`evt:id:${eventId}`),
+        redis.del(`evt:code:${event.eventCode}`),
+        redis.del(`evt:${eventId}:photos`),
+      ]);
+    } catch {}
 
     return NextResponse.json({ success: true });
   } catch (error) {

@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
       guestEmail: null,
       isApproved: !event.requireApproval,
     }).returning();
+  // Invalidate cached photo list for this event
+  try { await redis.del(`evt:${eventId}:photos`); } catch {}
     return Response.json(newPhoto, { status: 201 });
   } catch (error) {
     console.error('Error uploading photo:', error);

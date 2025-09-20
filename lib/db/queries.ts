@@ -7,16 +7,19 @@ import { activityLogs, users, events, photos, eventTimelines, ActivityType, even
 // ============================================================================
 
 import type { EventTimeline, NewEventTimeline } from './schema';
+import { redis } from '@/lib/upstash';
 
 /**
  * Fetches all timeline entries for an event, ordered by time and sortOrder
  */
 export async function getEventTimeline(eventId: number): Promise<EventTimeline[]> {
   return withDatabaseErrorHandling(async () => {
-    return db.query.eventTimelines.findMany({
-      where: eq(eventTimelines.eventId, eventId),
-      orderBy: [eventTimelines.time],
-    });
+    return cacheWrap(`evt:${eventId}:timeline`, 20, async () =>
+      db.query.eventTimelines.findMany({
+        where: eq(eventTimelines.eventId, eventId),
+        orderBy: [eventTimelines.time],
+      })
+    );
   }, 'getEventTimeline');
 }
 
@@ -27,6 +30,7 @@ export async function createEventTimelineEntry(data: NewEventTimeline): Promise<
   validateRequiredFields(data, ['eventId', 'title', 'time']);
   return withDatabaseErrorHandling(async () => {
     const [created] = await db.insert(eventTimelines).values(data).returning();
+    try { await redis.del(`evt:${data.eventId}:timeline`); } catch {}
     return created;
   }, 'createEventTimelineEntry');
 }
@@ -40,6 +44,9 @@ export async function updateEventTimelineEntry(id: number, data: Partial<NewEven
       .set({ ...data, updatedAt: new Date() })
       .where(eq(eventTimelines.id, id))
       .returning();
+    if (updated) {
+      try { await redis.del(`evt:${updated.eventId}:timeline`); } catch {}
+    }
     return updated || null;
   }, 'updateEventTimelineEntry');
 }
@@ -49,7 +56,11 @@ export async function updateEventTimelineEntry(id: number, data: Partial<NewEven
  */
 export async function deleteEventTimelineEntry(id: number): Promise<void> {
   return withDatabaseErrorHandling(async () => {
+    const existing = await getTimelineEntryById(id);
     await db.delete(eventTimelines).where(eq(eventTimelines.id, id));
+    if (existing) {
+      try { await redis.del(`evt:${existing.eventId}:timeline`); } catch {}
+    }
   }, 'deleteEventTimelineEntry');
 }
 
@@ -76,6 +87,7 @@ import type {
   PaginationOptions,
 } from '@/lib/types/common';
 import { withDatabaseErrorHandling, findFirst, validateRequiredFields } from '@/lib/utils/database';
+import { cacheWrap } from '@/lib/utils/cache';
 
 // ============================================================================
 // USER MANAGEMENT
@@ -182,11 +194,13 @@ export async function getActivityLogs(eventId: number, options: PaginationOption
  */
 export async function getEventById(eventId: number) {
   return withDatabaseErrorHandling(async () => {
-    return findFirst(
-      db.query.events.findMany({
-        where: eq(events.id, eventId),
-        limit: 1,
-      })
+    return cacheWrap(`evt:id:${eventId}`, 30, async () =>
+      findFirst(
+        db.query.events.findMany({
+          where: eq(events.id, eventId),
+          limit: 1,
+        })
+      )
     );
   }, 'getEventById');
 }
@@ -212,14 +226,16 @@ export async function getEventByAccessCode(code: string) {
  */
 export async function getEventByEventCode(code: string) {
   return withDatabaseErrorHandling(async () => {
-    return db.query.events.findFirst({
-      where: eq(events.eventCode, code),
-      with: {
-        createdBy: {
-          columns: { id: true, name: true, email: true }
+    return cacheWrap(`evt:code:${code}`, 30, async () =>
+      db.query.events.findFirst({
+        where: eq(events.eventCode, code),
+        with: {
+          createdBy: {
+            columns: { id: true, name: true, email: true }
+          }
         }
-      }
-    });
+      })
+    );
   }, 'getEventByEventCode');
 }
 
@@ -313,24 +329,26 @@ export async function getPhotoById(photoId: number) {
  */
 export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
   return withDatabaseErrorHandling(async () => {
-    return db.query.photos.findMany({
-      where: eq(photos.eventId, eventId),
-      orderBy: [desc(photos.uploadedAt)],
-      columns: {
-        id: true,
-        filename: true,
-        filePath: true,
-        originalFilename: true,
-        mimeType: true,
-        fileSize: true,
-        eventId: true,
-        uploadedAt: true,
-        isApproved: true,
-        uploadedBy: true,
-        guestName: true,
-        guestEmail: true,
-      },
-    });
+    return cacheWrap(`evt:${eventId}:photos`, 20, async () =>
+      db.query.photos.findMany({
+        where: eq(photos.eventId, eventId),
+        orderBy: [desc(photos.uploadedAt)],
+        columns: {
+          id: true,
+          filename: true,
+          filePath: true,
+          originalFilename: true,
+          mimeType: true,
+          fileSize: true,
+          eventId: true,
+          uploadedAt: true,
+          isApproved: true,
+          uploadedBy: true,
+          guestName: true,
+          guestEmail: true,
+        },
+      })
+    );
   }, 'getPhotosForEvent');
 }
 
