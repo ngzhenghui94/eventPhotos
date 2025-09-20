@@ -1,11 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { OptimizedImage } from './optimized-image';
-import { VirtualizedPhotoGrid } from './virtualized-photo-grid';
 import { GuestPhotoModal } from './guest-photo-modal';
-import { Button } from '@/components/ui/button';
 import type { Photo } from '@/lib/db/schema';
+import { GuestPhotoCard } from './guest-photo-card';
+import { Button } from '@/components/ui/button';
+import { BulkDownload } from './bulk-download';
+import { toast } from 'sonner';
 
 interface GuestPhoto extends Photo {
   uploadedByUser?: { id: number; name?: string | null; email?: string | null } | null;
@@ -22,11 +23,42 @@ export function GuestPhotoGrid({
   accessCode, 
   className = ''
 }: GuestPhotoGridProps) {
-  const [useVirtualized, setUseVirtualized] = useState(photos.length > 50);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedPhotos, setSelectedPhotos] = useState<GuestPhoto[]>([]);
 
   const handlePhotoClick = (photo: GuestPhoto, index: number) => {
-    setSelectedIndex(index);
+    if (isSelectMode) {
+      toggleSelection(photo);
+    } else {
+      setSelectedIndex(index);
+    }
+  };
+
+  const toggleSelection = (photo: GuestPhoto) => {
+    setSelectedPhotos(prev => {
+      const isSelected = prev.some(p => p.id === photo.id);
+      if (isSelected) {
+        return prev.filter(p => p.id !== photo.id);
+      } else {
+        if (prev.length >= 10) {
+          toast.warning('You can select a maximum of 10 photos for bulk download.');
+          return prev;
+        }
+        return [...prev, photo];
+      }
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedPhotos.length === photos.length) {
+      setSelectedPhotos([]);
+    } else {
+      setSelectedPhotos(photos.slice(0, 10));
+      if (photos.length > 10) {
+        toast.warning('Selected the first 10 photos. You can select a maximum of 10.');
+      }
+    }
   };
 
   if (photos.length === 0) {
@@ -49,47 +81,51 @@ export function GuestPhotoGrid({
         {/* Controls */}
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm text-gray-600">
-            {photos.length} photo{photos.length !== 1 ? 's' : ''}
+            {isSelectMode
+              ? `${selectedPhotos.length} selected`
+              : `${photos.length} photo${photos.length !== 1 ? 's' : ''}`}
           </div>
-          {photos.length > 50 && (
+          <div className="flex items-center gap-2">
+            {isSelectMode && (
+              <>
+                <Button variant="ghost" size="sm" onClick={handleSelectAll}>
+                  {selectedPhotos.length === photos.length ? 'Deselect All' : 'Select All'}
+                </Button>
+                <BulkDownload photos={selectedPhotos} accessCode={accessCode} />
+              </>
+            )}
             <Button
-              size="sm"
               variant="outline"
-              onClick={() => setUseVirtualized(!useVirtualized)}
+              size="sm"
+              onClick={() => {
+                setIsSelectMode(!isSelectMode);
+                setSelectedPhotos([]);
+              }}
             >
-              {useVirtualized ? 'Standard Grid' : 'Virtual Grid'}
+              {isSelectMode ? 'Cancel' : 'Select'}
             </Button>
-          )}
+          </div>
         </div>
 
         {/* Photo Grid */}
-        {useVirtualized ? (
-          <VirtualizedPhotoGrid
-            photos={photos}
-            onPhotoClick={handlePhotoClick}
-            accessCode={accessCode}
-            className="h-96 border rounded-lg"
-            itemsPerRow={4}
-            itemHeight={280}
-          />
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {photos.map((photo, index) => (
-              <GuestPhotoCard
-                key={photo.id}
-                photo={photo}
-                index={index}
-                accessCode={accessCode}
-                onPhotoClick={handlePhotoClick}
-                priority={index < 10} // Prioritize first 10 images
-              />
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
+          {photos.map((photo, index) => (
+            <GuestPhotoCard
+              key={photo.id}
+              photo={photo}
+              index={index}
+              accessCode={accessCode}
+              onPhotoClick={handlePhotoClick}
+              priority={index < 20} // Prioritize first 10 images
+              isSelected={selectedPhotos.some(p => p.id === photo.id)}
+              isSelectMode={isSelectMode}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Photo Modal */}
-      {selectedIndex !== null && (
+      {selectedIndex !== null && !isSelectMode && (
         <GuestPhotoModal
           photos={photos}
           currentIndex={selectedIndex}
@@ -99,60 +135,5 @@ export function GuestPhotoGrid({
         />
       )}
     </>
-  );
-}
-
-interface GuestPhotoCardProps {
-  photo: GuestPhoto;
-  index: number;
-  accessCode?: string;
-  onPhotoClick: (photo: GuestPhoto, index: number) => void;
-  priority?: boolean;
-}
-
-function GuestPhotoCard({ 
-  photo, 
-  index, 
-  accessCode, 
-  onPhotoClick,
-  priority = false 
-}: GuestPhotoCardProps) {
-  const handleClick = () => {
-    onPhotoClick(photo, index);
-  };
-  
-  const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
-  const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
-
-  return (
-    <div 
-      className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer"
-      onClick={handleClick}
-    >
-      <div className="aspect-square relative">
-        <OptimizedImage
-          photoId={photo.id}
-          accessCode={accessCode}
-          alt={photo.originalFilename || `Photo ${photo.id}`}
-          className="w-full h-full"
-          priority={priority}
-          thumbOnly={true}
-          sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
-        />
-        
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-200" />
-        
-        {/* Hover info */}
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-200">
-          <p className="text-white text-sm font-medium truncate">
-            {photo.originalFilename || `Photo ${photo.id}`}
-          </p>
-          <p className="text-white/80 text-xs">
-            By {uploadedBy} • {uploadDate}
-          </p>
-        </div>
-      </div>
-    </div>
   );
 }

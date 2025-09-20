@@ -8,11 +8,12 @@ import { toast } from 'sonner';
 
 interface BulkDownloadProps {
   photos: Photo[];
+  accessCode?: string;
   compact?: boolean;
   fullWidth?: boolean;
 }
 
-export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) {
+export function BulkDownload({ photos, accessCode, compact, fullWidth }: BulkDownloadProps) {
   const [loading, setLoading] = React.useState(false);
   const [progress, setProgress] = React.useState<number | null>(null);
 
@@ -39,7 +40,7 @@ export function BulkDownload({ photos, compact, fullWidth }: BulkDownloadProps) 
       const res = await fetch('/api/photos/bulk-download', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photoIds: photos.map(p => p.id) })
+        body: JSON.stringify({ photoIds: photos.map(p => p.id), accessCode })
       });
       // If server returned error, surface message before attempting to read blob
       if (!res.ok) {

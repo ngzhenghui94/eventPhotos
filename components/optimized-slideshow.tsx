@@ -138,40 +138,42 @@ export function OptimizedSlideshow({
           </Button>
 
           {/* Bottom Controls */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/50 rounded-lg px-3 py-2">
-            {/* Play/Pause Button */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsPlaying(!isPlaying)}
-              className="text-white hover:bg-white/20 p-1"
-            >
-              {isPlaying ? (
-                <Pause className="h-3 w-3" />
-              ) : (
-                <Play className="h-3 w-3" />
-              )}
-            </Button>
+          <div className="absolute bottom-4 left-0 right-0 flex justify-center">
+            <div className="flex items-center gap-4 bg-black/50 rounded-lg px-3 py-2">
+              {/* Play/Pause Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="text-white hover:bg-white/20 p-1"
+              >
+                {isPlaying ? (
+                  <Pause className="h-3 w-3" />
+                ) : (
+                  <Play className="h-3 w-3" />
+                )}
+              </Button>
 
-            {/* Slide Indicators */}
-            <div className="flex gap-1">
-              {photos.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => goToSlide(index)}
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    index === currentIndex 
-                      ? 'bg-white' 
-                      : 'bg-white/50 hover:bg-white/70'
-                  }`}
-                  aria-label={`Go to slide ${index + 1}`}
-                />
-              ))}
-            </div>
+              {/* Slide Indicators */}
+              <div className="flex gap-1 overflow-x-auto max-w-xs" style={{ scrollbarWidth: 'none' }}>
+                {photos.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => goToSlide(index)}
+                    className={`w-2 h-2 rounded-full transition-all flex-shrink-0 ${
+                      index === currentIndex 
+                        ? 'bg-white' 
+                        : 'bg-white/50 hover:bg-white/70'
+                    }`}
+                    aria-label={`Go to slide ${index + 1}`}
+                  />
+                ))}
+              </div>
 
-            {/* Counter */}
-            <div className="text-white text-xs ml-2">
-              {currentIndex + 1} / {photos.length}
+              {/* Counter */}
+              <div className="text-white text-xs w-16 text-center">
+                {currentIndex + 1} / {photos.length}
+              </div>
             </div>
           </div>
         </>
@@ -192,14 +194,15 @@ export function OptimizedSlideshow({
 
       {/* Preload upcoming images */}
       <div className="hidden">
-        {photos.slice(currentIndex + 1, currentIndex + 3).map((photo) => (
+    {photos.slice(currentIndex + 1, currentIndex + 3).map((photo) => (
           <OptimizedImage
             key={`preload-${photo.id}`}
             photoId={photo.id}
             accessCode={accessCode}
             alt=""
-            className="w-1 h-1"
-            priority={false}
+      className="w-1 h-1"
+      // Force eager load offscreen so navigation swaps to full image ASAP
+      priority={true}
           />
         ))}
       </div>

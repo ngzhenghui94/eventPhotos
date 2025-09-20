@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { photoIds } = await request.json();
+    const { photoIds, accessCode } = await request.json();
     if (!Array.isArray(photoIds) || photoIds.length === 0) {
       return NextResponse.json({ error: 'No photo IDs provided' }, { status: 400 });
     }
@@ -55,7 +55,8 @@ export async function POST(request: NextRequest) {
         const photoId = photoIds[i];
         const photo = await getPhotoById(photoId);
         if (!photo) continue;
-        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id });
+        // Authorize using user session or provided access code (for guests)
+        const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id, accessCode });
         if (!canAccess) continue;
         const filename = photo.originalFilename || photo.filename;
         if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
@@ -69,10 +70,16 @@ export async function POST(request: NextRequest) {
               contentDisposition: `attachment; filename=\"${encodeURIComponent(filename)}\"`
             });
           } else if (photo.filePath) {
-            url = photo.filePath;
+            // Build absolute URL to local photo API and include access code for auth
+            const local = new URL(`/api/photos/${photo.id}`, request.url);
+            if (accessCode) local.searchParams.set('code', accessCode);
+            url = local.toString();
           }
           if (!url) continue;
-          const res = await fetch(url);
+          const res = await fetch(url, {
+            // Include header for local API auth; S3 ignores it
+            headers: accessCode ? { 'x-access-code': accessCode } : undefined,
+          });
           if (!res.ok || !res.body) continue;
           // Convert Web ReadableStream to Node Readable for JSZip
           const nodeReadable = Readable.fromWeb(res.body as any);
@@ -81,14 +88,23 @@ export async function POST(request: NextRequest) {
       }
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, photoIds.length) }, () => worker()));
-    // Stream the zip to the client to avoid buffering in memory
+    // Stream the zip to the client to avoid buffering in memory. Convert Node stream to Web stream for NextResponse
     const nodeStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'STORE' });
-    return new NextResponse(nodeStream as any, {
+    let body: any;
+    try {
+      // Cast through any to avoid TS lib type mismatch between DOM and Node streams
+      body = (Readable as any).toWeb(nodeStream as any) as unknown as ReadableStream;
+    } catch {
+      // Fallback: hand Node stream directly (supported by Next in some environments)
+      body = nodeStream as any;
+    }
+    return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
         'Content-Disposition': 'attachment; filename="photos.zip"',
         'X-Total-Bytes': String(totalBytes || 0),
+        'Cache-Control': 'no-store',
         // No Content-Length because we are streaming
       },
     });

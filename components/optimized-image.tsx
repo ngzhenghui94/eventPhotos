@@ -168,7 +168,9 @@ export function OptimizedImage({
             throw err;
           }
         });
-        setCurrentSrc(thumbnailSrc);
+  // Show thumbnail immediately while full image loads in background
+  setCurrentSrc(thumbnailSrc);
+  setIsLoaded(true);
         // If we only want thumbs in this context, stop here
         if (thumbOnly) {
           setIsLoaded(true);
@@ -190,7 +192,8 @@ export function OptimizedImage({
           }
         });
         setCurrentSrc(fullSrc);
-        setIsLoaded(true);
+  // Keep loaded state true to avoid flicker; source upgrades seamlessly
+  setIsLoaded(true);
         onLoad?.();
       } catch (err) {
         setHasError(true);
@@ -213,7 +216,8 @@ export function OptimizedImage({
   }, [onError]);
 
   // Determine what to show
-  const shouldShowPlaceholder = !isLoaded && !hasError && placeholder !== 'empty';
+  // Show placeholder only until the thumbnail is ready
+  const shouldShowPlaceholder = !thumbnailLoaded && !hasError && placeholder !== 'empty';
   const shouldShowThumbnail = thumbnailLoaded && !fullImageLoaded && !hasError;
   const shouldShowFullImage = isLoaded && !hasError;
 

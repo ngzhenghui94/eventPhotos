@@ -175,11 +175,6 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               </div>
             )}
 
-            {/* Photo Upload for Guests */}
-            {hasAccess && event.allowGuestUploads && (
-              <GuestPhotoUpload eventId={event.id} />
-            )}
-
             {/* Photo Gallery */}
             <TimelineCollapsibleCard
               title={`Event Photos (${photoCount})`}
@@ -196,6 +191,11 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />
               )}
             </TimelineCollapsibleCard>
+
+            {/* Photo Upload for Guests */}
+            {hasAccess && event.allowGuestUploads && (
+              <GuestPhotoUpload eventId={event.id} />
+            )}
 
             <Card className={`${pickGradient(event.eventCode, 2)} rounded-xl shadow-lg ring-1 ring-slate-200/60`}>
               <CardHeader>
