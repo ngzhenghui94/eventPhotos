@@ -11,7 +11,7 @@ interface SlideshowClientProps {
 export default function SlideshowClient({ photos, accessCode, showControls = false }: SlideshowClientProps) {
   const [index, setIndex] = useState(0);
   const [playing, setPlaying] = useState(true);
-  const [intervalMs, setIntervalMs] = useState(5000);
+  const [intervalMs, setIntervalMs] = useState(10000);
 
   useEffect(() => {
     if (!playing || photos.length === 0) return;
@@ -38,7 +38,7 @@ export default function SlideshowClient({ photos, accessCode, showControls = fal
           <button className="px-2 py-1 hover:bg-white/20 rounded" onClick={() => setPlaying(p => !p)}>{playing ? 'Pause' : 'Play'}</button>
           <span>Every</span>
           <select className="bg-white text-black border border-white/30 rounded px-1 py-0.5 shadow" value={intervalMs} onChange={e => setIntervalMs(parseInt(e.target.value))}>
-            <option value={5000}>5s</option>
+            <option value={10000}>10s</option>
             <option value={15000}>15s</option>
             <option value={30000}>30s</option>
             <option value={60000}>60s</option>
