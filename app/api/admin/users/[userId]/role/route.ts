@@ -14,5 +14,5 @@ export async function POST(request: Request, context: { params: Promise<{ userId
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
   }
   await db.update(users).set({ role, updatedAt: new Date() }).where(eq(users.id, userId));
-  return NextResponse.redirect(new URL('/dashboard/admin/users', request.url));
+  return NextResponse.redirect(new URL('/dashboard/admin/users', request.url), { status: 303 });
 }

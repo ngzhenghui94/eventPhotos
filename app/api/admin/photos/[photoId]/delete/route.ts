@@ -41,5 +41,5 @@ export async function POST(request: Request, context: { params: Promise<{ photoI
       }
     } catch {}
   }
-  return NextResponse.redirect(new URL('/dashboard/admin/photos', request.url));
+  return NextResponse.redirect(new URL('/dashboard/admin/photos', request.url), { status: 303 });
 }

@@ -16,12 +16,13 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-  const data = await cacheWrap(`user:${user.id}:events:list`, 300, async () => {
+  const data = await cacheWrap(`user:${user.id}:events:list:v2`, 300, async () => {
       // Fetch events created by the user, explicitly select all columns
       const userEvents = await db
         .select({
           id: events.id,
           eventCode: events.eventCode,
+          accessCode: events.accessCode,
           name: events.name,
           description: events.description,
           date: events.date,
@@ -88,6 +89,7 @@ export async function GET() {
       const result = userEvents.map((ev) => ({
         id: ev.id,
         eventCode: ev.eventCode,
+        accessCode: ev.accessCode,
         name: ev.name,
         description: ev.description,
         date: ev.date,

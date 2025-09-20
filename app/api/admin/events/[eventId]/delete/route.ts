@@ -12,5 +12,5 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   // delete photos first to avoid FK constraint issues
   await db.delete(photos).where(eq(photos.eventId, eventId));
   await db.delete(events).where(eq(events.id, eventId));
-  return NextResponse.redirect(new URL('/dashboard/admin/events', request.url));
+  return NextResponse.redirect(new URL('/dashboard/admin/events', request.url), { status: 303 });
 }

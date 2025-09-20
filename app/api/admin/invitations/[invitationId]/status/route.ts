@@ -12,5 +12,5 @@ export async function POST(request: Request, context: { params: Promise<{ invita
   const status = String(form.get('status') || 'pending');
   if (!id) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   await db.update(invitations).set({ status }).where(eq(invitations.id, id));
-  return NextResponse.redirect(new URL('/dashboard/admin/invitations', request.url));
+  return NextResponse.redirect(new URL('/dashboard/admin/invitations', request.url), { status: 303 });
 }

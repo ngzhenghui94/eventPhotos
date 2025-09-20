@@ -10,5 +10,5 @@ export async function POST(request: Request, context: { params: Promise<{ photoI
   const photoId = Number(photoIdParam);
   if (!photoId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
   await db.update(photos).set({ isApproved: true }).where(eq(photos.id, photoId));
-  return NextResponse.redirect(new URL('/dashboard/admin/photos', request.url));
+  return NextResponse.redirect(new URL('/dashboard/admin/photos', request.url), { status: 303 });
 }

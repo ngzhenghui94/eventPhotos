@@ -55,5 +55,6 @@ export async function setSession(user: NewUser) {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
+    path: '/',
   });
 }
