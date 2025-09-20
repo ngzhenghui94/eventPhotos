@@ -6,6 +6,8 @@ import { eq } from 'drizzle-orm';
 import { deleteFromS3 } from '@/lib/s3';
 import { join } from 'path';
 import { promises as fs } from 'fs';
+import { redis } from '@/lib/upstash';
+import { getEventById } from '@/lib/db/queries';
 
 export async function POST(request: Request, context: { params: Promise<{ photoId: string }> }) {
   await requireSuperAdmin();
@@ -26,5 +28,18 @@ export async function POST(request: Request, context: { params: Promise<{ photoI
   }
 
   await db.delete(photos).where(eq(photos.id, photoId));
+  // Adjust counters and invalidate caches
+  if (p) {
+    try {
+      await Promise.all([
+        redis.del(`evt:${p.eventId}:photos`),
+        redis.incrby(`evt:${p.eventId}:photoCount`, -1),
+      ]);
+      const event = await getEventById(p.eventId);
+      if (event) {
+        await redis.del(`user:${event.createdBy}:events:list`);
+      }
+    } catch {}
+  }
   return NextResponse.redirect(new URL('/dashboard/admin/photos', request.url));
 }
