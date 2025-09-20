@@ -16,7 +16,7 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const data = await cacheWrap(`user:${user.id}:events:list`, 90, async () => {
+  const data = await cacheWrap(`user:${user.id}:events:list`, 300, async () => {
       // Fetch events created by the user, explicitly select all columns
       const userEvents = await db
         .select({

@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
       return Response.json({ error: 'File too large for direct API upload. Use presigned upload.' }, { status: 413 });
     }
 
-    const event = await getEventById(eventId);
+  const event = await getEventById(eventId);
     if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
     const user = await getUser();
@@ -72,13 +72,13 @@ export async function POST(request: NextRequest) {
       guestEmail: null,
       isApproved: !event.requireApproval,
     }).returning();
-    // Invalidate cached photo list and counters for this event, and the owner's dashboard list
+    // Update counters and invalidate lists for this event and the owner's dashboard
     try {
       await Promise.all([
         redis.del(`evt:${eventId}:photos`),
-        redis.del(`evt:${eventId}:photoCount`),
-        // We don't know owner id here quickly; clear all user lists would be too broad.
-        // Dashboard list revalidates on next call if needed.
+        // Increment live counter if present; if not present, set to current count lazily later.
+        redis.incr(`evt:${eventId}:photoCount`),
+        redis.del(`user:${event.createdBy}:events:list`),
       ]);
     } catch {}
     return Response.json(newPhoto, { status: 201 });

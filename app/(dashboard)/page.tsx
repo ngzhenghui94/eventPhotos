@@ -162,6 +162,17 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-3xl sm:text-4xl font-extrabold text-gray-900 text-center mb-12">How {brand.productName} works</h2>
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+            {/* Card 4: Authentication by Google */}
+            <div className="relative group">
+              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-red-400 via-yellow-400 to-blue-500 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 text-white flex items-center justify-center shadow-lg">
+                  <Shield className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Authentication provided by Google</h3>
+                <p className="mt-3 text-xs text-gray-600">Sign in securely with your Google account.</p>
+              </div>
+            </div>
             {/* Card 1 */}
             <div className="relative group">
               <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
@@ -251,17 +262,7 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Card 4: Authentication by Google */}
-            <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-red-400 via-yellow-400 to-blue-500 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
-              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
-                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 text-white flex items-center justify-center shadow-lg">
-                  <Shield className="h-7 w-7" />
-                </div>
-                <h3 className="mt-6 font-bold text-xl text-gray-900">Authentication provided by Google</h3>
-                <p className="mt-3 text-xs text-gray-600">Sign in securely with your Google account.</p>
-              </div>
-            </div>
+
 
           </div>
         </div>
