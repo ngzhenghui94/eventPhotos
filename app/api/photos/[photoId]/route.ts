@@ -61,8 +61,8 @@ export async function GET(
       const urlCacheKey = `photo:url:${photoId}`;
       const cached = await redis.get<string>(urlCacheKey).catch(() => null);
       if (cached) return NextResponse.redirect(cached);
-  const signed = await getSignedDownloadUrl(meta.s3Key, 120);
-  try { await redis.set(urlCacheKey, signed, { ex: 110 }); } catch {}
+  const signed = await getSignedDownloadUrl(meta.s3Key, 3600);
+  try { await redis.set(urlCacheKey, signed, { ex: 3500 }); } catch {}
   return NextResponse.redirect(signed);
     }
 

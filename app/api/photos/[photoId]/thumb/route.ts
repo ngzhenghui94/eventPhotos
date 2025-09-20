@@ -105,9 +105,9 @@ export async function GET(
   // If thumbnail exists, proxy it from S3 with caching headers.
   try {
     await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
-    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 600 });
-    // Cache URL briefly (just under the signed URL expiry)
-    try { await redis.set(urlCacheKey, signed, { ex: 590 }); } catch {}
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 3600 });
+    // Cache URL just under the signed URL expiry
+    try { await redis.set(urlCacheKey, signed, { ex: 3500 }); } catch {}
     try {
       const uo = new URL(signed);
       console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: thumbKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
@@ -132,8 +132,8 @@ export async function GET(
       }));
       try { console.info('[api][thumb][stored]', { photoId, key: thumbKey }); } catch {}
     } catch {}
-    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 600 });
-    try { await redis.set(urlCacheKey, signed, { ex: 590 }); } catch {}
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: 3600 });
+    try { await redis.set(urlCacheKey, signed, { ex: 3500 }); } catch {}
     try {
       const uo = new URL(signed);
       console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
