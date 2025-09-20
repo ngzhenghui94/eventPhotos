@@ -194,14 +194,15 @@ export function OptimizedSlideshow({
 
       {/* Preload upcoming images */}
       <div className="hidden">
-        {photos.slice(currentIndex + 1, currentIndex + 3).map((photo) => (
+    {photos.slice(currentIndex + 1, currentIndex + 3).map((photo) => (
           <OptimizedImage
             key={`preload-${photo.id}`}
             photoId={photo.id}
             accessCode={accessCode}
             alt=""
-            className="w-1 h-1"
-            priority={false}
+      className="w-1 h-1"
+      // Force eager load offscreen so navigation swaps to full image ASAP
+      priority={true}
           />
         ))}
       </div>
