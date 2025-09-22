@@ -134,8 +134,26 @@ export async function POST(
     guestName: guestName || undefined,
     body,
   });
-  // bump version so chat recent cache refreshes quickly
-  try { await bumpEventVersion(Number(eventId)); } catch {}
+  // Actively update cached recent messages (default page size 50)
+  try {
+    const v = await getEventVersion(Number(eventId));
+    const defaultLimit = 50;
+    const cacheKey = `evt:${eventId}:v${v}:chat:recent:${defaultLimit}`;
+    const cached = await redis.get<string>(cacheKey).catch(() => null);
+    if (cached) {
+      try {
+        const arr = JSON.parse(cached);
+        if (Array.isArray(arr)) {
+          arr.unshift(created);
+          if (arr.length > defaultLimit) arr.length = defaultLimit;
+          await redis.set(cacheKey, JSON.stringify(arr), { ex: CHAT_RECENT_TTL_SECONDS });
+        }
+      } catch {}
+    } else {
+      // Seed minimal list so next GET is instant
+      await redis.set(cacheKey, JSON.stringify([created]), { ex: CHAT_RECENT_TTL_SECONDS });
+    }
+  } catch {}
   return Response.json(created, { status: 201 });
 }
 
@@ -158,7 +176,22 @@ export async function DELETE(
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
   await db.delete(eventMessages).where(eq(eventMessages.id, id));
-  try { await bumpEventVersion(Number(eventId)); } catch {}
+  // Actively update cached recent messages by removing the deleted id
+  try {
+    const v = await getEventVersion(Number(eventId));
+    const defaultLimit = 50;
+    const cacheKey = `evt:${eventId}:v${v}:chat:recent:${defaultLimit}`;
+    const cached = await redis.get<string>(cacheKey).catch(() => null);
+    if (cached) {
+      try {
+        const arr = JSON.parse(cached);
+        if (Array.isArray(arr)) {
+          const filtered = arr.filter((m: any) => m?.id !== id);
+          await redis.set(cacheKey, JSON.stringify(filtered), { ex: CHAT_RECENT_TTL_SECONDS });
+        }
+      } catch { /* ignore parse errors */ }
+    }
+  } catch { /* ignore cache update errors */ }
   return Response.json({ success: true });
 }
 

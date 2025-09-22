@@ -28,7 +28,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
     if (isMinimized) return;
 
     let cancelled = false;
-    const POLL_MS = 10000;
+  const POLL_MS = 3000;
     const inFlight = { current: false } as { current: boolean };
     let timer: ReturnType<typeof setTimeout> | null = null;
 

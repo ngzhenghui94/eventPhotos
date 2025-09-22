@@ -40,7 +40,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
       return; // Stop polling if user can't access or chat is collapsed
     }
 
-        const POLL_MS = 10000;
+  const POLL_MS = 3000;
     let cancelled = false;
     const inFlight = { current: false } as { current: boolean };
     let timer: ReturnType<typeof setTimeout> | null = null;
