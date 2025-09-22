@@ -27,6 +27,48 @@ export default function DashboardPage() {
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const { data: events, error, isLoading } = useSWR<EventWithPhotoCount[]>('/api/events', fetcher);
 
+  // Aggregate event stats across all events by calling the new stats endpoint per event
+  const eventIds = useMemo(() => (Array.isArray(events) ? events.map(e => e.id) : []), [events]);
+  const { data: aggStats } = useSWR<{
+    totalPhotos: number;
+    approvedPhotos: number;
+    pendingApprovals: number;
+    lastUploadAt: string | null;
+  }>(
+    eventIds && eventIds.length > 0 ? ['user-events-stats', eventIds] : null,
+    async ([, ids]: [string, number[]]) => {
+      const results = await Promise.all(
+        ids.map(async (id) => {
+          const res = await fetch(`/api/events/${id}/stats`);
+          if (!res.ok) return null;
+          return res.json() as Promise<{ totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null }>;
+        })
+      );
+      const valid = results.filter((r): r is { totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null } => !!r);
+      let latestMs = 0;
+      let latestStr: string | null = null;
+      const totals = valid.reduce(
+        (acc, s) => {
+          acc.totalPhotos += s.totalPhotos || 0;
+          acc.approvedPhotos += s.approvedPhotos || 0;
+          acc.pendingApprovals += s.pendingApprovals || 0;
+          if (s.lastUploadAt) {
+            const t = new Date(s.lastUploadAt).getTime();
+            if (t > latestMs) {
+              latestMs = t;
+              latestStr = s.lastUploadAt;
+            }
+          }
+          return acc;
+        },
+        { totalPhotos: 0, approvedPhotos: 0, pendingApprovals: 0, lastUploadAt: null as string | null }
+      );
+      totals.lastUploadAt = latestStr;
+      return totals;
+    },
+    { revalidateOnFocus: false }
+  );
+
   if (error) {
     return (
       <Card className="text-center py-12">
@@ -150,7 +192,14 @@ export default function DashboardPage() {
                 </div>
                 <div className="ml-4">
                   <p className="text-sm font-medium text-blue-900">Your Total Photos</p>
-                  <p className="text-2xl font-bold text-blue-800">{Array.isArray(events) ? events.reduce((total, e) => total + Number((e as any).photoCount ?? 0), 0) : 0}</p>
+                  <p className="text-2xl font-bold text-blue-800">
+                    {aggStats?.totalPhotos ?? (Array.isArray(events) ? events.reduce((total, e) => total + Number((e as any).photoCount ?? 0), 0) : 0)}
+                  </p>
+                  {aggStats ? (
+                    <p className="text-xs text-blue-700 mt-1">
+                      Approved: <span className="font-semibold">{aggStats.approvedPhotos}</span> • Pending: <span className="font-semibold">{aggStats.pendingApprovals}</span>
+                    </p>
+                  ) : null}
                 </div>
               </div>
             </CardContent>

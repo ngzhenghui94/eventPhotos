@@ -1,10 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, MapPin, Users, QrCode } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Users, QrCode, BarChart3, Clock } from 'lucide-react';
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
-import { getEventByEventCode, getPhotosForEvent, getUser, getEventTimeline } from '@/lib/db/queries';
+import { getEventByEventCode, getPhotosForEvent, getUser, getEventTimeline, getEventStats } from '@/lib/db/queries';
 import { addTimelineEntry, updateTimelineEntry, deleteTimelineEntry } from './timeline-actions';
 import { EventTimelineEditor } from '@/components/event-timeline-editor';
 import { Timeline } from '@/components/event-timeline';
@@ -60,6 +60,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   const timelineItems = await getEventTimeline(eventId);
   const eventCode = event.eventCode;
   const photos = await getPhotosForEvent(eventId);
+  const stats = await getEventStats(eventId);
 
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;

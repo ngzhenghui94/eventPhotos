@@ -117,7 +117,7 @@ export function OptimizedImage({
   useEffect(() => {
     if (thumbnailLoaded) {
       setCurrentSrc(thumbnailSrc);
-      setIsLoaded(true);
+      // Let the visible <img> onLoad flip isLoaded to avoid hiding placeholder too early
     }
   }, [thumbnailLoaded, thumbnailSrc]);
 
@@ -164,12 +164,10 @@ export function OptimizedImage({
             throw err;
           }
         });
-  // Show thumbnail immediately while full image loads in background
-  setCurrentSrc(thumbnailSrc);
-  setIsLoaded(true);
+        // Show thumbnail; visible <img> will fire onLoad to flip isLoaded
+        setCurrentSrc(thumbnailSrc);
         // If we only want thumbs in this context, stop here
         if (thumbOnly) {
-          setIsLoaded(true);
           onLoad?.();
           return;
         }
@@ -188,8 +186,6 @@ export function OptimizedImage({
           }
         });
         setCurrentSrc(fullSrc);
-  // Keep loaded state true to avoid flicker; source upgrades seamlessly
-  setIsLoaded(true);
         onLoad?.();
       } catch (err) {
         setHasError(true);
@@ -213,7 +209,7 @@ export function OptimizedImage({
 
   // Determine what to show
   // Show placeholder only until the thumbnail is ready
-  const shouldShowPlaceholder = !thumbnailLoaded && !hasError && placeholder !== 'empty';
+  const shouldShowPlaceholder = !isLoaded && !hasError && placeholder !== 'empty';
   const shouldShowThumbnail = thumbnailLoaded && !fullImageLoaded && !hasError;
   const shouldShowFullImage = isLoaded && !hasError;
 
@@ -224,7 +220,7 @@ export function OptimizedImage({
         <img
           src={blurDataURL}
           alt=""
-          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200"
+          className="absolute inset-0 w-full h-full object-cover transition-opacity duration-200 z-0"
           style={{
             filter: 'blur(20px)',
             transform: 'scale(1.1)', // Slight scale to hide blur edges
@@ -241,7 +237,7 @@ export function OptimizedImage({
           (thumbnailLoaded ? thumbnailSrc : (priority ? thumbnailSrc : undefined))
         }
         alt={alt}
-        className={`w-full h-full object-cover transition-opacity duration-300 ${
+        className={`w-full h-full object-cover transition-opacity duration-300 relative z-[1] ${
           isLoaded ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={(e) => onClick?.(e)}

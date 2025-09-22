@@ -45,7 +45,13 @@ export async function GET(
     const cacheKey = `evt:${numericEventId}:v${v}:chat:recent:${limVal}`;
     const cached = await redis.get<string>(cacheKey).catch(() => null);
     if (cached) {
-      return Response.json({ messages: JSON.parse(cached) });
+      try {
+        const parsed = JSON.parse(cached);
+        return Response.json({ messages: parsed });
+      } catch (e) {
+        // Malformed cache; delete and fall through to fetch fresh
+        try { await redis.del(cacheKey); } catch {}
+      }
     }
     const messages = await getEventMessages(numericEventId, { limit: limVal });
     const ordered = [...messages].reverse();
