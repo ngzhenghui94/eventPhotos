@@ -4,7 +4,7 @@ import { redis } from '@/lib/upstash';
 import { S3Client, HeadObjectCommand, PutObjectCommand, GetObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import sharp from 'sharp';
-import { PHOTO_META_TTL_SECONDS, SIGNED_URL_TTL_SECONDS, SIGNED_URL_REDIS_MIRROR_SECONDS, THUMBNAIL_CACHE_CONTROL } from '@/lib/config/cache';
+import { PHOTO_META_TTL_SECONDS, SIGNED_URL_TTL_SECONDS, SIGNED_URL_REDIS_MIRROR_SECONDS, THUMBNAIL_CACHE_CONTROL, THUMB_EXISTS_TTL_SECONDS } from '@/lib/config/cache';
 import { cookies } from 'next/headers';
 // derive thumb key locally to avoid module hot-reload issues
 
@@ -105,7 +105,11 @@ export async function GET(
 
   // If thumbnail exists, proxy it from S3 with caching headers.
   try {
-    await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
+    const existsFlag = await redis.get<number>(`photo:thumb:exists:${photoId}`).catch(() => null);
+    if (existsFlag !== 1) {
+      await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
+      try { await redis.set(`photo:thumb:exists:${photoId}`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
+    }
   const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
     // Cache URL just under the signed URL expiry
   try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}

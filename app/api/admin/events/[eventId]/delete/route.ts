@@ -4,6 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { events, photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { redis } from '@/lib/upstash';
+import { bumpEventVersion } from '@/lib/utils/cache';
 
 export async function POST(request: Request, context: { params: Promise<{ eventId: string }> }) {
   await requireSuperAdmin();
@@ -24,8 +25,7 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     await Promise.all([
       redis.del(`evt:id:${eventId}`),
       ev?.eventCode ? redis.del(`evt:code:${ev.eventCode}`) : Promise.resolve(),
-      redis.del(`evt:${eventId}:photos`),
-      redis.del(`evt:${eventId}:photoCount`),
+      bumpEventVersion(eventId),
       redis.del(`evt:${eventId}:timeline`),
     ]);
     // Best-effort per-photo cache clears

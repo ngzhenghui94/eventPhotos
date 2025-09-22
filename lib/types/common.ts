@@ -63,3 +63,10 @@ export interface EventWithPhotoCount {
   updatedAt: Date;
   photoCount: number;
 }
+
+export interface EventStats {
+  totalPhotos: number;
+  approvedPhotos: number;
+  pendingApprovals: number;
+  lastUploadAt: string | null;
+}

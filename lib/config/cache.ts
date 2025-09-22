@@ -15,6 +15,8 @@ export const EVENT_BY_CODE_TTL_SECONDS = 300; // 5 minutes
 export const EVENT_PHOTOS_TTL_SECONDS = 120; // 2 minutes
 export const EVENT_PHOTO_COUNT_TTL_SECONDS = 300; // 5 minutes
 export const USER_EVENTS_LIST_TTL_SECONDS = 300; // 5 minutes
+// Pointer key for versioned event caches
+export const EVENT_VERSION_TTL_SECONDS = 24 * 60 * 60; // 24 hours
 
 // Client-side in-memory caches (milliseconds)
 export const CLIENT_PHOTOS_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
@@ -22,3 +24,10 @@ export const CLIENT_PHOTOS_STALE_TIME_MS = 5 * 60 * 1000; // 5 minutes
 // Thumbnail object browser cache headers
 export const THUMBNAIL_MAX_AGE_SECONDS = 31536000; // 1 year
 export const THUMBNAIL_CACHE_CONTROL = `public, max-age=${THUMBNAIL_MAX_AGE_SECONDS}, immutable`;
+
+// Additional Redis TTLs
+export const ACCESS_CHECK_TTL_SECONDS = 180; // 3 minutes
+export const EVENT_STATS_TTL_SECONDS = 300; // 5 minutes
+export const PHOTO_DERIVED_META_TTL_SECONDS = 7 * 24 * 3600; // 7 days
+export const THUMB_EXISTS_TTL_SECONDS = 6 * 3600; // 6 hours
+export const CHAT_RECENT_TTL_SECONDS = 10; // 10 seconds

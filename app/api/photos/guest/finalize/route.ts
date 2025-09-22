@@ -3,6 +3,8 @@ import { db } from '@/lib/db/drizzle';
 import { photos } from '@/lib/db/schema';
 import { getEventById } from '@/lib/db/queries';
 import { redis } from '@/lib/upstash';
+import { bumpEventVersion } from '@/lib/utils/cache';
+import { getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,16 +44,28 @@ export async function POST(request: NextRequest) {
     }
     const inserted = await db.insert(photos).values(records).returning({ id: photos.id });
     console.info('[api][guest-finalize][ok]', { eventId, count: inserted.length });
-    // Invalidate event photo list and counts, and user event list cache
+    // Invalidate via version bump and clear owner list cache
     try {
-      await Promise.all([
-        redis.del(`evt:${eventId}:photos`),
-        redis.del(`evt:${eventId}:photoCount`),
-      ]);
+      await bumpEventVersion(eventId);
       const ownerId = event.createdBy;
       if (ownerId) {
         await redis.del(`user:${ownerId}:events:list:v2`);
       }
+      // Warm/update stats optimistically
+      try {
+        const prev = await getEventStatsCached(eventId);
+        if (prev) {
+          const delta = inserted.length;
+          const approvedDelta = event.requireApproval ? 0 : delta;
+          const next = {
+            totalPhotos: prev.totalPhotos + delta,
+            approvedPhotos: prev.approvedPhotos + approvedDelta,
+            pendingApprovals: Math.max(0, (prev.totalPhotos + delta) - (prev.approvedPhotos + approvedDelta)),
+            lastUploadAt: new Date().toISOString(),
+          };
+          await setEventStatsCached(eventId, next);
+        }
+      } catch {}
     } catch {}
     return Response.json({ count: inserted.length });
   } catch (err) {

@@ -5,6 +5,8 @@ import { photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { deleteFromS3 } from '@/lib/s3';
 import { redis } from '@/lib/upstash';
+import { bumpEventVersion } from '@/lib/utils/cache';
+import { getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
 
 export async function POST(
   request: NextRequest,
@@ -37,11 +39,10 @@ export async function POST(
   }
 
   await db.delete(photos).where(eq(photos.id, photoId));
-  // Decrement counters and clear lists
+  // Invalidate via version bump and clear per-photo and owner list caches
   try {
     await Promise.all([
-      redis.del(`evt:${photo.eventId}:photos`),
-      redis.incrby(`evt:${photo.eventId}:photoCount`, -1),
+      bumpEventVersion(photo.eventId),
       // clear per-photo caches
       redis.del(`photo:meta:${photoId}`),
       redis.del(`photo:url:${photoId}`),
@@ -51,6 +52,19 @@ export async function POST(
     if (event) {
       await redis.del(`user:${event.createdBy}:events:list:v2`);
     }
+    // Warm/update stats: total -1 and approved -1 if was approved
+    try {
+      const prev = await getEventStatsCached(photo.eventId);
+      if (prev) {
+        const next = {
+          ...prev,
+          totalPhotos: Math.max(0, prev.totalPhotos - 1),
+          approvedPhotos: photo.isApproved ? Math.max(0, prev.approvedPhotos - 1) : prev.approvedPhotos,
+          pendingApprovals: Math.max(0, (Math.max(0, prev.totalPhotos - 1)) - (photo.isApproved ? Math.max(0, prev.approvedPhotos - 1) : prev.approvedPhotos)),
+        };
+        await setEventStatsCached(photo.eventId, next);
+      }
+    } catch {}
   } catch {}
 
   return NextResponse.json({ success: true });

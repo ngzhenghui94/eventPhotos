@@ -10,7 +10,9 @@ import { verifyToken } from '@/lib/auth/session';
 import type { EventTimeline, NewEventTimeline } from './schema';
 import { redis } from '@/lib/upstash';
 import { withDatabaseErrorHandling, findFirst, validateRequiredFields } from '@/lib/utils/database';
-import { cacheWrap } from '@/lib/utils/cache';
+import { cacheWrap, versionedCacheWrap, getEventVersion, getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
+import type { EventStats } from '@/lib/types/common';
+import { ACCESS_CHECK_TTL_SECONDS } from '@/lib/config/cache';
 import { EVENT_TIMELINE_TTL_SECONDS, EVENT_BY_ID_TTL_SECONDS, EVENT_BY_CODE_TTL_SECONDS, EVENT_PHOTOS_TTL_SECONDS } from '@/lib/config/cache';
 
 /**
@@ -248,18 +250,36 @@ export async function canUserAccessEvent(eventId: number, options: EventAccessOp
   return withDatabaseErrorHandling(async () => {
     const event = await getEventById(eventId);
     if (!event) return false;
+    if (event.isPublic) return true;
 
-    // Public event or correct access code
-    if (event.isPublic || (options.accessCode && options.accessCode === event.accessCode)) {
-      return true;
+    const v = await getEventVersion(eventId);
+    let byUser = false;
+    let byCode = false;
+
+    if (options.userId) {
+      const userKey = `access:evt:${eventId}:v${v}:user:${options.userId}`;
+      const cached = await redis.get<number>(userKey).catch(() => null);
+      if (cached === 1) byUser = true;
+      else if (cached === 0) byUser = false;
+      else {
+        byUser = options.userId === event.createdBy;
+        try { await redis.set(userKey, byUser ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch {}
+      }
     }
 
-    // Owner access
-    if (options.userId && options.userId === event.createdBy) {
-      return true;
+    if (options.accessCode) {
+      const code = options.accessCode.toUpperCase().trim();
+      const codeKey = `access:evt:${eventId}:v${v}:code:${code}`;
+      const cached = await redis.get<number>(codeKey).catch(() => null);
+      if (cached === 1) byCode = true;
+      else if (cached === 0) byCode = false;
+      else {
+        byCode = code === (event.accessCode || '').toUpperCase().trim();
+        try { await redis.set(codeKey, byCode ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch {}
+      }
     }
 
-    return false;
+    return byUser || byCode;
   }, 'canUserAccessEvent');
 }
 
@@ -331,7 +351,7 @@ export async function getPhotoById(photoId: number) {
  */
 export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:${eventId}:photos`, EVENT_PHOTOS_TTL_SECONDS, async () =>
+  return versionedCacheWrap(eventId, 'photos', EVENT_PHOTOS_TTL_SECONDS, async () =>
       db.query.photos.findMany({
         where: eq(photos.eventId, eventId),
         orderBy: [desc(photos.uploadedAt)],
@@ -352,6 +372,30 @@ export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
       })
     );
   }, 'getPhotosForEvent');
+}
+
+/**
+ * Event stats: total, approved, pending, last upload time
+ */
+export async function getEventStats(eventId: number): Promise<EventStats> {
+  return withDatabaseErrorHandling(async () => {
+    const cached = await getEventStatsCached(eventId);
+    if (cached) return cached;
+    const rows = await db.select({
+      total: sql<number>`count(*)`,
+      approved: sql<number>`sum(case when ${photos.isApproved} then 1 else 0 end)`,
+      last: sql<Date>`max(${photos.uploadedAt})`,
+    }).from(photos).where(eq(photos.eventId, eventId));
+    const row = rows[0] as any;
+    const stats: EventStats = {
+      totalPhotos: Number(row?.total || 0),
+      approvedPhotos: Number(row?.approved || 0),
+      pendingApprovals: Math.max(0, Number(row?.total || 0) - Number(row?.approved || 0)),
+      lastUploadAt: row?.last ? new Date(row.last).toISOString() : null,
+    };
+    await setEventStatsCached(eventId, stats);
+    return stats;
+  }, 'getEventStats');
 }
 
 // ============================================================================

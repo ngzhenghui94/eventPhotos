@@ -5,6 +5,8 @@ import { getEventById, getEventMessages, createEventMessage, getUser, canUserAcc
 import { eventMessages } from '@/lib/db/schema';
 import { cookies } from 'next/headers';
 import { redis } from '@/lib/upstash';
+import { CHAT_RECENT_TTL_SECONDS } from '@/lib/config/cache';
+import { getEventVersion, bumpEventVersion } from '@/lib/utils/cache';
 
 export async function GET(
   request: NextRequest,
@@ -34,11 +36,27 @@ export async function GET(
     return Response.json({ error: 'Access denied' }, { status: 403 });
   }
 
-  const messages = await getEventMessages(Number(eventId), {
-    limit: limit ? Math.min(100, Math.max(1, Number(limit))) : 50,
-    beforeId: beforeId ? Number(beforeId) : undefined,
+  const numericEventId = Number(eventId);
+  const limVal = limit ? Math.min(100, Math.max(1, Number(limit))) : 50;
+  const beforeVal = beforeId ? Number(beforeId) : undefined;
+  // Only cache the "recent page" (no beforeId) to keep it simple
+  if (!beforeVal) {
+    const v = await getEventVersion(numericEventId);
+    const cacheKey = `evt:${numericEventId}:v${v}:chat:recent:${limVal}`;
+    const cached = await redis.get<string>(cacheKey).catch(() => null);
+    if (cached) {
+      return Response.json({ messages: JSON.parse(cached) });
+    }
+    const messages = await getEventMessages(numericEventId, { limit: limVal });
+    const ordered = [...messages].reverse();
+    try { await redis.set(cacheKey, JSON.stringify(ordered), { ex: CHAT_RECENT_TTL_SECONDS }); } catch {}
+    return Response.json({ messages: ordered });
+  }
+
+  const messages = await getEventMessages(numericEventId, {
+    limit: limVal,
+    beforeId: beforeVal,
   });
-  // return newest-last
   const ordered = [...messages].reverse();
   return Response.json({ messages: ordered });
 }
@@ -110,7 +128,8 @@ export async function POST(
     guestName: guestName || undefined,
     body,
   });
-
+  // bump version so chat recent cache refreshes quickly
+  try { await bumpEventVersion(Number(eventId)); } catch {}
   return Response.json(created, { status: 201 });
 }
 
@@ -133,6 +152,7 @@ export async function DELETE(
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
   await db.delete(eventMessages).where(eq(eventMessages.id, id));
+  try { await bumpEventVersion(Number(eventId)); } catch {}
   return Response.json({ success: true });
 }
 

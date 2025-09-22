@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { generateAccessCode } from '@/lib/events/actions';
 import { getUser, getEventById } from '@/lib/db/queries';
 import { redis } from '@/lib/upstash';
+import { bumpEventVersion } from '@/lib/utils/cache';
 
 export async function POST(req: Request) {
   try {
@@ -69,8 +70,7 @@ export async function POST(req: Request) {
       await Promise.all([
         redis.del(`evt:id:${eventId}`),
         redis.del(`evt:code:${event.eventCode}`),
-        redis.del(`evt:${eventId}:photos`),
-        redis.del(`evt:${eventId}:photoCount`),
+        bumpEventVersion(eventId),
         redis.del(`user:${event.createdBy}:events:list:v2`),
         // clear timeline cache if related fields were toggled
         redis.del(`evt:${eventId}:timeline`),

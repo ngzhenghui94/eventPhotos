@@ -7,6 +7,7 @@ import { eq } from 'drizzle-orm';
 import { photos } from '@/lib/db/schema';
 import { sql, inArray } from 'drizzle-orm';
 import { cacheWrap } from '@/lib/utils/cache';
+import { getEventVersion } from '@/lib/utils/cache';
 import { EVENT_PHOTO_COUNT_TTL_SECONDS, USER_EVENTS_LIST_TTL_SECONDS } from '@/lib/config/cache';
 import { redis } from '@/lib/upstash';
 
@@ -42,7 +43,8 @@ export async function GET() {
       const photoCounts: Record<number, number> = {};
       if (eventIds.length > 0) {
         // Try per-event count cache first via MGET
-        const keys = eventIds.map((id) => `evt:${id}:photoCount`);
+        const versions = await Promise.all(eventIds.map((id) => getEventVersion(id)));
+        const keys = eventIds.map((id, i) => `evt:${id}:v${versions[i]}:photoCount`);
         let cachedCounts: Array<number | null> = [];
         try {
           const res = await (redis as any).mget(...keys);
@@ -73,14 +75,18 @@ export async function GET() {
             photoCounts[row.eventId] = c;
             // Prime cache for each event's photoCount
             try {
-              await redis.set(`evt:${row.eventId}:photoCount`, c, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS });
+              const vi = versions[eventIds.indexOf(row.eventId)] ?? 1;
+              await redis.set(`evt:${row.eventId}:v${vi}:photoCount`, c, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS });
             } catch {}
           }
           // Any events without rows have zero photos
           for (const id of missingIds) {
             if (!(id in photoCounts)) {
               photoCounts[id] = 0;
-              try { await redis.set(`evt:${id}:photoCount`, 0, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS }); } catch {}
+              try {
+                const vi = versions[eventIds.indexOf(id)] ?? 1;
+                await redis.set(`evt:${id}:v${vi}:photoCount`, 0, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS });
+              } catch {}
             }
           }
         }
