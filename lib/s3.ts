@@ -25,9 +25,13 @@ function getS3Client(): S3Client {
         console.warn('[s3][config] Using http endpoint in production may break browser uploads due to mixed content. Consider switching HETZNER_S3_ENDPOINT to https. Current:', ENDPOINT);
       }
     } catch {}
+    // In production, coerce any http endpoint to https to avoid mixed-content when generating presigned URLs
+    const endpointToUse = (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string')
+      ? ENDPOINT.replace(/^http:\/\//, 'https://')
+      : ENDPOINT;
     s3Client = new S3Client({
       region: REGION,
-      endpoint: ENDPOINT,
+      endpoint: endpointToUse,
       forcePathStyle: true, // Hetzner requires path-style URLs
       credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
       requestHandler: new NodeHttpHandler({

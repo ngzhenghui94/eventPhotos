@@ -15,9 +15,13 @@ const SECRET_ACCESS_KEY = clean(process.env.HETZNER_S3_SECRET_KEY);
 const ENDPOINT = clean(process.env.HETZNER_S3_ENDPOINT);
 const BUCKET_NAME = clean(process.env.HETZNER_S3_BUCKET);
 
+// Coerce to https in production to avoid mixed-content blocked images
+const endpointToUse = (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string')
+  ? ENDPOINT.replace(/^http:\/\//, 'https://')
+  : ENDPOINT;
 const s3 = new S3Client({
   region: REGION,
-  endpoint: ENDPOINT,
+  endpoint: endpointToUse,
   forcePathStyle: true,
   credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
 });
