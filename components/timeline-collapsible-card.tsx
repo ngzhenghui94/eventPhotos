@@ -9,13 +9,21 @@ type Props = {
   icon?: React.ReactNode;
   gradientClass?: string;
   children: React.ReactNode;
+  onCollapsedChange?: (collapsed: boolean) => void;
 };
 
-export default function TimelineCollapsibleCard({ title, storageKey, icon, gradientClass, children }: Props) {
+export default function TimelineCollapsibleCard({ title, storageKey, icon, gradientClass, children, onCollapsedChange }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
-    try { const v = localStorage.getItem(storageKey); if (v === '1') setCollapsed(true); } catch {}
-  }, [storageKey]);
+    try {
+      const v = localStorage.getItem(storageKey);
+      const initial = v === '1';
+      setCollapsed(initial);
+      onCollapsedChange?.(initial);
+    } catch {
+      onCollapsedChange?.(false);
+    }
+  }, [storageKey, onCollapsedChange]);
 
   return (
     <div className={`rounded-xl border border-blue-200 bg-gradient-to-r from-blue-100 via-red-50 to-orange-100 shadow-sm px-6 py-6 ${gradientClass || ''}`}>
@@ -32,7 +40,10 @@ export default function TimelineCollapsibleCard({ title, storageKey, icon, gradi
           aria-expanded={!collapsed}
           onClick={() => {
             setCollapsed((prev) => {
-              const next = !prev; try { localStorage.setItem(storageKey, next ? '1' : '0'); } catch {} return next;
+              const next = !prev;
+              try { localStorage.setItem(storageKey, next ? '1' : '0'); } catch {}
+              onCollapsedChange?.(next);
+              return next;
             });
           }}
         >
