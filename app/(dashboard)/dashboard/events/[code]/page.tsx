@@ -207,6 +207,37 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               <CalendarIcon className="h-4 w-4" /> Subscribe (ICS)
             </a>
           </div>
+          {/* Event Snapshot Stats (cached) */}
+          <div className="rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-3">
+            <div className="flex items-center gap-3">
+              <span className="bg-violet-100 rounded-full p-2">
+                <BarChart3 className="w-6 h-6 text-violet-700" />
+              </span>
+              <span className="font-bold text-2xl text-violet-900">Event Snapshot</span>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="rounded-lg bg-white/70 border border-violet-100 p-4 shadow-sm">
+                <div className="text-xs uppercase tracking-wide text-violet-700">Total Photos</div>
+                <div className="text-2xl font-extrabold text-violet-900">{stats?.totalPhotos ?? (photos?.length || 0)}</div>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-green-100 p-4 shadow-sm">
+                <div className="text-xs uppercase tracking-wide text-green-700">Approved</div>
+                <div className="text-2xl font-extrabold text-green-900">{stats?.approvedPhotos ?? ((photos as any[])?.filter(p => p.isApproved).length || 0)}</div>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-amber-100 p-4 shadow-sm">
+                <div className="text-xs uppercase tracking-wide text-amber-700">Pending</div>
+                <div className="text-2xl font-extrabold text-amber-900">{stats?.pendingApprovals ?? Math.max(0, (photos?.length || 0) - ((photos as any[])?.filter(p => p.isApproved).length || 0))}</div>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-blue-100 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-blue-700">
+                  <Clock className="w-4 h-4" /> Last Upload
+                </div>
+                <div className="text-sm font-semibold text-blue-900 mt-1">
+                  {stats?.lastUploadAt ? new Date(stats.lastUploadAt).toLocaleString() : '—'}
+                </div>
+              </div>
+            </div>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Event Stats - compact */}
             <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-6 py-6 flex flex-col gap-2">
