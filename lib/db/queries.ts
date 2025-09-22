@@ -235,7 +235,7 @@ export async function getEventByEventCode(code: string) {
         where: eq(events.eventCode, code),
         with: {
           createdBy: {
-            columns: { id: true, name: true, email: true }
+            columns: { id: true, name: true, email: true, planName: true }
           }
         }
       })

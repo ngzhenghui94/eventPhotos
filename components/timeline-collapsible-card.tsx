@@ -10,9 +10,10 @@ type Props = {
   gradientClass?: string;
   children: React.ReactNode;
   onCollapsedChange?: (collapsed: boolean) => void;
+  headerExtras?: React.ReactNode;
 };
 
-export default function TimelineCollapsibleCard({ title, storageKey, icon, gradientClass, children, onCollapsedChange }: Props) {
+export default function TimelineCollapsibleCard({ title, storageKey, icon, gradientClass, children, onCollapsedChange, headerExtras }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     try {
@@ -34,7 +35,11 @@ export default function TimelineCollapsibleCard({ title, storageKey, icon, gradi
           </span>
           <span role="heading" aria-level={2} className="font-bold text-2xl text-blue-900">{title}</span>
         </div>
-        <button
+        <div className="flex items-center gap-3 ml-auto">
+          {headerExtras ? (
+            <div className="shrink-0">{headerExtras}</div>
+          ) : null}
+          <button
           type="button"
           className="inline-flex items-center text-sm text-blue-800 hover:text-blue-900 w-full sm:w-auto justify-center"
           aria-expanded={!collapsed}
@@ -46,9 +51,10 @@ export default function TimelineCollapsibleCard({ title, storageKey, icon, gradi
               return next;
             });
           }}
-        >
-          {collapsed ? (<><ChevronDown className="h-4 w-4 mr-1"/> Expand</>) : (<><ChevronUp className="h-4 w-4 mr-1"/> Minimize</>)}
-        </button>
+          >
+            {collapsed ? (<><ChevronDown className="h-4 w-4 mr-1"/> Expand</>) : (<><ChevronUp className="h-4 w-4 mr-1"/> Minimize</>)}
+          </button>
+        </div>
       </div>
       {!collapsed && (
         <div>

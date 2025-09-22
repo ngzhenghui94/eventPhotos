@@ -18,6 +18,8 @@ import EventChat from '@/components/EventChat';
 import Link from 'next/link';
 import { OptimizedSlideshow } from '@/components/optimized-slideshow';
 import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
+import { BulkDownload } from '@/components/bulk-download';
+import { normalizePlanName } from '@/lib/plans';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
@@ -50,6 +52,8 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const photos = (photosRaw || []).filter((p: any) => p.isApproved);
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
+  const hostPlan = normalizePlanName(event.createdBy?.planName as any);
+  const isBusinessPlan = hostPlan === 'business';
 
   // Deterministic gradient picker per event using a simple hash on event code
   const gradients = [
@@ -180,6 +184,13 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               title={`Event Photos (${photoCount})`}
               storageKey={`tcg_gallery_collapsed:guest:${event.id}`}
               icon={<Users className="w-5 h-5 text-blue-600" />}
+              headerExtras={
+                hasAccess && isBusinessPlan && photoCount > 0 ? (
+                  <div className="min-w-0 w-full sm:w-auto sm:min-w-[220px]">
+                    <BulkDownload photos={(photos as any[])} accessCode={event.isPublic ? undefined : accessCodeCookie} compact fullWidth={false} />
+                  </div>
+                ) : null
+              }
             >
               {hasAccess ? (
                 <GuestPhotoGrid
@@ -202,7 +213,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 <CardTitle>Find out more about The Crowd Grid</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 mb-2">The Crowd Grid is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
+                <p className="text-sm text-gray-700 mb-2">The Crowd Grid helps you collect, curate, and share event photos. Guests upload with a code or QR, you approve what’s visible, and everyone enjoys a fast, secure gallery.</p>
                 <a href={process.env.BASE_URL} target="_blank" rel="noopener noreferrer">
                   <Button variant="default">Learn More</Button>
                 </a>
@@ -294,7 +305,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
                 <CardTitle>Find out more about The Crowd Grid</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-gray-700 mb-2">The Crowd Grid is a modern platform for event photo sharing, guest uploads, and secure galleries.</p>
+                <p className="text-sm text-gray-700 mb-2">The Crowd Grid helps you collect, curate, and share event photos. Guests upload with a code or QR, you approve what’s visible, and everyone enjoys a fast, secure gallery.</p>
                 <a href={process.env.BASE_URL} target="_blank" rel="noopener noreferrer">
                   <Button variant="default">Learn More</Button>
                 </a>

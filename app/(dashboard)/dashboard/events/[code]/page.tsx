@@ -245,12 +245,12 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               storageKey={`tcg_event_stats:${eventId}`}
               icon={<svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg>}
               gradientClass="border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50"
-            >
-              <div className="flex items-center gap-2 mb-2">
-                <span className="ml-auto px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-base font-semibold">
+              headerExtras={
+                <span className="px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-base font-semibold">
                   {planName.charAt(0).toUpperCase() + planName.slice(1)}
                 </span>
-              </div>
+              }
+            >
               <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700 items-center">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center gap-2">
