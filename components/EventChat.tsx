@@ -33,6 +33,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [isPageVisible, setIsPageVisible] = useState<boolean>(true);
+  const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
 
   const canSend = canAccess && text.trim().length > 0 && !sending;
 
@@ -49,7 +50,25 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
   }, []);
 
   useEffect(() => {
-    if (!canAccess || collapsed || !isPageVisible) {
+    // Track window focus to pause polling when window is not focused
+    const onFocus = () => setIsWindowFocused(true);
+    const onBlur = () => setIsWindowFocused(false);
+    if (typeof window !== 'undefined') {
+      const initial = typeof document !== 'undefined' && typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+      setIsWindowFocused(initial);
+      window.addEventListener('focus', onFocus);
+      window.addEventListener('blur', onBlur);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+        window.removeEventListener('blur', onBlur);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!canAccess || collapsed || !isPageVisible || !isWindowFocused) {
       return; // Stop polling if user can't access or chat is collapsed
     }
 
@@ -99,7 +118,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [eventId, canAccess, collapsed, isPageVisible]);
+  }, [eventId, canAccess, collapsed, isPageVisible, isWindowFocused]);
 
 
   // Fetch current user to prefill/lock name if logged in

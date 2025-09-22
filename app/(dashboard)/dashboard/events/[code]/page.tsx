@@ -523,32 +523,30 @@ export default async function Page({ params }: { params: Promise<{ code: string 
           </div>
           {/* Event Details */}
           {/* Event Details - shifted up (removed from here) */}
-          {/* Photo Upload */}
-          <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2 mb-6">
-            <div className="flex items-center gap-3 mb-2">
-              <span className="bg-purple-100 rounded-full p-2">
-                <Users className="w-6 h-6 text-purple-600" />
-              </span>
-              <span className="font-bold text-2xl text-purple-900">Upload Photos</span>
-            </div>
+          {/* Photo Upload (collapsible) */}
+          <TimelineCollapsibleCard
+            title="Upload Photos"
+            storageKey={`tcg_upload_photos:${eventId}`}
+            icon={<Users className="w-6 h-6 text-purple-600" />}
+            gradientClass="border-purple-200 bg-gradient-to-r from-purple-50 to-orange-50"
+          >
             <PhotoUpload eventId={eventId} planName={planName} />
-          </div>
+          </TimelineCollapsibleCard>
           {/* Photo Approval */}
           {event?.requireApproval && (
             <PhotoApproval photos={photos || []} eventId={eventId} />
           )}
-          {/* Photo Gallery */}
-          <div className="rounded-xl border border-pink-200 bg-gradient-to-r from-pink-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2 mb-6">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <span className="bg-pink-100 rounded-full p-2">
-                  <Users className="w-6 h-6 text-pink-600" />
-                </span>
-                <span className="font-bold text-2xl text-pink-900">Approved Photos</span>
-                <span className="ml-2 px-3 py-1 rounded-full bg-pink-50 text-pink-700 text-base font-semibold">
-                  {photos?.filter((p: any) => p.isApproved).length || 0} Approved
-                </span>
-              </div>
+          {/* Approved Photos (collapsible) */}
+          <TimelineCollapsibleCard
+            title="Approved Photos"
+            storageKey={`tcg_approved_photos:${eventId}`}
+            icon={<Users className="w-6 h-6 text-pink-600" />}
+            gradientClass="border-pink-200 bg-gradient-to-r from-pink-50 to-orange-50"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <span className="px-3 py-1 rounded-full bg-pink-50 text-pink-700 text-base font-semibold">
+                {photos?.filter((p: any) => p.isApproved).length || 0} Approved
+              </span>
               <div className="min-w-0 w-full sm:w-auto sm:min-w-[220px]">
                 <BulkDownload photos={(photos as any[])?.filter((p) => p.isApproved) || []} compact fullWidth />
               </div>
@@ -559,7 +557,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               currentUserId={user?.id}
               canManage={true}
             />
-          </div>
+          </TimelineCollapsibleCard>
 
           {/* Host Chat Moderation */}
           {isEventOwner && event?.chatEnabled !== false && (

@@ -24,6 +24,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
   const [isMinimized, setIsMinimized] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [isPageVisible, setIsPageVisible] = useState(true);
+  const [isWindowFocused, setIsWindowFocused] = useState(true);
 
   useEffect(() => {
     const onVis = () => setIsPageVisible(typeof document !== 'undefined' ? !document.hidden : true);
@@ -35,7 +36,24 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
   }, []);
 
   useEffect(() => {
-    if (isMinimized || !isPageVisible) return;
+    const onFocus = () => setIsWindowFocused(true);
+    const onBlur = () => setIsWindowFocused(false);
+    if (typeof window !== 'undefined') {
+      const initial = typeof document !== 'undefined' && typeof document.hasFocus === 'function' ? document.hasFocus() : true;
+      setIsWindowFocused(initial);
+      window.addEventListener('focus', onFocus);
+      window.addEventListener('blur', onBlur);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', onFocus);
+        window.removeEventListener('blur', onBlur);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isMinimized || !isPageVisible || !isWindowFocused) return;
 
     let cancelled = false;
   const POLL_MS = 3000;
@@ -70,7 +88,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
 
     load().finally(schedule);
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [eventId, isMinimized, isPageVisible]);
+  }, [eventId, isMinimized, isPageVisible, isWindowFocused]);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
