@@ -32,11 +32,24 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [isPageVisible, setIsPageVisible] = useState<boolean>(true);
 
   const canSend = canAccess && text.trim().length > 0 && !sending;
 
   useEffect(() => {
-    if (!canAccess || collapsed) {
+    // Track page visibility to pause polling when tab is inactive
+    const onVis = () => setIsPageVisible(typeof document !== 'undefined' ? !document.hidden : true);
+    if (typeof document !== 'undefined') {
+      setIsPageVisible(!document.hidden);
+      document.addEventListener('visibilitychange', onVis);
+    }
+    return () => {
+      if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!canAccess || collapsed || !isPageVisible) {
       return; // Stop polling if user can't access or chat is collapsed
     }
 
@@ -86,7 +99,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [eventId, canAccess, collapsed]);
+  }, [eventId, canAccess, collapsed, isPageVisible]);
 
 
   // Fetch current user to prefill/lock name if logged in

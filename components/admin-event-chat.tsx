@@ -23,9 +23,19 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
   const [text, setText] = useState('');
   const [isMinimized, setIsMinimized] = useState(false);
   const listRef = useRef<HTMLDivElement | null>(null);
+  const [isPageVisible, setIsPageVisible] = useState(true);
 
   useEffect(() => {
-    if (isMinimized) return;
+    const onVis = () => setIsPageVisible(typeof document !== 'undefined' ? !document.hidden : true);
+    if (typeof document !== 'undefined') {
+      setIsPageVisible(!document.hidden);
+      document.addEventListener('visibilitychange', onVis);
+    }
+    return () => { if (typeof document !== 'undefined') document.removeEventListener('visibilitychange', onVis); };
+  }, []);
+
+  useEffect(() => {
+    if (isMinimized || !isPageVisible) return;
 
     let cancelled = false;
   const POLL_MS = 3000;
@@ -60,7 +70,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
 
     load().finally(schedule);
     return () => { cancelled = true; if (timer) clearTimeout(timer); };
-  }, [eventId, isMinimized]);
+  }, [eventId, isMinimized, isPageVisible]);
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;

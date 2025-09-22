@@ -34,6 +34,7 @@ import { generateAccessCode } from '@/lib/events/actions';
 import DeleteEventModal from '@/components/delete-event-modal';
 import EventSettingsForm from '@/components/event-settings-form';
 import AdminEventChat from '@/components/admin-event-chat';
+import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
 
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -207,14 +208,13 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               <CalendarIcon className="h-4 w-4" /> Subscribe (ICS)
             </a>
           </div>
-          {/* Event Snapshot Stats (cached) */}
-          <div className="rounded-xl border border-violet-200 bg-gradient-to-r from-violet-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              <span className="bg-violet-100 rounded-full p-2">
-                <BarChart3 className="w-6 h-6 text-violet-700" />
-              </span>
-              <span className="font-bold text-2xl text-violet-900">Event Snapshot</span>
-            </div>
+          {/* Event Snapshot Stats (cached) with collapse */}
+          <TimelineCollapsibleCard
+            title="Event Snapshot"
+            storageKey={`tcg_event_snapshot:${eventId}`}
+            icon={<BarChart3 className="w-6 h-6 text-violet-700" />}
+            gradientClass="border-violet-200 bg-gradient-to-r from-violet-50 to-orange-50"
+          >
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="rounded-lg bg-white/70 border border-violet-100 p-4 shadow-sm">
                 <div className="text-xs uppercase tracking-wide text-violet-700">Total Photos</div>
@@ -237,16 +237,17 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
               </div>
             </div>
-          </div>
+          </TimelineCollapsibleCard>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Event Stats - compact */}
-            <div className="rounded-xl border border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50 shadow-sm px-6 py-6 flex flex-col gap-2">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="bg-orange-100 rounded-full p-2">
-                  <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
-                </span>
-                <span className="font-bold text-2xl text-orange-900">Event Stats</span>
-                <span className="ml-2 px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-base font-semibold">
+            {/* Event Stats - compact (collapsible) */}
+            <TimelineCollapsibleCard
+              title="Event Stats"
+              storageKey={`tcg_event_stats:${eventId}`}
+              icon={<svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/><circle cx="12" cy="13" r="4"/><line x1="12" y1="9" x2="12" y2="13"/></svg>}
+              gradientClass="border-orange-200 bg-gradient-to-r from-orange-50 to-blue-50"
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <span className="ml-auto px-3 py-1 rounded-full bg-orange-50 text-orange-700 text-base font-semibold">
                   {planName.charAt(0).toUpperCase() + planName.slice(1)}
                 </span>
               </div>
@@ -380,16 +381,15 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                             {isEventOwner && (
                 <EventSettingsForm event={event} isEventOwner={isEventOwner} />
               )}
-            </div>
+            </TimelineCollapsibleCard>
             {/* Event Settings - moved beside stats */}
-            {/* Redesigned Event Settings card */}
-            <div className="rounded-xl border border-green-200 bg-gradient-to-r from-green-50 to-orange-50 shadow-sm px-6 py-6 flex flex-col gap-2">
-              <div className="flex items-center gap-3 mb-2">
-                <span className="bg-green-100 rounded-full p-2">
-                  <Calendar className="w-6 h-6 text-green-600" />
-                </span>
-                <span className="font-bold text-2xl text-green-900">Event Settings</span>
-              </div>
+            {/* Event Settings card (collapsible) */}
+            <TimelineCollapsibleCard
+              title="Event Settings"
+              storageKey={`tcg_event_settings:${eventId}`}
+              icon={<Calendar className="w-6 h-6 text-green-600" />}
+              gradientClass="border-green-200 bg-gradient-to-r from-green-50 to-orange-50"
+            >
               <div className="grid grid-cols-3 gap-x-6 gap-y-2 text-sm text-gray-700">
                 <div className="flex flex-col items-center">
                   <div className="flex items-center gap-2">
@@ -519,7 +519,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                   <EventQr code={eventCode} size={160} compact />
                 </div>
               </div>
-            </div>
+            </TimelineCollapsibleCard>
           </div>
           {/* Event Details */}
           {/* Event Details - shifted up (removed from here) */}
