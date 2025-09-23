@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { OptimizedImage } from './optimized-image';
 import { Button } from '@/components/ui/button';
-import { Play, Pause, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Pause, ChevronLeft, ChevronRight, Maximize2, Minimize2, X } from 'lucide-react';
 
 interface SlideshowPhoto {
   id: number;
@@ -32,6 +32,7 @@ export function OptimizedSlideshow({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Memoize current photo
   const currentPhoto = useMemo(() => photos[currentIndex], [photos, currentIndex]);
@@ -73,12 +74,23 @@ export function OptimizedSlideshow({
           e.preventDefault();
           setIsPlaying(!isPlaying);
           break;
+        case 'f':
+        case 'F':
+          e.preventDefault();
+          setIsFullscreen((v) => !v);
+          break;
+        case 'Escape':
+          if (isFullscreen) {
+            e.preventDefault();
+            setIsFullscreen(false);
+          }
+          break;
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNext, goToPrevious, isPlaying]);
+  }, [goToNext, goToPrevious, isPlaying, isFullscreen]);
 
   if (photos.length === 0) {
     return (
@@ -91,10 +103,10 @@ export function OptimizedSlideshow({
     );
   }
 
-  return (
-    <div 
-      className={`relative overflow-hidden rounded-lg bg-gray-900 ${className}`}
-      style={{ height }}
+  const SlideshowBody = (
+    <div
+      className={`relative overflow-hidden bg-gray-900 ${isFullscreen ? '' : 'rounded-lg'} ${className}`}
+      style={{ height: isFullscreen ? '100vh' : height }}
     >
       {/* Main Image */}
       <div className="relative w-full h-full">
@@ -102,7 +114,7 @@ export function OptimizedSlideshow({
           photoId={currentPhoto.id}
           accessCode={accessCode}
           alt={currentPhoto.name || `Photo ${currentPhoto.id}`}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           priority={true}
           onLoad={() => setIsLoaded(true)}
         />
@@ -175,6 +187,22 @@ export function OptimizedSlideshow({
                 {currentIndex + 1} / {photos.length}
               </div>
             </div>
+              {/* Fullscreen toggle */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsFullscreen(v => !v)}
+                className="text-white hover:bg-white/20 p-1"
+                aria-label={isFullscreen ? 'Minimize' : 'Maximize'}
+                title={isFullscreen ? 'Minimize (Esc)' : 'Maximize (F)'}
+              >
+                {isFullscreen ? (
+                  <Minimize2 className="h-3 w-3" />
+                ) : (
+                  <Maximize2 className="h-3 w-3" />
+                )}
+              </Button>
+
           </div>
         </>
       )}
@@ -194,7 +222,7 @@ export function OptimizedSlideshow({
 
       {/* Preload upcoming images */}
       <div className="hidden">
-    {photos.slice(currentIndex + 1, currentIndex + 3).map((photo) => (
+        {photos.slice(currentIndex + 1, currentIndex + 3).map((photo) => (
           <OptimizedImage
             key={`preload-${photo.id}`}
             photoId={photo.id}
@@ -206,6 +234,25 @@ export function OptimizedSlideshow({
           />
         ))}
       </div>
+    </div>
+  );
+
+  if (!isFullscreen) return SlideshowBody;
+
+  // Fullscreen overlay wrapper
+  return (
+    <div className="fixed inset-0 z-[60] bg-black">
+      {/* Close button */}
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setIsFullscreen(false)}
+        className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white"
+        aria-label="Close fullscreen"
+      >
+        <X className="h-4 w-4" />
+      </Button>
+      {SlideshowBody}
     </div>
   );
 }

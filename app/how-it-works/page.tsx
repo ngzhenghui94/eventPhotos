@@ -1,5 +1,3 @@
-"use client";
-
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Calendar, CalendarClock, QrCode, Upload, CheckCircle2, Shield, Users, ImageIcon } from "lucide-react";
@@ -131,27 +129,6 @@ export default function HowItWorksPage() {
       </div>
     </div>
       </section>
-
-      <style jsx>{`
-        .glass-card {
-          background: rgba(255,255,255,0.6);
-          border-radius: 1.25rem;
-          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
-          backdrop-filter: blur(8px);
-          border: 1px solid rgba(255,255,255,0.18);
-        }
-        .fade-in-up {
-          opacity: 0;
-          transform: translateY(30px);
-          animation: fadeInUp 1.2s ease forwards;
-        }
-        @keyframes fadeInUp {
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-      `}</style>
     </main>
   );
 }

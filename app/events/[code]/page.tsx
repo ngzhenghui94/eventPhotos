@@ -106,27 +106,36 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid gap-8 lg:grid-cols-4">
           <div className="lg:col-span-3 space-y-8">
-            {/* Inline Slideshow (hidden until unlocked for private events) */}
-            {photos.length > 0 && (event.isPublic || hasAccess) && event.slideshowEnabled !== false && (
+            {/* Inline Slideshow (visible; prompts unlock for private events) */}
+            {photos.length > 0 && event.slideshowEnabled !== false && (
               <Card className="rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50 to-orange-50 shadow-sm">
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2 text-blue-900 text-2xl">
                     <span className="bg-blue-100 rounded-full p-2"><Camera className="w-5 h-5 text-blue-600" /></span>
                     Slideshow
                   </CardTitle>
-                  <Link href={`/events/${event.eventCode}/slideshow`}>
-                    <Button size="sm">Start Slideshow</Button>
-                  </Link>
+                  {(event.isPublic || hasAccess) && (
+                    <Link href={`/events/${event.eventCode}/slideshow`}>
+                      <Button size="sm">Start Slideshow</Button>
+                    </Link>
+                  )}
                 </CardHeader>
                 <CardContent>
-                  <OptimizedSlideshow
-                    photos={photos.map(p => ({ id: p.id, name: p.originalFilename }))}
-                    accessCode={hasAccess ? (event.isPublic ? undefined : accessCodeCookie) : undefined}
-                    height={360}
-                    intervalMs={4000}
-                    autoPlay={true}
-                    showControls={true}
-                  />
+                  {(event.isPublic || hasAccess) ? (
+                    <OptimizedSlideshow
+                      photos={photos.map(p => ({ id: p.id, name: p.originalFilename }))}
+                      accessCode={hasAccess ? (event.isPublic ? undefined : accessCodeCookie) : undefined}
+                      height={360}
+                      intervalMs={4000}
+                      autoPlay={true}
+                      showControls={true}
+                    />
+                  ) : (
+                    <div className="rounded-lg border border-blue-200 bg-white/60 px-4 py-3 text-sm text-slate-600 flex items-center gap-2">
+                      <Lock className="h-4 w-4 text-blue-600" />
+                      Unlock the event to view the slideshow.
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
