@@ -134,6 +134,8 @@ export async function POST(
     guestName: guestName || undefined,
     body,
   });
+  // Notify listeners via version bump
+  try { await bumpEventVersion(Number(eventId)); } catch {}
   // Actively update cached recent messages (default page size 50)
   try {
     const v = await getEventVersion(Number(eventId));
@@ -176,6 +178,8 @@ export async function DELETE(
     return Response.json({ error: 'Forbidden' }, { status: 403 });
   }
   await db.delete(eventMessages).where(eq(eventMessages.id, id));
+  // Notify listeners via version bump
+  try { await bumpEventVersion(Number(eventId)); } catch {}
   // Actively update cached recent messages by removing the deleted id
   try {
     const v = await getEventVersion(Number(eventId));

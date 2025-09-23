@@ -69,55 +69,55 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
   }, []);
 
   useEffect(() => {
-    if (!canAccess || collapsed || !isPageVisible || !isWindowFocused) {
-      return; // Stop polling if user can't access or chat is collapsed
+    if (!canAccess || collapsed) {
+      return;
     }
 
-  const POLL_MS = 3000;
     let cancelled = false;
-    const inFlight = { current: false } as { current: boolean };
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
+    let fallbackTimer: ReturnType<typeof setInterval> | null = null;
 
-    async function load() {
-      // Don't show loading spinner on background refresh, but do it on initial load
-      if (!messages.length) {
-        setLoading(true);
-      }
+    async function loadOnce() {
+      if (!messages.length) setLoading(true);
       try {
         const res = await fetch(`/api/events/${eventId}/chat`, { cache: 'no-store' });
         if (!res.ok) throw new Error('Failed to load messages');
         const data = await res.json();
-        if (!cancelled) {
-          setMessages(Array.isArray(data.messages) ? data.messages : []);
-        }
+        if (!cancelled) setMessages(Array.isArray(data.messages) ? data.messages : []);
       } catch {
-        // Errors are ignored in polling
       } finally {
         if (!cancelled) setLoading(false);
       }
     }
 
-    function schedule() {
-      if (cancelled) return;
-      timer = setTimeout(async () => {
-        if (!inFlight.current) {
-          inFlight.current = true;
-          try {
-            await load();
-          } finally {
-            inFlight.current = false;
-          }
-        }
-        schedule();
-      }, POLL_MS);
-    }
+    // Initial load
+    loadOnce();
 
-    // Initial load then schedule next
-    load().finally(schedule);
+    // Subscribe via Server-Sent Events for push updates
+    try {
+      es = new EventSource(`/api/events/${eventId}/chat/stream`);
+      es.addEventListener('version', () => {
+        // Version bumped; fetch latest messages
+        loadOnce();
+      });
+      es.addEventListener('init', () => {
+        // initial handshake received; nothing else to do
+      });
+      es.onerror = () => {
+        // The connection will auto-retry per server `retry:` hint; we also keep a slow safety refresh
+      };
+    } catch {}
+
+    // Slow safety refresh when page is visible and focused (e.g., if SSE is blocked)
+    const SAFETY_MS = 20000;
+    if (isPageVisible && isWindowFocused) {
+      fallbackTimer = setInterval(loadOnce, SAFETY_MS);
+    }
 
     return () => {
       cancelled = true;
-      if (timer) clearTimeout(timer);
+      if (fallbackTimer) clearInterval(fallbackTimer);
+      if (es) es.close();
     };
   }, [eventId, canAccess, collapsed, isPageVisible, isWindowFocused]);
 
