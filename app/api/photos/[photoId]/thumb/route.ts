@@ -48,7 +48,12 @@ export async function GET(
     const cachedUrl = await redis.get<string>(urlCacheKey);
     if (cachedUrl) {
       try { console.info('[api][thumb][cache-hit-url]', { photoId, ms: Date.now() - t0 }); } catch {}
-      return NextResponse.redirect(cachedUrl);
+      return NextResponse.redirect(cachedUrl, {
+        headers: {
+          'Cache-Control': 'private, max-age=60',
+          'Vary': 'Accept',
+        },
+      });
     }
   } catch {}
   let meta = await redis.get<PhotoMeta>(cacheKey);
@@ -128,7 +133,12 @@ export async function GET(
       const uo = new URL(signed);
       console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: preferredKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
     } catch { console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: preferredKey, ms: Date.now() - t0 }); }
-    return NextResponse.redirect(signed);
+    return NextResponse.redirect(signed, {
+      headers: {
+        'Cache-Control': 'private, max-age=60',
+        'Vary': 'Accept',
+      },
+    });
   } catch {
     // If preferred format missing, attempt fallback format if different
     if (preferredKey !== thumbKeyJpeg) {
@@ -137,7 +147,12 @@ export async function GET(
         const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKeyJpeg }), { expiresIn: SIGNED_URL_TTL_SECONDS });
         try { await redis.set(`photo:thumb:exists:${photoId}:jpeg`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
         try { await redis.set(`photo:thumb:url:${photoId}:jpeg`, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
-        return NextResponse.redirect(signed);
+        return NextResponse.redirect(signed, {
+          headers: {
+            'Cache-Control': 'private, max-age=60',
+            'Vary': 'Accept',
+          },
+        });
       } catch {}
     }
   }
@@ -184,10 +199,20 @@ export async function GET(
       const uo = new URL(signed);
       console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, key: outKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
     } catch { console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, key: outKey, ms: Date.now() - t0 }); }
-    return NextResponse.redirect(signed);
+    return NextResponse.redirect(signed, {
+      headers: {
+        'Cache-Control': 'private, max-age=60',
+        'Vary': 'Accept',
+      },
+    });
   } catch (err) {
     console.error('[api][thumb][error]', { photoId, eventId: meta.eventId, err });
     try { console.info('[api][thumb][fallback-original]', { photoId, eventId: meta.eventId }); } catch {}
-    return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url));
+    return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url), {
+      headers: {
+        'Cache-Control': 'private, max-age=60',
+        'Vary': 'Accept',
+      },
+    });
   }
 }

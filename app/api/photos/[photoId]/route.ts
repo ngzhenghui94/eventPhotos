@@ -60,15 +60,15 @@ export async function GET(
     if (isS3 && meta.s3Key) {
       const urlCacheKey = `photo:url:${photoId}`;
     const cached = await redis.get<string>(urlCacheKey).catch(() => null);
-      if (cached) return NextResponse.redirect(cached);
+    if (cached) return NextResponse.redirect(cached, { headers: { 'Cache-Control': 'private, max-age=60' } });
   const signed = await getSignedDownloadUrl(meta.s3Key, SIGNED_URL_TTL_SECONDS);
   try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
-  return NextResponse.redirect(signed);
+  return NextResponse.redirect(signed, { headers: { 'Cache-Control': 'private, max-age=60' } });
     }
 
     // Local fallback
     if (meta.filePath) {
-      return NextResponse.redirect(new URL(meta.filePath, request.url));
+      return NextResponse.redirect(new URL(meta.filePath, request.url), { headers: { 'Cache-Control': 'private, max-age=60' } });
     }
     return Response.json({ error: 'File path missing' }, { status: 500 });
   } catch (error) {
