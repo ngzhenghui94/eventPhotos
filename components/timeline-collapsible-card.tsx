@@ -20,11 +20,15 @@ export default function TimelineCollapsibleCard({ title, storageKey, icon, gradi
       const v = localStorage.getItem(storageKey);
       const initial = v === '1';
       setCollapsed(initial);
-      onCollapsedChange?.(initial);
     } catch {
-      onCollapsedChange?.(false);
+      // ignore
     }
   }, [storageKey, onCollapsedChange]);
+
+  // Notify parent after collapsed state changes to avoid setState during render in another component
+  useEffect(() => {
+    onCollapsedChange?.(collapsed);
+  }, [collapsed, onCollapsedChange]);
 
   return (
     <div className={`rounded-xl border border-blue-200 bg-gradient-to-r from-blue-100 via-red-50 to-orange-100 shadow-sm px-6 py-6 ${gradientClass || ''}`}>
@@ -47,7 +51,6 @@ export default function TimelineCollapsibleCard({ title, storageKey, icon, gradi
             setCollapsed((prev) => {
               const next = !prev;
               try { localStorage.setItem(storageKey, next ? '1' : '0'); } catch {}
-              onCollapsedChange?.(next);
               return next;
             });
           }}
