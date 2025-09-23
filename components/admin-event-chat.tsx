@@ -53,20 +53,17 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
   }, []);
 
   useEffect(() => {
-    if (isMinimized || !isPageVisible || !isWindowFocused) return;
+    if (isMinimized) return;
 
     let cancelled = false;
-    const POLL_MS = 3000;
-    const inFlight = { current: false } as { current: boolean };
-    let timer: ReturnType<typeof setTimeout> | null = null;
+    let es: EventSource | null = null;
+    let fallbackTimer: ReturnType<typeof setInterval> | null = null;
 
-    async function load() {
-      setLoading(true);
+    async function loadOnce() {
+      if (!messages.length) setLoading(true);
       try {
         const res = await fetch(`/api/events/${eventId}/chat?limit=200`, { cache: 'no-store' });
-        if (!res.ok) {
-          return;
-        }
+        if (!res.ok) return;
         const data = await res.json();
         if (!cancelled) setMessages(Array.isArray(data.messages) ? data.messages : []);
       } finally {
@@ -74,19 +71,34 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
       }
     }
 
-    function schedule() {
-      if (cancelled) return;
-      timer = setTimeout(async () => {
-        if (!inFlight.current) {
-          inFlight.current = true;
-          try { await load(); } finally { inFlight.current = false; }
-        }
-        schedule();
-      }, POLL_MS);
+    // Initial load
+    loadOnce();
+
+    // Subscribe to SSE for push updates
+    try {
+      es = new EventSource(`/api/events/${eventId}/chat/stream`);
+      es.addEventListener('version', () => {
+        loadOnce();
+      });
+      es.addEventListener('init', () => {
+        // handshake received
+      });
+      es.onerror = () => {
+        // auto-retry handled via server 'retry' hint
+      };
+    } catch {}
+
+    // Slow safety refresh if page visible and focused (in case SSE is blocked)
+    const SAFETY_MS = 20000;
+    if (isPageVisible && isWindowFocused) {
+      fallbackTimer = setInterval(loadOnce, SAFETY_MS);
     }
 
-    load().finally(schedule);
-    return () => { cancelled = true; if (timer) clearTimeout(timer); };
+    return () => {
+      cancelled = true;
+      if (fallbackTimer) clearInterval(fallbackTimer);
+      if (es) es.close();
+    };
   }, [eventId, isMinimized, isPageVisible, isWindowFocused]);
 
   useEffect(() => {
