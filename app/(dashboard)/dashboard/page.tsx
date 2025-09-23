@@ -35,36 +35,16 @@ export default function DashboardPage() {
     pendingApprovals: number;
     lastUploadAt: string | null;
   }>(
-    eventIds && eventIds.length > 0 ? ['user-events-stats', eventIds] : null,
+    eventIds && eventIds.length > 0 ? ['dashboard-batch-stats', eventIds] : null,
     async ([, ids]: [string, number[]]) => {
-      const results = await Promise.all(
-        ids.map(async (id) => {
-          const res = await fetch(`/api/events/${id}/stats`);
-          if (!res.ok) return null;
-          return res.json() as Promise<{ totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null }>;
-        })
-      );
-      const valid = results.filter((r): r is { totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null } => !!r);
-      let latestMs = 0;
-      let latestStr: string | null = null;
-      const totals = valid.reduce(
-        (acc, s) => {
-          acc.totalPhotos += s.totalPhotos || 0;
-          acc.approvedPhotos += s.approvedPhotos || 0;
-          acc.pendingApprovals += s.pendingApprovals || 0;
-          if (s.lastUploadAt) {
-            const t = new Date(s.lastUploadAt).getTime();
-            if (t > latestMs) {
-              latestMs = t;
-              latestStr = s.lastUploadAt;
-            }
-          }
-          return acc;
-        },
-        { totalPhotos: 0, approvedPhotos: 0, pendingApprovals: 0, lastUploadAt: null as string | null }
-      );
-      totals.lastUploadAt = latestStr;
-      return totals;
+      const res = await fetch('/api/dashboard/stats', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ eventIds: ids }),
+      });
+      if (!res.ok) throw new Error('Failed to load aggregated stats');
+      const json = await res.json();
+      return json.aggregate as { totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null };
     },
     { revalidateOnFocus: false }
   );

@@ -38,7 +38,11 @@ export async function GET(
 
   type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
   const cacheKey = `photo:meta:${photoId}`;
-  const urlCacheKey = `photo:thumb:url:${photoId}`;
+  // We store format-specific URL mirrors for better client bytes (webp/jpeg)
+  const accept = request.headers.get('accept') || '';
+  const wantsModern = /image\/avif|image\/webp/.test(accept);
+  const fmt = wantsModern ? 'webp' : 'jpeg';
+  const urlCacheKey = `photo:thumb:url:${photoId}:${fmt}`;
   // Fast path: short-lived cached signed URL
   try {
     const cachedUrl = await redis.get<string>(urlCacheKey);
@@ -105,48 +109,81 @@ export async function GET(
   const lastSlash = key.lastIndexOf('/');
   const dir = key.substring(0, lastSlash);
   const file = key.substring(lastSlash + 1);
-  const thumbKey = `${dir}/thumbs/sm-${file}`;
+  const base = file.replace(/\.[^.]+$/, '');
+  const thumbKeyJpeg = `${dir}/thumbs/sm-${file}`; // keep original filename with extension for jpeg variant
+  const thumbKeyWebp = `${dir}/thumbs/sm-${base}.webp`;
+  let preferredKey = wantsModern ? thumbKeyWebp : thumbKeyJpeg;
 
   // If thumbnail exists, proxy it from S3 with caching headers.
+  // Try HEAD on preferred key; on miss, try fallback format
   try {
-    const existsFlag = await redis.get<number>(`photo:thumb:exists:${photoId}`).catch(() => null);
+    const existsFlag = await redis.get<number>(`photo:thumb:exists:${photoId}:${fmt}`).catch(() => null);
     if (existsFlag !== 1) {
-      await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }));
-      try { await redis.set(`photo:thumb:exists:${photoId}`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
+      await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: preferredKey }));
+      try { await redis.set(`photo:thumb:exists:${photoId}:${fmt}`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
     }
-  const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
-    // Cache URL just under the signed URL expiry
-  try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: preferredKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
+    try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
     try {
       const uo = new URL(signed);
-      console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: thumbKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
-    } catch { console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: thumbKey, ms: Date.now() - t0 }); }
+      console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: preferredKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
+    } catch { console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: preferredKey, ms: Date.now() - t0 }); }
     return NextResponse.redirect(signed);
-  } catch {}
+  } catch {
+    // If preferred format missing, attempt fallback format if different
+    if (preferredKey !== thumbKeyJpeg) {
+      try {
+        await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKeyJpeg }));
+        const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKeyJpeg }), { expiresIn: SIGNED_URL_TTL_SECONDS });
+        try { await redis.set(`photo:thumb:exists:${photoId}:jpeg`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
+        try { await redis.set(`photo:thumb:url:${photoId}:jpeg`, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
+        return NextResponse.redirect(signed);
+      } catch {}
+    }
+  }
 
   // Generate thumbnail on the fly (max 512px)
   try {
     const obj = await s3.send(new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
     const source = Buffer.from(await obj.Body!.transformToByteArray());
-    const resized = await sharp(source).rotate().resize(512, 512, { fit: 'inside' }).jpeg({ quality: 80 }).toBuffer();
-    try { console.info('[api][thumb][generate]', { photoId, eventId: meta.eventId, srcBytes: source.length, outBytes: resized.length }); } catch {}
+    let out: Buffer;
+    let contentType: 'image/webp' | 'image/jpeg';
+    let outKey = preferredKey;
+    try {
+      if (wantsModern) {
+        out = await sharp(source).rotate().resize(512, 512, { fit: 'inside' }).webp({ quality: 78 }).toBuffer();
+        contentType = 'image/webp';
+      } else {
+        out = await sharp(source).rotate().resize(512, 512, { fit: 'inside' }).jpeg({ quality: 80 }).toBuffer();
+        contentType = 'image/jpeg';
+      }
+    } catch {
+      // Fallback to jpeg on any transform error
+      out = await sharp(source).rotate().resize(512, 512, { fit: 'inside' }).jpeg({ quality: 80 }).toBuffer();
+      contentType = 'image/jpeg';
+      outKey = thumbKeyJpeg;
+    }
+    try { console.info('[api][thumb][generate]', { photoId, eventId: meta.eventId, outKey, outBytes: out.length }); } catch {}
     // Store back to S3 for future requests (best-effort)
     try {
       await s3.send(new PutObjectCommand({
         Bucket: BUCKET_NAME,
-        Key: thumbKey,
-        Body: resized,
-        ContentType: 'image/jpeg',
+        Key: outKey,
+        Body: out,
+        ContentType: contentType,
         CacheControl: THUMBNAIL_CACHE_CONTROL,
       }));
-      try { console.info('[api][thumb][stored]', { photoId, key: thumbKey }); } catch {}
+      try { console.info('[api][thumb][stored]', { photoId, key: outKey }); } catch {}
     } catch {}
-  const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: thumbKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
-  try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
+    const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: outKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
+    // Mirror cache under the right format key
+    const outFmt = outKey.endsWith('.webp') ? 'webp' : 'jpeg';
+    try { await redis.set(`photo:thumb:url:${photoId}:${outFmt}`, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
+    try { await redis.set(`photo:thumb:exists:${photoId}:${outFmt}`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
     try {
       const uo = new URL(signed);
-      console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
-    } catch { console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, ms: Date.now() - t0 }); }
+      console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, key: outKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
+    } catch { console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, key: outKey, ms: Date.now() - t0 }); }
     return NextResponse.redirect(signed);
   } catch (err) {
     console.error('[api][thumb][error]', { photoId, eventId: meta.eventId, err });

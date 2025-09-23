@@ -375,6 +375,23 @@ export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
 }
 
 /**
+ * Coalesced event payload: event record + photos (optionally only approved).
+ * Server-side helper to reduce roundtrips for page bootstrap.
+ */
+export async function getEventWithPhotos(eventId: number, options?: { approvedOnly?: boolean }) {
+  return withDatabaseErrorHandling(async () => {
+    const [event, photosList] = await Promise.all([
+      getEventById(eventId),
+      getPhotosForEvent(eventId),
+    ]);
+    const out = Array.isArray(photosList)
+      ? (options?.approvedOnly ? photosList.filter(p => (p as any).isApproved) : photosList)
+      : [];
+    return { event, photos: out };
+  }, 'getEventWithPhotos');
+}
+
+/**
  * Event stats: total, approved, pending, last upload time
  */
 export async function getEventStats(eventId: number): Promise<EventStats> {
@@ -396,6 +413,54 @@ export async function getEventStats(eventId: number): Promise<EventStats> {
     await setEventStatsCached(eventId, stats);
     return stats;
   }, 'getEventStats');
+}
+
+/**
+ * Batched stats for a user's events (optionally filtered by eventIds).
+ * Returns a record keyed by eventId to EventStats. Uses a single grouped query.
+ */
+export async function getUserEventsStats(userId: number, filterEventIds?: number[]): Promise<Record<number, EventStats>> {
+  return withDatabaseErrorHandling(async () => {
+    // Ensure we only include events owned by the user
+    // Left join photos to gather counts; filter by provided event ids if any
+    const whereOwned = eq(events.createdBy, userId);
+    const whereFilter = filterEventIds && filterEventIds.length > 0
+      ? and(whereOwned, inArray(events.id, filterEventIds))
+      : whereOwned;
+
+    const rows = await db
+      .select({
+        eventId: events.id,
+        total: sql<number>`coalesce(count(${photos.id}), 0)`,
+        approved: sql<number>`coalesce(sum(case when ${photos.isApproved} then 1 else 0 end), 0)`,
+        last: sql<Date>`max(${photos.uploadedAt})`,
+      })
+      .from(events)
+      .leftJoin(photos, eq(photos.eventId, events.id))
+      .where(whereFilter)
+      .groupBy(events.id);
+
+    const out: Record<number, EventStats> = {};
+    for (const r of rows) {
+      const total = Number((r as any)?.total || 0);
+      const approved = Number((r as any)?.approved || 0);
+      out[(r as any).eventId] = {
+        totalPhotos: total,
+        approvedPhotos: approved,
+        pendingApprovals: Math.max(0, total - approved),
+        lastUploadAt: (r as any)?.last ? new Date((r as any).last).toISOString() : null,
+      };
+    }
+    // For filtered ids with no rows (no photos), return zero stats
+    if (filterEventIds && filterEventIds.length) {
+      for (const id of filterEventIds) {
+        if (!out[id]) {
+          out[id] = { totalPhotos: 0, approvedPhotos: 0, pendingApprovals: 0, lastUploadAt: null };
+        }
+      }
+    }
+    return out;
+  }, 'getUserEventsStats');
 }
 
 // ============================================================================

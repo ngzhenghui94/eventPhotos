@@ -18,14 +18,21 @@ interface OptimizedImageProps {
   quality?: number;
   // When true, only load and display the thumbnail; never upgrade to full image
   thumbOnly?: boolean;
+  fetchPriority?: 'high' | 'low' | 'auto';
 }
 
 // Create a global concurrency gate to limit concurrent image loads
 class ConcurrencyGate {
   private inFlight = 0;
   private queue: Array<() => void> = [];
-  
-  constructor(private maxConcurrent: number = 6) {}
+  private maxConcurrent: number;
+
+  constructor(maxConcurrent: number = 6) {
+    this.maxConcurrent = maxConcurrent;
+  }
+  setMaxConcurrent(n: number) {
+    this.maxConcurrent = Math.max(1, Math.min(16, Math.floor(n)));
+  }
   
   async execute<T>(task: () => Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
@@ -86,7 +93,8 @@ export function OptimizedImage({
   onError,
   placeholder = 'blur',
   quality = 80,
-  thumbOnly = false
+  thumbOnly = false,
+  fetchPriority = 'auto'
 }: OptimizedImageProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -111,6 +119,17 @@ export function OptimizedImage({
   useEffect(() => {
     // Mark mounted to ensure any client-only style transitions don't mismatch SSR
     setMounted(true);
+    // Adjust concurrency based on connection quality once
+    try {
+      const nav = (navigator as any);
+      const et: string | undefined = nav?.connection?.effectiveType;
+      if (typeof et === 'string') {
+        // conservative defaults per connection type
+        const map: Record<string, number> = { 'slow-2g': 2, '2g': 2, '3g': 3, '4g': 8 };
+        const max = map[et] ?? 6;
+        imageGate.setMaxConcurrent(max);
+      }
+    } catch {}
   }, []);
 
   // If we've previously loaded the thumbnail (from global cache), show it immediately
@@ -244,6 +263,9 @@ export function OptimizedImage({
         onLoad={handleImageLoad}
         onError={handleImageError}
         loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        // Let callers override fetch priority; default to 'high' when priority=true
+        fetchPriority={priority && fetchPriority === 'auto' ? 'high' : fetchPriority}
         sizes={sizes}
         style={{
           minHeight: '100px', // Prevent layout shift

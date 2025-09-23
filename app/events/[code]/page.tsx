@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar, MapPin, Users, Upload, Camera, Lock, ArrowLeft } from 'lucide-react';
 import { CategoryIcon } from '@/components/category-icon';
-import { getEventByEventCode, getPhotosForEvent } from '@/lib/db/queries';
+import { getEventByEventCode, getPhotosForEvent, getEventWithPhotos } from '@/lib/db/queries';
 import { getEventTimeline } from '@/lib/db/queries';
 import { Timeline } from '@/components/event-timeline';
 import { redirect } from 'next/navigation';
@@ -26,24 +26,18 @@ interface GuestEventPageProps { params: Promise<{ code: string }>; }
 export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const { code } = await params;
 
-  // Fetch event, cookies, and timeline in parallel
-  const [event, cookieStore, timelineItems] = await Promise.all([
-    getEventByEventCode(code.toUpperCase()),
-    cookies(),
-    (async () => {
-      const evt = await getEventByEventCode(code.toUpperCase());
-      return evt ? await getEventTimeline(evt.id) : [];
-    })(),
-  ]);
+  // Fetch event first (by code)
+  const event = await getEventByEventCode(code.toUpperCase());
+  const cookieStore = await cookies();
+  const timelineItems = event ? await getEventTimeline(event.id) : [];
 
   if (!event) {
     redirect('/events/not-found');
   }
 
-  // Fetch photos in parallel with cookie logic
-  const [photosRaw] = await Promise.all([
-    getPhotosForEvent(event.id),
-  ]);
+  // Coalesce server-side: event + photos in one helper call
+  const bundled = await getEventWithPhotos(event.id);
+  const photosRaw = bundled?.photos || [];
 
   const cookieKey = `evt:${event.eventCode}:access`;
   const accessCodeCookie = cookieStore.get(cookieKey)?.value || '';

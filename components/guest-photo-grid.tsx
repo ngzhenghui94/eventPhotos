@@ -116,7 +116,7 @@ export function GuestPhotoGrid({
               index={index}
               accessCode={accessCode}
               onPhotoClick={handlePhotoClick}
-              priority={index < 20} // Prioritize first 10 images
+              priority={index < 8} // Prioritize the first 8 images to avoid overloading
               isSelected={selectedPhotos.some(p => p.id === photo.id)}
               isSelectMode={isSelectMode}
             />
