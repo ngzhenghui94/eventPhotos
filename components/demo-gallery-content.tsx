@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Calendar, MapPin, Upload, Download, X, Camera, ArrowLeft, Link as LinkIcon, Copy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { EventQr } from '@/components/event-qr';
+import EventChat from '@/components/EventChat';
 import { brand } from '@/lib/brand';
 
 interface SelectedPhotoThumbProps {
@@ -467,12 +468,20 @@ export default function DemoGalleryContent() {
 
               <div className="col-span-1 p-8 sm:p-12 border-t lg:border-l border-slate-200/60 bg-white/40">
                 {demo && (
-                  <div className="mx-auto w-full max-w-[260px]">
+                  <div className="mx-auto w-full max-w-[260px] space-y-4">
                     <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-4 shadow-md">
                       <EventQr code={demo.guestPath.replace('/events/','')} />
                       <div className="mt-3 text-center text-xs text-gray-600">
                         Scan to open guest link
                       </div>
+                    </div>
+                    <div className="rounded-2xl border border-slate-200/70 bg-white/80 p-3 shadow-md">
+                      <EventChat
+                        eventId={demo.id}
+                        canAccess={true}
+                        storageKey="demo_event_chat_collapsed"
+                        defaultCollapsed={true}
+                      />
                     </div>
                   </div>
                 )}

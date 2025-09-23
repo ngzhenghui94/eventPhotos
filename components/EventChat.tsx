@@ -20,9 +20,10 @@ type EventChatProps = {
   canAccess: boolean;
   gradientClass?: string;
   storageKey?: string;
+  defaultCollapsed?: boolean;
 };
 
-export default function EventChat({ eventId, canAccess, gradientClass, storageKey }: EventChatProps) {
+export default function EventChat({ eventId, canAccess, gradientClass, storageKey, defaultCollapsed }: EventChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [sending, setSending] = useState<boolean>(false);
@@ -31,7 +32,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
   const [userName, setUserName] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(!!defaultCollapsed);
   const [isPageVisible, setIsPageVisible] = useState<boolean>(true);
   const [isWindowFocused, setIsWindowFocused] = useState<boolean>(true);
 
@@ -150,6 +151,7 @@ export default function EventChat({ eventId, canAccess, gradientClass, storageKe
       if (!storageKey) return;
       const saved = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
       if (saved === '1') setCollapsed(true);
+      if (saved === '0') setCollapsed(false);
     } catch {}
   }, [storageKey]);
 
