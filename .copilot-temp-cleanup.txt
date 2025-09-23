@@ -1,1 +1,0 @@
-Cleanup marker: attempting to delete lib/mailer.ts and types/nodemailer.d.ts failed via patch API; will fall back to emptying files next.
