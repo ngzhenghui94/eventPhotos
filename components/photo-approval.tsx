@@ -129,7 +129,10 @@ interface ApprovalPhotoCardProps {
 }
 
 function ApprovalPhotoCard({ photo, onApprove, onReject, onView, isProcessing }: ApprovalPhotoCardProps) {
-  const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
+  const isHost = photo.uploadedBy !== null;
+  const uploadedBy = isHost
+    ? (photo.uploadedByUser?.name || 'Host')
+    : (photo.guestName || 'Guest');
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
 
   return (
@@ -140,6 +143,11 @@ function ApprovalPhotoCard({ photo, onApprove, onReject, onView, isProcessing }:
           alt={photo.originalFilename}
           className="w-full h-full object-cover"
         />
+        {isHost && (
+          <div className="absolute top-2 right-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] font-semibold shadow">
+            Host
+          </div>
+        )}
         
         {/* Pending indicator */}
   <div className="absolute top-2 left-2 bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs font-medium">Pending</div>
@@ -159,7 +167,14 @@ function ApprovalPhotoCard({ photo, onApprove, onReject, onView, isProcessing }:
 
       <div className="p-2">
         <p className="text-xs font-medium text-gray-900 truncate">{photo.originalFilename}</p>
-        <p className="text-[11px] text-gray-500 mb-2">By {uploadedBy} • {uploadDate}</p>
+        <p className="text-[11px] text-gray-500 mb-2 flex items-center gap-1">
+          <span>By {uploadedBy}</span>
+          {isHost && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-medium">Host</span>
+          )}
+          <span className="mx-1">•</span>
+          <span>{uploadDate}</span>
+        </p>
         <div className="flex items-center gap-2">
           <Button size="icon" onClick={onApprove} disabled={isProcessing} className="h-8 w-8 bg-green-600 hover:bg-green-700">
             <Check className="h-4 w-4" />

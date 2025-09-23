@@ -282,12 +282,20 @@ interface PhotoCardProps {
 }
 
 function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode, multiMode, selected, onToggleSelect }: PhotoCardProps & { multiMode?: boolean; selected?: boolean; onToggleSelect?: () => void; }) {
-  const uploadedBy = photo.uploadedByUser?.name || photo.guestName || 'Guest';
+  const isHost = photo.uploadedBy !== null;
+  const uploadedBy = isHost
+    ? (photo.uploadedByUser?.name || 'Host')
+    : (photo.guestName || 'Guest');
   const uploadDate = new Date(photo.uploadedAt).toLocaleDateString();
 
   return (
     <div className="group relative bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-lg transition-all">
       <div className="aspect-square relative">
+        {isHost && (
+          <div className="absolute top-2 right-2 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-[10px] font-semibold shadow">
+            Host
+          </div>
+        )}
         {multiMode && (
           <label className="absolute top-2 left-2 z-10 inline-flex items-center gap-2 bg-white/90 px-2 py-1 rounded text-xs cursor-pointer shadow">
             <input type="checkbox" className="h-3 w-3" checked={!!selected} onChange={onToggleSelect} />
@@ -352,8 +360,13 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
         <p className="text-sm font-medium text-gray-900 truncate">
           {photo.originalFilename}
         </p>
-        <p className="text-xs text-gray-500">
-          By {uploadedBy} • {uploadDate}
+        <p className="text-xs text-gray-500 flex items-center gap-1">
+          <span>By {uploadedBy}</span>
+          {isHost && (
+            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-medium">Host</span>
+          )}
+          <span className="mx-1">•</span>
+          <span>{uploadDate}</span>
         </p>
       </div>
     </div>
