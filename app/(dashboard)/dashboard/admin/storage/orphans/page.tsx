@@ -6,13 +6,11 @@ import { db } from '@/lib/db/drizzle';
 import { photos, events } from '@/lib/db/schema';
 import { inArray } from 'drizzle-orm';
 
-function originalKeyForThumb(key: string): string | null {
-  // Match .../thumbs/(sm|md)-FILENAME and return .../FILENAME
+function parseThumbInfo(key: string): { dir: string; size: 'sm' | 'md'; filename: string } | null {
+  // Matches .../thumbs/(sm|md)-FILENAME
   const m = key.match(/^(.*)\/thumbs\/(sm|md)-(.+)$/);
   if (!m) return null;
-  const baseDir = m[1];
-  const filename = m[3];
-  return `${baseDir}/${filename}`;
+  return { dir: m[1], size: m[2] as 'sm' | 'md', filename: m[3] };
 }
 
 export default async function AdminOrphansPage() {
@@ -38,10 +36,30 @@ export default async function AdminOrphansPage() {
   const photosWithMissingEvent = dbPhotos.filter((p) => !existingEventIds.has(p.eventId));
   // Exclude thumbs when their original exists either in DB references or in S3 listing
   const allS3Keys = new Set(objects.map((o) => o.key));
+  const commonExts = ['jpg','jpeg','png','webp','avif','heic','heif'];
+
   const orphanedObjects = objects.filter((o) => {
     if (referencedKeys.has(o.key)) return false;
-    const original = originalKeyForThumb(o.key);
-    if (original && (referencedKeys.has(original) || allS3Keys.has(original))) {
+    const info = parseThumbInfo(o.key);
+    if (!info) return true;
+
+    // If the thumb is WebP-only (sm-<base>.webp), try to find the original by base + any common extension
+    const webpMatch = info.filename.toLowerCase().endsWith('.webp');
+    if (webpMatch) {
+      const base = info.filename.replace(/\.[^.]+$/, '');
+      for (const ext of commonExts) {
+        const candidate = `${info.dir}/${base}.${ext}`;
+        if (referencedKeys.has(candidate) || allS3Keys.has(candidate)) {
+          return false; // Not an orphan; original exists
+        }
+      }
+      // No original found for this webp thumb; treat as orphan
+      return true;
+    }
+
+    // Legacy pattern where thumb kept original filename + extension
+    const legacyOriginal = `${info.dir}/${info.filename}`;
+    if (referencedKeys.has(legacyOriginal) || allS3Keys.has(legacyOriginal)) {
       return false;
     }
     return true;

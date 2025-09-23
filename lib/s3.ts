@@ -185,10 +185,14 @@ export function generatePhotoKey(eventId: number, fileName: string): string {
 }
 
 export function deriveThumbKey(originalKey: string, size: 'sm' | 'md' = 'sm'): string {
-  const lastSlash = originalKey.lastIndexOf('/');
-  const dir = originalKey.substring(0, lastSlash);
-  const file = originalKey.substring(lastSlash + 1);
-  return `${dir}/thumbs/${size}-${file}`;
+  // Normalize possible s3: prefix
+  const key = originalKey.startsWith('s3:') ? originalKey.slice(3) : originalKey;
+  const lastSlash = key.lastIndexOf('/');
+  const dir = key.substring(0, lastSlash);
+  const file = key.substring(lastSlash + 1);
+  const base = file.replace(/\.[^.]+$/, '');
+  // WebP-only thumbnails
+  return `${dir}/thumbs/${size}-${base}.webp`;
 }
 
 export type S3ObjectInfo = { key: string; size: number; lastModified?: Date };
