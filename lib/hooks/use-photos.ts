@@ -191,15 +191,21 @@ export function usePhotoLoader(photoId: number, accessCode?: string) {
   const preloadThumbnail = useCallback(() => {
     // Short-circuit if we already know it's loaded (from cache or state)
     if (thumbLoadedCache.has(cacheKey) || thumbnailLoaded) return Promise.resolve();
-
     return new Promise<void>((resolve, reject) => {
       const img = new Image();
+      const timeout = setTimeout(() => {
+        try { img.src = ''; } catch {}
+        setError('Thumbnail load timed out');
+        reject(new Error('Thumbnail load timed out'));
+      }, 15000);
       img.onload = () => {
+        clearTimeout(timeout);
         thumbLoadedCache.set(cacheKey, true);
         setThumbnailLoaded(true);
         resolve();
       };
       img.onerror = () => {
+        clearTimeout(timeout);
         setError('Failed to load thumbnail');
         reject(new Error('Failed to load thumbnail'));
       };
@@ -209,15 +215,21 @@ export function usePhotoLoader(photoId: number, accessCode?: string) {
 
   const preloadFullImage = useCallback(() => {
     if (fullLoadedCache.has(cacheKey) || fullImageLoaded) return Promise.resolve();
-
     return new Promise<void>((resolve, reject) => {
       const img = new Image();
+      const timeout = setTimeout(() => {
+        try { img.src = ''; } catch {}
+        setError('Full image load timed out');
+        reject(new Error('Full image load timed out'));
+      }, 25000);
       img.onload = () => {
+        clearTimeout(timeout);
         fullLoadedCache.set(cacheKey, true);
         setFullImageLoaded(true);
         resolve();
       };
       img.onerror = () => {
+        clearTimeout(timeout);
         setError('Failed to load full image');
         reject(new Error('Failed to load full image'));
       };

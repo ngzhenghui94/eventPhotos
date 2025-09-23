@@ -140,6 +140,16 @@ export function OptimizedImage({
     }
   }, [thumbnailLoaded, thumbnailSrc]);
 
+  // If the <img> has already loaded (from cache) when we set src, ensure we flip isLoaded
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+    if (img.src && (img.complete || img.naturalWidth > 0)) {
+      setIsLoaded(true);
+      onLoad?.();
+    }
+  }, [currentSrc, onLoad]);
+
   // Intersection Observer for lazy loading
   useEffect(() => {
     if (priority || isInView) return;
@@ -229,7 +239,7 @@ export function OptimizedImage({
   // Determine what to show
   // Show placeholder only until the thumbnail is ready
   const shouldShowPlaceholder = !isLoaded && !hasError && placeholder !== 'empty';
-  const shouldShowThumbnail = thumbnailLoaded && !fullImageLoaded && !hasError;
+  const shouldShowThumbnail = (thumbOnly ? thumbnailLoaded : (thumbnailLoaded && !fullImageLoaded)) && !hasError;
   const shouldShowFullImage = isLoaded && !hasError;
 
   return (
@@ -260,7 +270,15 @@ export function OptimizedImage({
           isLoaded ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={(e) => onClick?.(e)}
-        onLoad={handleImageLoad}
+        onLoad={(e) => {
+          // If we only show thumbs, flip loaded immediately on first success
+          if (thumbOnly && (e.currentTarget.src?.includes('/thumb') || thumbnailLoaded)) {
+            setIsLoaded(true);
+            onLoad?.();
+            return;
+          }
+          handleImageLoad();
+        }}
         onError={handleImageError}
         loading={priority ? 'eager' : 'lazy'}
         decoding="async"
