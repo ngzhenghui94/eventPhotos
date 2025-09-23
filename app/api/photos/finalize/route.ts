@@ -5,6 +5,7 @@ import { getEventById, getUser, canUserAccessEvent } from '@/lib/db/queries';
 import { eq, sql } from 'drizzle-orm';
 import { redis } from '@/lib/upstash';
 import { bumpEventVersion } from '@/lib/utils/cache';
+import { precomputeThumbsForUploadedPhotos } from '@/lib/photos/processing';
 import { getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
 
 export const runtime = 'nodejs';
@@ -43,7 +44,7 @@ export async function POST(request: NextRequest) {
         isApproved: !event.requireApproval,
       }));
     if (records.length === 0) return Response.json({ error: 'No valid items' }, { status: 400 });
-    const inserted = await db.insert(photos).values(records).returning({ id: photos.id });
+  const inserted = await db.insert(photos).values(records).returning({ id: photos.id, filePath: photos.filePath });
     // Invalidate via version bump and clear owner list cache
     try {
       await bumpEventVersion(eventId);
@@ -67,6 +68,17 @@ export async function POST(request: NextRequest) {
         }
       } catch {}
     } catch {}
+    // Fire-and-forget thumbnail precompute; do not block response
+    try {
+      const items = inserted
+        .map((rec) => {
+          const key = rec.filePath?.startsWith('s3:') ? rec.filePath.replace(/^s3:/, '') : null;
+          return key ? { photoId: rec.id as number, s3Key: key } : null;
+        })
+        .filter(Boolean) as { photoId: number; s3Key: string }[];
+      if (items.length) precomputeThumbsForUploadedPhotos(items);
+    } catch {}
+
     return Response.json({ count: inserted.length });
   } catch (err) {
     console.error('finalize error', err);

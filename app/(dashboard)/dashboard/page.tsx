@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import useSWR from 'swr';
+import { useSWRConfig } from 'swr';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +25,7 @@ const fetcher = async (url: string) => {
   return res.json();
 };
 export default function DashboardPage() {
+  const { mutate } = useSWRConfig();
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const { data: events, error, isLoading } = useSWR<EventWithPhotoCount[]>('/api/events', fetcher);
 
@@ -46,8 +48,27 @@ export default function DashboardPage() {
       const json = await res.json();
       return json.aggregate as { totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null };
     },
-    { revalidateOnFocus: false }
+    { revalidateOnFocus: true, revalidateIfStale: true }
   );
+
+  // Listen for photo changes (deletes/uploads) and revalidate relevant data
+  useEffect(() => {
+    function onPhotosChanged() {
+      // Revalidate events list (photoCount) and aggregated stats
+      mutate('/api/events');
+      if (eventIds && eventIds.length > 0) {
+        mutate(['dashboard-batch-stats', eventIds]);
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.addEventListener('photos:changed', onPhotosChanged);
+    }
+    return () => {
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('photos:changed', onPhotosChanged);
+      }
+    };
+  }, [mutate, eventIds]);
 
   if (error) {
     return (

@@ -238,6 +238,10 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
       } else {
         console.info('[guest-upload][done]', { traceId, uploaded: selectedFiles.length });
         toast.success('Photos uploaded');
+        // Notify other tabs/pages (e.g., dashboard) that photos changed
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('photos:changed'));
+        }
       }
     } catch (error: any) {
       console.error('[guest-upload][exception]', { traceId, error });

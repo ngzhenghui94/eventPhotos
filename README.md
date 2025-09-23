@@ -78,6 +78,10 @@ Versioned keys per event
 
 Browser/cache headers
 - Thumbnails served with `Cache-Control: public, max-age=31536000, immutable`
+- App 307 redirects (to S3) include `Cache-Control: private, max-age=60` to reduce repeat hits while scrolling
+
+CDN
+- See `docs/hetzner-cdn.md` for a quick Cloudflare/Hetzner setup and an example Nginx config
 
 ---
 

@@ -156,6 +156,23 @@ export async function GET(
       } catch {}
     }
   }
+  
+  // Ensure original exists before attempting generation; otherwise fall back gracefully
+  try {
+    await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
+  } catch (e: any) {
+    try {
+      const status = e?.$metadata?.httpStatusCode;
+      const code = e?.Code || e?.name;
+      console.warn('[api][thumb][origin-missing]', { photoId, eventId: meta.eventId, key, code, status });
+    } catch {}
+    return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url), {
+      headers: {
+        'Cache-Control': 'private, max-age=60',
+        'Vary': 'Accept',
+      },
+    });
+  }
 
   // Generate thumbnail on the fly (max 512px)
   try {
@@ -205,9 +222,16 @@ export async function GET(
         'Vary': 'Accept',
       },
     });
-  } catch (err) {
-    console.error('[api][thumb][error]', { photoId, eventId: meta.eventId, err });
-    try { console.info('[api][thumb][fallback-original]', { photoId, eventId: meta.eventId }); } catch {}
+  } catch (err: any) {
+    try {
+      const status = err?.$metadata?.httpStatusCode;
+      const code = err?.Code || err?.name;
+      if (code === 'NoSuchKey' || status === 404) {
+        console.warn('[api][thumb][generate-failed]', { photoId, eventId: meta.eventId, code, status });
+      } else {
+        console.error('[api][thumb][generate-failed]', { photoId, eventId: meta.eventId, code, status });
+      }
+    } catch {}
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url), {
       headers: {
         'Cache-Control': 'private, max-age=60',

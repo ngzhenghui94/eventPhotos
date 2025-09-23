@@ -10,6 +10,8 @@ import { uploadLimitBytes, normalizePlanName, photoLimitPerEvent } from '@/lib/p
 import { AuthenticationUtils } from '@/lib/utils/auth';
 import { FileOperationUtils } from '@/lib/utils/files';
 import { withDatabaseErrorHandling } from '@/lib/utils/database';
+import { bumpEventVersion } from '@/lib/utils/cache';
+import { redis } from '@/lib/upstash';
 import { ValidationUtils, bulkPhotoActionSchema } from '@/lib/utils/validation';
 
 export async function uploadPhotosAction(formData: FormData) {
@@ -116,6 +118,14 @@ export async function uploadPhotosAction(formData: FormData) {
       // Delete the database record
       await db.delete(photos).where(eq(photos.id, photoId));
 
+        // Invalidate caches and bump event version so stats/counts refresh immediately
+        try {
+          await bumpEventVersion(photoRecord.eventId);
+        } catch {}
+        try {
+          await redis.del(`user:${eventRecord.createdBy}:events:list:v2`);
+        } catch {}
+
         // Log activity
         try {
           const { logActivity } = await import('@/lib/db/queries');
@@ -173,6 +183,14 @@ export async function uploadPhotosAction(formData: FormData) {
       // Delete database records
       const targetIds = target.map((p) => p.id);
       await db.delete(photos).where(inArray(photos.id, targetIds));
+
+      // Invalidate caches and bump event version so stats/counts refresh immediately
+      try {
+        await bumpEventVersion(eventId);
+      } catch {}
+      try {
+        await redis.del(`user:${event.createdBy}:events:list:v2`);
+      } catch {}
 
       // Revalidate pages
       try {

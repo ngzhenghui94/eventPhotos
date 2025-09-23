@@ -145,7 +145,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
           mimeType: u.mimeType,
           fileSize: u.fileSize,
         })));
-        console.info('[host-upload][finalize][ok]', { traceId });
+  console.info('[host-upload][finalize][ok]', { traceId });
       }
 
       setSelectedFiles([]);
@@ -159,6 +159,10 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
       } else {
         console.info('[host-upload][done]', { traceId, uploaded: succeeded.length });
         toast.success(`Uploaded ${succeeded.length} file${succeeded.length !== 1 ? 's' : ''}`);
+        // Notify dashboard/cards to refresh counts and stats
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('photos:changed'));
+        }
       }
     } catch (error) {
       console.error('[host-upload][exception]', { traceId, error });

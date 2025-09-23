@@ -65,6 +65,10 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       formData.append('photoId', photoId.toString());
       await deletePhotoAction(formData);
       toast.success('Photo deleted');
+      // Notify other tabs/pages (e.g., dashboard) that photos changed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('photos:changed'));
+      }
       // Use Next.js router.refresh for server-side revalidation
       if (typeof refresh === 'function') {
         refresh();
@@ -125,6 +129,10 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
       toast.success(`${result?.count ?? selectedIds.size} photo(s) deleted`);
       clearAll();
       setMultiMode(false);
+      // Notify other tabs/pages (e.g., dashboard) that photos changed
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('photos:changed'));
+      }
       // Use Next.js router.refresh for server-side revalidation
       if (typeof refresh === 'function') {
         refresh();
