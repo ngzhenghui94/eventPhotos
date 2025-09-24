@@ -1,7 +1,7 @@
 import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { db } from './drizzle';
-import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages } from './schema';
+import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages, eventMembers } from './schema';
 import { verifyToken } from '@/lib/auth/session';
 // ============================================================================
 // EVENT TIMELINE MANAGEMENT
@@ -10,7 +10,7 @@ import { verifyToken } from '@/lib/auth/session';
 import type { EventTimeline, NewEventTimeline } from './schema';
 import { redis } from '@/lib/upstash';
 import { withDatabaseErrorHandling, findFirst, validateRequiredFields } from '@/lib/utils/database';
-import { cacheWrap, versionedCacheWrap, getEventVersion, getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
+import { cacheWrap, versionedCacheWrap, getEventVersion, getEventStatsCached, setEventStatsCached, bumpEventVersion } from '@/lib/utils/cache';
 import type { EventStats } from '@/lib/types/common';
 import { ACCESS_CHECK_TTL_SECONDS } from '@/lib/config/cache';
 import { EVENT_TIMELINE_TTL_SECONDS, EVENT_BY_ID_TTL_SECONDS, EVENT_BY_CODE_TTL_SECONDS, EVENT_PHOTOS_TTL_SECONDS } from '@/lib/config/cache';
@@ -92,6 +92,7 @@ import type {
   EventWithPhotoCount,
   PaginationOptions,
 } from '@/lib/types/common';
+import type { EventRole } from '@/lib/types/common';
 // imports moved to top
 
 // ============================================================================
@@ -263,7 +264,14 @@ export async function canUserAccessEvent(eventId: number, options: EventAccessOp
       if (cached === 1) byUser = true;
       else if (cached === 0) byUser = false;
       else {
-        byUser = options.userId === event.createdBy;
+        // Owner or event member has access
+        if (options.userId === event.createdBy) byUser = true;
+        else {
+          const membership = await db.query.eventMembers.findFirst({
+            where: and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, options.userId)),
+          });
+          byUser = !!membership;
+        }
         try { await redis.set(userKey, byUser ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch {}
       }
     }
@@ -284,11 +292,134 @@ export async function canUserAccessEvent(eventId: number, options: EventAccessOp
   }, 'canUserAccessEvent');
 }
 
+// ============================================================================
+// EVENT ROLES AND MEMBERSHIPS
+// ============================================================================
+
+export async function getUserEventRole(eventId: number, userId: number): Promise<EventRole | null> {
+  return withDatabaseErrorHandling(async () => {
+    const membership = await db.query.eventMembers.findFirst({
+      where: and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)),
+      columns: { role: true },
+    });
+    return (membership?.role as EventRole) || null;
+  }, 'getUserEventRole');
+}
+
+export async function isEventMember(eventId: number, userId: number): Promise<boolean> {
+  return withDatabaseErrorHandling(async () => {
+    const m = await db.query.eventMembers.findFirst({
+      where: and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)),
+      columns: { id: true },
+    });
+    return !!m;
+  }, 'isEventMember');
+}
+
+export function canRoleManageEvent(role: EventRole | null | undefined) {
+  return role === 'host' || role === 'organizer';
+}
+
+export function canRoleManageTimeline(role: EventRole | null | undefined) {
+  return role === 'host' || role === 'organizer';
+}
+
+export function canRoleUpload(role: EventRole | null | undefined) {
+  return role === 'host' || role === 'organizer' || role === 'photographer';
+}
+
+export async function listEventMembers(eventId: number) {
+  return withDatabaseErrorHandling(async () => {
+    return db.query.eventMembers.findMany({
+      where: eq(eventMembers.eventId, eventId),
+      columns: { id: true, eventId: true, userId: true, role: true, createdAt: true, updatedAt: true },
+    });
+  }, 'listEventMembers');
+}
+
+/**
+ * Lists event members with joined user details (name, email) for UI display
+ */
+export async function listEventMembersWithUsers(eventId: number) {
+  return withDatabaseErrorHandling(async () => {
+    return db
+      .select({
+        id: eventMembers.id,
+        eventId: eventMembers.eventId,
+        userId: eventMembers.userId,
+        role: eventMembers.role,
+        createdAt: eventMembers.createdAt,
+        updatedAt: eventMembers.updatedAt,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(eventMembers)
+      .leftJoin(users, eq(eventMembers.userId, users.id))
+      .where(eq(eventMembers.eventId, eventId));
+  }, 'listEventMembersWithUsers');
+}
+
+/** Find a user by email (case-insensitive) */
+export async function findUserByEmail(email: string) {
+  return withDatabaseErrorHandling(async () => {
+    const e = (email || '').trim().toLowerCase();
+    if (!e) return null;
+    return findFirst(
+      db.query.users.findMany({
+        where: sql`${users.email} ILIKE ${e}`,
+        limit: 1,
+        columns: { id: true, name: true, email: true, isOwner: true },
+      })
+    );
+  }, 'findUserByEmail');
+}
+
+export async function addOrUpdateEventMember(eventId: number, userId: number, role: EventRole) {
+  return withDatabaseErrorHandling(async () => {
+    // If this is the host user (event creator), force role 'host'
+    const evt = await getEventById(eventId);
+    if (!evt) throw new Error('Event not found');
+    const effectiveRole: EventRole = (userId === evt.createdBy) ? 'host' : role;
+
+    const existing = await db.query.eventMembers.findFirst({
+      where: and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)),
+    });
+    let row;
+    if (existing) {
+      const [updated] = await db.update(eventMembers)
+        .set({ role: effectiveRole, updatedAt: new Date() })
+        .where(and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)))
+        .returning();
+      row = updated;
+    } else {
+      const [inserted] = await db.insert(eventMembers)
+        .values({ eventId, userId, role: effectiveRole })
+        .returning();
+      row = inserted;
+    }
+    try { await bumpEventVersion(eventId); } catch {}
+    return row;
+  }, 'addOrUpdateEventMember');
+}
+
+export async function removeEventMember(eventId: number, userId: number) {
+  return withDatabaseErrorHandling(async () => {
+    const evt = await getEventById(eventId);
+    if (!evt) throw new Error('Event not found');
+    if (userId === evt.createdBy) {
+      throw new Error('Cannot remove host from event');
+    }
+    await db.delete(eventMembers).where(and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)));
+    try { await bumpEventVersion(eventId); } catch {}
+  }, 'removeEventMember');
+}
+
 /**
  * Gets all events created by a user with photo counts
  */
 export async function getUserEvents(userId: number): Promise<EventWithPhotoCount[]> {
   return withDatabaseErrorHandling(async () => {
+    // Events created by the user OR where the user is a member
     return db
       .select({
         id: events.id,
@@ -306,10 +437,20 @@ export async function getUserEvents(userId: number): Promise<EventWithPhotoCount
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
         photoCount: sql<number>`coalesce(count(${photos.id}), 0)`,
+        role: sql<'host' | 'organizer' | 'photographer' | 'customer' | null>`max(case
+          when ${events.createdBy} = ${userId} then 'host'
+          when em.role = 'host' then 'host'
+          when em.role = 'organizer' then 'organizer'
+          when em.role = 'photographer' then 'photographer'
+          when em.role = 'customer' then 'customer'
+          else null end)`,
       })
       .from(events)
       .leftJoin(photos, eq(photos.eventId, events.id))
-      .where(eq(events.createdBy, userId))
+      .leftJoin(sql`event_members em`, sql`em.event_id = ${events.id} AND em.user_id = ${userId}`)
+      .where(
+        sql<boolean>`(${events.createdBy} = ${userId} OR EXISTS (SELECT 1 FROM event_members em WHERE em.event_id = ${events.id} AND em.user_id = ${userId}))`
+      )
       .groupBy(
         events.id,
         events.name,
@@ -429,12 +570,12 @@ export async function getEventStats(eventId: number): Promise<EventStats> {
  */
 export async function getUserEventsStats(userId: number, filterEventIds?: number[]): Promise<Record<number, EventStats>> {
   return withDatabaseErrorHandling(async () => {
-    // Ensure we only include events owned by the user
+    // Include events the user owns OR is a member of
     // Left join photos to gather counts; filter by provided event ids if any
-    const whereOwned = eq(events.createdBy, userId);
+    const whereOwnerOrMember = sql<boolean>`(${events.createdBy} = ${userId} OR EXISTS (SELECT 1 FROM event_members em WHERE em.event_id = ${events.id} AND em.user_id = ${userId}))`;
     const whereFilter = filterEventIds && filterEventIds.length > 0
-      ? and(whereOwned, inArray(events.id, filterEventIds))
-      : whereOwned;
+      ? and(whereOwnerOrMember, inArray(events.id, filterEventIds))
+      : whereOwnerOrMember;
 
     const rows = await db
       .select({

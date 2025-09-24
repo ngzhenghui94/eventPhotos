@@ -1,15 +1,7 @@
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db/drizzle';
-import { events, ActivityType } from '@/lib/db/schema';
-import { getUser } from '@/lib/db/queries';
-
-import { eq } from 'drizzle-orm';
-import { photos } from '@/lib/db/schema';
-import { sql, inArray } from 'drizzle-orm';
+import { getUser, getUserEvents } from '@/lib/db/queries';
 import { cacheWrap } from '@/lib/utils/cache';
-import { getEventVersion } from '@/lib/utils/cache';
-import { EVENT_PHOTO_COUNT_TTL_SECONDS, USER_EVENTS_LIST_TTL_SECONDS } from '@/lib/config/cache';
-import { redis } from '@/lib/upstash';
+import { USER_EVENTS_LIST_TTL_SECONDS } from '@/lib/config/cache';
 
 export async function GET() {
   try {
@@ -18,99 +10,10 @@ export async function GET() {
       return Response.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-  const data = await cacheWrap(`user:${user.id}:events:list:v2`, USER_EVENTS_LIST_TTL_SECONDS, async () => {
-      // Fetch events created by the user, explicitly select all columns
-      const userEvents = await db
-        .select({
-          id: events.id,
-          eventCode: events.eventCode,
-          accessCode: events.accessCode,
-          name: events.name,
-          description: events.description,
-          date: events.date,
-          location: events.location,
-          category: events.category,
-          isPublic: events.isPublic,
-          allowGuestUploads: events.allowGuestUploads,
-          requireApproval: events.requireApproval,
-          createdAt: events.createdAt,
-          createdBy: events.createdBy,
-        })
-        .from(events)
-        .where(eq(events.createdBy, user.id));
-
-      const eventIds = userEvents.map((ev) => ev.id);
-      const photoCounts: Record<number, number> = {};
-      if (eventIds.length > 0) {
-        // Try per-event count cache first via MGET
-        const versions = await Promise.all(eventIds.map((id) => getEventVersion(id)));
-        const keys = eventIds.map((id, i) => `evt:${id}:v${versions[i]}:photoCount`);
-        let cachedCounts: Array<number | null> = [];
-        try {
-          const res = await (redis as any).mget(...keys);
-          cachedCounts = Array.isArray(res) ? (res as Array<number | null>) : [];
-        } catch {
-          cachedCounts = [];
-        }
-
-        const missingIds: number[] = [];
-        for (let i = 0; i < eventIds.length; i++) {
-          const id = eventIds[i];
-          const val = cachedCounts[i];
-          if (typeof val === 'number') {
-            photoCounts[id] = val;
-          } else {
-            missingIds.push(id);
-          }
-        }
-
-        if (missingIds.length > 0) {
-          const rows = await db
-            .select({ eventId: photos.eventId, count: sql<number>`count(*)` })
-            .from(photos)
-            .where(inArray(photos.eventId, missingIds))
-            .groupBy(photos.eventId);
-          for (const row of rows) {
-            const c = Number(row.count) || 0;
-            photoCounts[row.eventId] = c;
-            // Prime cache for each event's photoCount
-            try {
-              const vi = versions[eventIds.indexOf(row.eventId)] ?? 1;
-              await redis.set(`evt:${row.eventId}:v${vi}:photoCount`, c, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS });
-            } catch {}
-          }
-          // Any events without rows have zero photos
-          for (const id of missingIds) {
-            if (!(id in photoCounts)) {
-              photoCounts[id] = 0;
-              try {
-                const vi = versions[eventIds.indexOf(id)] ?? 1;
-                await redis.set(`evt:${id}:v${vi}:photoCount`, 0, { ex: EVENT_PHOTO_COUNT_TTL_SECONDS });
-              } catch {}
-            }
-          }
-        }
-      }
-
-      // Build result
-      const result = userEvents.map((ev) => ({
-        id: ev.id,
-        eventCode: ev.eventCode,
-        accessCode: ev.accessCode,
-        name: ev.name,
-        description: ev.description,
-        date: ev.date,
-        location: ev.location,
-        category: ev.category,
-        isPublic: ev.isPublic,
-        allowGuestUploads: ev.allowGuestUploads,
-        requireApproval: ev.requireApproval,
-        createdAt: ev.createdAt,
-        ownerName: user.name,
-        ownerId: user.id,
-        photoCount: photoCounts[ev.id] || 0,
-      }));
-      return result;
+  const data = await cacheWrap(`user:${user.id}:events:list:v3`, USER_EVENTS_LIST_TTL_SECONDS, async () => {
+      // Fetch all events the user owns or is a member of, including photo counts
+      const rows = await getUserEvents(user.id);
+      return rows;
     });
 
     return Response.json(data, { status: 200 });

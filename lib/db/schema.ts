@@ -156,6 +156,21 @@ export const photosRelations = relations(photos, ({ one }) => ({
   }),
 }));
 
+// Event membership with roles
+export const eventMembers = pgTable('event_members', {
+  id: serial('id').primaryKey(),
+  eventId: integer('event_id').notNull().references(() => events.id, { onDelete: 'cascade' }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  role: varchar('role', { length: 32 }).notNull(), // host | organizer | photographer | customer
+  createdAt: timestamp('created_at').notNull().defaultNow(),
+  updatedAt: timestamp('updated_at').notNull().defaultNow(),
+});
+
+export const eventMembersRelations = relations(eventMembers, ({ one }) => ({
+  event: one(events, { fields: [eventMembers.eventId], references: [events.id] }),
+  user: one(users, { fields: [eventMembers.userId], references: [users.id] }),
+}));
+
 // Event chat messages
 export const eventMessages = pgTable('event_messages', {
   id: serial('id').primaryKey(),
@@ -192,6 +207,9 @@ export type ActivityLog = typeof activityLogs.$inferSelect;
 export type NewActivityLog = typeof activityLogs.$inferInsert;
 export type Invitation = typeof invitations.$inferSelect;
 export type NewInvitation = typeof invitations.$inferInsert;
+
+export type EventMember = typeof eventMembers.$inferSelect;
+export type NewEventMember = typeof eventMembers.$inferInsert;
 
 export type EventTimeline = typeof eventTimelines.$inferSelect;
 export type NewEventTimeline = typeof eventTimelines.$inferInsert;

@@ -4,7 +4,7 @@ import { ArrowLeft, Calendar, MapPin, Users, QrCode, BarChart3, Clock } from 'lu
 import { Calendar as CalendarIcon } from 'lucide-react';
 import { Tooltip } from '@/components/ui/tooltip';
 import Link from 'next/link';
-import { getEventByEventCode, getPhotosForEvent, getUser, getEventTimeline, getEventStats } from '@/lib/db/queries';
+import { getEventByEventCode, getPhotosForEvent, getUser, getEventTimeline, getEventStats, getUserEventRole, canRoleManageEvent } from '@/lib/db/queries';
 import { addTimelineEntry, updateTimelineEntry, deleteTimelineEntry } from './timeline-actions';
 import { EventTimelineEditor } from '@/components/event-timeline-editor';
 import { Timeline } from '@/components/event-timeline';
@@ -35,6 +35,7 @@ import DeleteEventModal from '@/components/delete-event-modal';
 import EventSettingsForm from '@/components/event-settings-form';
 import AdminEventChat from '@/components/admin-event-chat';
 import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
+import EventMembers from '@/components/event-members';
 
 export default async function Page({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
@@ -66,12 +67,14 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
   const approvedCount = (photos as any[])?.filter((p) => p.isApproved)?.length || 0;
-  // Use user's planName for limits and caps
-  const planName = normalizePlanName(user?.planName ?? 'free');
+  // Use host's planName (event creator) for limits and caps
+  const planName = normalizePlanName(event?.createdBy?.planName ?? 'free');
   const planUploadLimit = uploadLimitBytes(planName);
   const planPhotoCap = photoLimitPerEvent(planName) ?? Number.MAX_SAFE_INTEGER;
   const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
   const isEventOwner = user.id === event.createdBy.id || !!user.isOwner;
+  const role = await getUserEventRole(eventId, user.id);
+  const canManageEvent = isEventOwner || canRoleManageEvent(role);
 
   async function saveEvent(formData: FormData) {
     'use server';
@@ -187,8 +190,8 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               )}
             </div>
           </div>
-          {/* Timeline editor for event owner */}
-          {isEventOwner && (
+          {/* Timeline editor for managers */}
+          {canManageEvent && (
             <EventTimelineEditor
               eventId={eventId}
               entries={timelineItems.map((item) => ({
@@ -201,7 +204,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
           )}
           {/* Timeline component for all users */}
           <div className="mb-2">
-            <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:view:${eventId}`} canAdjust={isEventOwner} eventId={eventId} />
+            <Timeline items={timelineItems} storageKey={`tcg_timeline_collapsed:view:${eventId}`} canAdjust={canManageEvent} eventId={eventId} />
           </div>
           <div className="flex items-center gap-2 mb-6">
             <a href={`/api/events/${eventId}/ics`} className="inline-flex items-center gap-2 px-3 py-1.5 rounded border border-amber-300 bg-white text-amber-800 hover:bg-amber-50 text-sm">
@@ -386,9 +389,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                   {photoCount} / {planPhotoCap} used
                 </span>
               </div>
-                            {isEventOwner && (
-                <EventSettingsForm event={event} isEventOwner={isEventOwner} />
-              )}
+                            <EventSettingsForm event={event} canEdit={canManageEvent} />
             </TimelineCollapsibleCard>
             {/* Event Settings - moved beside stats */}
             {/* Event Settings card (collapsible) */}
@@ -529,6 +530,17 @@ export default async function Page({ params }: { params: Promise<{ code: string 
               </div>
             </TimelineCollapsibleCard>
           </div>
+          {/* Event Members (standalone card) */}
+          {canManageEvent && (
+            <TimelineCollapsibleCard
+              title="Event Members"
+              storageKey={`tcg_event_members:${eventId}`}
+              icon={<Users className="w-6 h-6 text-green-600" />}
+              gradientClass="border-green-200 bg-gradient-to-r from-green-50 to-orange-50"
+            >
+              <EventMembers eventId={eventId} canManage={canManageEvent} />
+            </TimelineCollapsibleCard>
+          )}
           {/* Event Details */}
           {/* Event Details - shifted up (removed from here) */}
           {/* Photo Upload (collapsible) */}

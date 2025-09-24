@@ -13,6 +13,7 @@ import {
   Edit,
   Trash2,
   Upload,
+  Download,
 
   type LucideIcon,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.UPLOAD_PHOTO]: Upload,
   [ActivityType.DELETE_PHOTO]: Trash2,
   [ActivityType.APPROVE_PHOTO]: CheckCircle,
+  [ActivityType.DOWNLOAD_PHOTO]: Download,
 };
 
 function getRelativeTime(date: Date) {

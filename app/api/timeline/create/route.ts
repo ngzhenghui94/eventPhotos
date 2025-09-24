@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createEventTimelineEntry, getEventById, getUser } from '@/lib/db/queries';
+import { createEventTimelineEntry, getEventById, getUser, getUserEventRole, canRoleManageTimeline } from '@/lib/db/queries';
 import { z } from 'zod';
 
 const TimelineEntrySchema = z.object({
@@ -26,8 +26,9 @@ export async function POST(req: Request) {
     if (!event) {
       return NextResponse.json({ error: 'Event not found' }, { status: 404 });
     }
-    const isOwner = event.createdBy === user.id || !!user.isOwner;
-    if (!isOwner) {
+    const role = await getUserEventRole(event.id, user.id);
+    const canManage = !!user.isOwner || event.createdBy === user.id || canRoleManageTimeline(role);
+    if (!canManage) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
     const entry = await createEventTimelineEntry({

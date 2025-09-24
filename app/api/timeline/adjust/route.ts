@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getUser, getTimelineEntryById, getEventById, updateEventTimelineEntry } from '@/lib/db/queries';
+import { getUser, getTimelineEntryById, getEventById, updateEventTimelineEntry, getUserEventRole, canRoleManageTimeline } from '@/lib/db/queries';
 import { z } from 'zod';
 
 const AdjustSchema = z.object({
@@ -23,8 +23,9 @@ export async function POST(req: Request) {
 
     const event = await getEventById(existing.eventId);
     if (!event) return NextResponse.json({ error: 'Event not found' }, { status: 404 });
-    const isOwner = event.createdBy === user.id || !!(user as any).isOwner;
-    if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  const role = await getUserEventRole(event.id, user.id);
+  const canManage = !!(user as any).isOwner || event.createdBy === user.id || canRoleManageTimeline(role);
+  if (!canManage) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
 
     const current = new Date(existing.time as any);
     const updated = new Date(current.getTime() + parsed.data.deltaMinutes * 60 * 1000);

@@ -6,6 +6,8 @@ import {
   getUser,
   getEventById,
   getTimelineEntryById,
+  getUserEventRole,
+  canRoleManageTimeline,
 } from '@/lib/db/queries';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 
@@ -24,8 +26,9 @@ export const addTimelineEntry = validatedActionWithUser(
     // Only event owner can add
     const event = await getEventById(data.eventId);
     if (!event) return { error: 'Event not found' };
-    const isOwner = event.createdBy === user.id || !!user.isOwner;
-    if (!isOwner) return { error: 'You do not have permission to add timeline entries.' };
+  const role = await getUserEventRole(event.id, user.id);
+  const canManage = !!user.isOwner || event.createdBy === user.id || canRoleManageTimeline(role);
+  if (!canManage) return { error: 'You do not have permission to add timeline entries.' };
     console.log('[Timeline Debug] Received data:', data);
     const entry = await createEventTimelineEntry({
       eventId: data.eventId,
@@ -47,8 +50,9 @@ export const updateTimelineEntry = validatedActionWithUser(
     if (!existing) return { error: 'Timeline entry not found' };
     const event = await getEventById(existing.eventId);
     if (!event) return { error: 'Event not found' };
-    const isOwner = event.createdBy === user.id || !!user.isOwner;
-    if (!isOwner) return { error: 'You do not have permission to update timeline entries.' };
+  const role = await getUserEventRole(event.id, user.id);
+  const canManage = !!user.isOwner || event.createdBy === user.id || canRoleManageTimeline(role);
+  if (!canManage) return { error: 'You do not have permission to update timeline entries.' };
     const entry = await updateEventTimelineEntry(data.id, {
       title: data.title,
       description: data.description,
@@ -67,8 +71,9 @@ export const deleteTimelineEntry = validatedActionWithUser(
     if (!existing) return { error: 'Timeline entry not found' };
     const event = await getEventById(existing.eventId);
     if (!event) return { error: 'Event not found' };
-    const isOwner = event.createdBy === user.id || !!user.isOwner;
-    if (!isOwner) return { error: 'You do not have permission to delete timeline entries.' };
+  const role = await getUserEventRole(event.id, user.id);
+  const canManage = !!user.isOwner || event.createdBy === user.id || canRoleManageTimeline(role);
+  if (!canManage) return { error: 'You do not have permission to delete timeline entries.' };
     await deleteEventTimelineEntry(data.id);
     return { success: 'Timeline entry deleted' };
   }

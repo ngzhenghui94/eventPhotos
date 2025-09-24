@@ -1,5 +1,5 @@
 import { db } from '@/lib/db/drizzle';
-import { events, photos } from '@/lib/db/schema';
+import { events, photos, eventMembers } from '@/lib/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { withDatabaseErrorHandling } from '@/lib/utils/database';
 
@@ -30,9 +30,15 @@ export class EventUtils {
       }
 
       // Check access permissions
+      // Membership check
+      let isMember = false;
+      if (userId && userId !== event.createdBy) {
+        const m = await db.query.eventMembers.findFirst({ where: and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)), columns: { id: true } });
+        isMember = !!m;
+      }
       const canAccess = event.isPublic || 
                        (accessCode && accessCode === event.accessCode) ||
-                       (userId && userId === event.createdBy);
+                       (userId && (userId === event.createdBy || isMember));
 
       return { event, canAccess };
     }, 'getEventWithAccess');
@@ -84,7 +90,11 @@ export class EventUtils {
       }
 
       const event = result[0];
-      const isOwner = userId && userId === event.createdBy;
+      let isOwner = !!(userId && userId === event.createdBy);
+      if (!isOwner && userId) {
+        const m = await db.query.eventMembers.findFirst({ where: and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)), columns: { id: true } });
+        isOwner = !!m; // treat members as having some privileges; specific ops still enforced elsewhere
+      }
 
       return { event, isOwner };
     }, 'getEventSummary');

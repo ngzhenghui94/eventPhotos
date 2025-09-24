@@ -8,6 +8,7 @@ type EventItem = import('@/lib/db/schema').Event & {
 	photoCount: number;
 	ownerName?: string | null;
 	category?: string;
+	role?: 'host' | 'organizer' | 'photographer' | 'customer' | null;
 };
 
 function formatDate(date: Date | string | null | undefined) {
@@ -58,6 +59,27 @@ export function EventCard({ event }: { event: EventItem }) {
 									{event.category}
 								</span>
 							)}
+														{event.role && (
+																<span
+																	className={(() => {
+																		const base = 'inline-flex items-center px-2 py-0.5 rounded-full text-[11px] border';
+																		switch (event.role) {
+																			case 'host':
+																				return `${base} bg-orange-50 text-orange-700 border-orange-200`;
+																			case 'organizer':
+																				return `${base} bg-green-50 text-green-700 border-green-200`;
+																			case 'photographer':
+																				return `${base} bg-purple-50 text-purple-700 border-purple-200`;
+																			case 'customer':
+																				return `${base} bg-gray-50 text-gray-700 border-gray-200`;
+																			default:
+																				return `${base} bg-gray-50 text-gray-700 border-gray-200`;
+																		}
+																	})()}
+																>
+																	{event.role.charAt(0).toUpperCase() + event.role.slice(1)}
+																</span>
+														)}
 						</div>
 
 						{/* Meta chips */}

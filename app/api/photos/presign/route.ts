@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { db } from '@/lib/db/drizzle';
 import { photos, events as eventsTable, users as usersTable } from '@/lib/db/schema';
-import { getEventById, getUser, canUserAccessEvent } from '@/lib/db/queries';
+import { getEventById, getUser, canUserAccessEvent, getUserEventRole, canRoleUpload } from '@/lib/db/queries';
 import { getSignedUploadUrl, generatePhotoKey } from '@/lib/s3';
 import { uploadLimitBytes, normalizePlanName, photoLimitPerEvent } from '@/lib/plans';
 import { sql, eq } from 'drizzle-orm';
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     const payload = await request.json();
     const eventId = Number(payload?.eventId);
     const files: FileMeta[] = Array.isArray(payload?.files) ? payload.files : [];
-    console.info('[api][host-presign][start]', { eventId, fileCount: files.length, origin: request.headers.get('origin'), ua: request.headers.get('user-agent') });
+  // start log removed for noise reduction
     if (!eventId || !Number.isFinite(eventId)) {
       return Response.json({ error: 'Invalid event ID' }, { status: 400 });
     }
@@ -28,12 +28,21 @@ export async function POST(request: NextRequest) {
     const event = await getEventById(eventId);
     if (!event) return Response.json({ error: 'Event not found' }, { status: 404 });
 
-    const user = await getUser();
+  const user = await getUser();
     const accessCode = typeof payload?.accessCode === 'string' ? payload.accessCode : undefined;
     const canAccess = await canUserAccessEvent(eventId, { userId: user?.id, accessCode });
 
     if (!canAccess) {
       return Response.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    // If authenticated, ensure role allows upload via this endpoint
+    if (user?.id) {
+      const role = await getUserEventRole(eventId, user.id);
+      const allowed = !!user.isOwner || event.createdBy === user.id || canRoleUpload(role);
+      if (!allowed) {
+        return Response.json({ error: 'Forbidden' }, { status: 403 });
+      }
     }
 
     // Determine size and count limits by host plan
@@ -57,11 +66,9 @@ export async function POST(request: NextRequest) {
       uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
     }
     if (uploads.length === 0) {
-      console.warn('[api][host-presign][no-valid-files]', { eventId, files });
       return Response.json({ error: 'No valid files to upload' }, { status: 400 });
     }
 
-    console.info('[api][host-presign][ok]', { eventId, count: uploads.length, maxFileSize: MAX_FILE_SIZE });
     return Response.json({ uploads, maxFileSize: MAX_FILE_SIZE });
   } catch (err) {
     console.error('[api][host-presign][error]', err);

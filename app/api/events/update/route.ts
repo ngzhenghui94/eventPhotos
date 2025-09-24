@@ -4,7 +4,7 @@ import { db } from '@/lib/db/drizzle';
 import { events as eventsTable } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { generateAccessCode } from '@/lib/events/actions';
-import { getUser, getEventById } from '@/lib/db/queries';
+import { getUser, getEventById, getUserEventRole, canRoleManageEvent } from '@/lib/db/queries';
 import { redis } from '@/lib/upstash';
 import { bumpEventVersion } from '@/lib/utils/cache';
 
@@ -40,8 +40,9 @@ export async function POST(req: Request) {
     if (!event) {
       return NextResponse.json({ success: false, error: 'Event not found' }, { status: 404 });
     }
-    const isOwner = user.id === event.createdBy || !!user.isOwner;
-    if (!isOwner) {
+    const role = await getUserEventRole(event.id, user.id);
+    const canManage = !!user.isOwner || user.id === event.createdBy || canRoleManageEvent(role);
+    if (!canManage) {
       return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
     }
 

@@ -63,6 +63,7 @@ export interface EventWithPhotoCount {
   createdAt: Date;
   updatedAt: Date;
   photoCount: number;
+  role?: 'host' | 'organizer' | 'photographer' | 'customer' | null;
 }
 
 export interface EventStats {
@@ -71,4 +72,16 @@ export interface EventStats {
   pendingApprovals: number;
   lastUploadAt: string | null;
   lastDownloadAt?: string | null;
+}
+
+// Event roles and membership
+export type EventRole = 'host' | 'organizer' | 'photographer' | 'customer';
+
+export interface EventMember {
+  id: number;
+  eventId: number;
+  userId: number;
+  role: EventRole;
+  createdAt: Date;
+  updatedAt: Date;
 }

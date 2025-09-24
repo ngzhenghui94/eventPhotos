@@ -12,9 +12,10 @@ const categories = [
 type CategoryDropdownProps = {
   initialCategory?: string;
   onChange?: (category: string) => void;
+  disabled?: boolean;
 };
 
-export function CategoryDropdown({ initialCategory, onChange }: CategoryDropdownProps) {
+export function CategoryDropdown({ initialCategory, onChange, disabled }: CategoryDropdownProps) {
   const [category, setCategory] = React.useState(initialCategory || "General");
 
   React.useEffect(() => {
@@ -26,11 +27,12 @@ export function CategoryDropdown({ initialCategory, onChange }: CategoryDropdown
       <Label htmlFor="category">Category</Label>
       <input type="hidden" name="category" value={category} />
       <DropdownMenu>
-        <DropdownMenuTrigger asChild>
+        <DropdownMenuTrigger asChild disabled={disabled}>
           <Button
             type="button"
             variant="outline"
-            className="w-full mt-2 h-9 border-2 border-amber-200 rounded-lg text-left flex justify-between items-center bg-amber-50 hover:bg-amber-50 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100"
+            className="w-full mt-2 h-9 border-2 border-amber-200 rounded-lg text-left flex justify-between items-center bg-amber-50 hover:bg-amber-50 focus-visible:border-blue-400 focus-visible:ring-2 focus-visible:ring-blue-100 disabled:opacity-60 disabled:cursor-not-allowed"
+            disabled={disabled}
           >
             {category}
             <span className="ml-2 text-gray-400">▼</span>
