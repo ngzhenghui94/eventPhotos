@@ -119,8 +119,8 @@ const deleteEventSchema = z.object({
 export const deleteEvent = validatedActionWithUser(
   deleteEventSchema,
   async (data, _, user) => {
-    // Note: `validatedActionWithUser` already verifies user is logged in.
-    // We still need to verify they OWN this event.
+  // Note: `validatedActionWithUser` already verifies user is logged in.
+  // Only the Host (event creator) can delete an event.
     const existing = await db.query.events.findFirst({
       where: eq(events.id, data.eventId),
       columns: { createdBy: true },

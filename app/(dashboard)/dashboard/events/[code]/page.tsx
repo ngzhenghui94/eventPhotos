@@ -73,6 +73,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   const planPhotoCap = photoLimitPerEvent(planName) ?? Number.MAX_SAFE_INTEGER;
   const usedPct = Math.min(100, Math.round((photoCount / planPhotoCap) * 100));
   const isEventOwner = user.id === event.createdBy.id || !!user.isOwner;
+  const isHost = user.id === event.createdBy.id;
   const role = await getUserEventRole(eventId, user.id);
   const canManageEvent = isEventOwner || canRoleManageEvent(role);
 
@@ -118,8 +119,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
     const existing = await db.query.events.findFirst({ where: eq(eventsTable.id, eventId) });
     if (!existing) return redirect(`/dashboard/events?error=${encodeURIComponent('Event not found')}`);
 
-    const isCreator = existing.createdBy === u.id;
-    if (!isCreator && !u.isOwner) {
+    if (existing.createdBy !== u.id) {
       return redirect(`/dashboard/events/${existing.eventCode}?error=${encodeURIComponent('You do not have permission to delete this event')}`);
     }
 
@@ -587,7 +587,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
           )}
 
           {/* Danger Zone */}
-          {isEventOwner && (
+          {isHost && (
             <div className="pt-6 mt-2 border-t">
               <p className="text-sm font-medium text-red-600 mb-2">Danger Zone</p>
               <div className="text-xs text-gray-600 mb-3">
