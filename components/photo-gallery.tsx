@@ -361,9 +361,10 @@ function PhotoCard({ photo, onView, onDelete, canDelete, isDeleting, accessCode,
           {photo.originalFilename}
         </p>
         <p className="text-xs text-gray-500 flex items-center gap-1">
-          <span>By {uploadedBy}</span>
-          {isHost && (
+          {isHost ? (
             <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200 text-[10px] font-medium">Host</span>
+          ) : (
+            <span>By {uploadedBy}</span>
           )}
           <span className="mx-1">•</span>
           <span>{uploadDate}</span>

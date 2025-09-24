@@ -11,19 +11,25 @@ type Props = {
   children: React.ReactNode;
   onCollapsedChange?: (collapsed: boolean) => void;
   headerExtras?: React.ReactNode;
+  defaultCollapsed?: boolean;
 };
 
-export default function TimelineCollapsibleCard({ title, storageKey, icon, gradientClass, children, onCollapsedChange, headerExtras }: Props) {
+export default function TimelineCollapsibleCard({ title, storageKey, icon, gradientClass, children, onCollapsedChange, headerExtras, defaultCollapsed }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   useEffect(() => {
     try {
       const v = localStorage.getItem(storageKey);
-      const initial = v === '1';
-      setCollapsed(initial);
+      if (v === '1') {
+        setCollapsed(true);
+      } else if (v === '0') {
+        setCollapsed(false);
+      } else {
+        setCollapsed(!!defaultCollapsed);
+      }
     } catch {
-      // ignore
+      setCollapsed(!!defaultCollapsed);
     }
-  }, [storageKey, onCollapsedChange]);
+  }, [storageKey, defaultCollapsed, onCollapsedChange]);
 
   // Notify parent after collapsed state changes to avoid setState during render in another component
   useEffect(() => {

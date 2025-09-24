@@ -150,6 +150,7 @@ export default function AdminEventChat({ eventId }: { eventId: number }) {
       storageKey={`tcg_admin_event_chat:${eventId}`}
       icon={<MessageSquareText className="w-6 h-6 text-indigo-600" />}
       gradientClass="border-indigo-200 bg-gradient-to-r from-indigo-50 to-pink-50"
+      defaultCollapsed
       onCollapsedChange={setIsMinimized}
     >
       {!isMinimized && (

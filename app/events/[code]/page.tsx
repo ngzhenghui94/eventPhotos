@@ -178,7 +178,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             {/* Event Chat - only when enabled by host */}
             {event.chatEnabled !== false && (
               <div className="mb-8">
-                <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} storageKey={`tcg_chat_collapsed:guest:${event.id}`} />
+                <EventChat eventId={event.id} canAccess={hasAccess} gradientClass={`${pickGradient(event.eventCode, 3)}`} storageKey={`tcg_chat_collapsed:guest:${event.id}`} defaultCollapsed />
               </div>
             )}
 
