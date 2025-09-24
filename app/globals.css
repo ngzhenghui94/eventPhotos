@@ -284,6 +284,13 @@
     border: 1px solid rgba(255, 255, 255, 0.18);
   }
 
+  /* Feather the edges of background glows so blur doesn't clip with visible borders */
+  .mask-soft {
+    /* Radial alpha mask: fully opaque center, feathered edges to transparent */
+    -webkit-mask-image: radial-gradient(closest-side, rgba(0,0,0,1) 70%, rgba(0,0,0,0.6) 85%, rgba(0,0,0,0) 100%);
+            mask-image: radial-gradient(closest-side, rgba(0,0,0,1) 70%, rgba(0,0,0,0.6) 85%, rgba(0,0,0,0) 100%);
+  }
+
   .fade-in-up {
     opacity: 0;
     transform: translateY(30px);

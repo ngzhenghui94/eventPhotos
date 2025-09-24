@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { brand } from '@/lib/brand';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarClock, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X, Eye } from 'lucide-react';
+import { Calendar, CalendarClock, CheckCircle2, ImageIcon, Shield, Upload, Users, ArrowRight, QrCode, Megaphone, X, Eye, MessageCircle, SlidersHorizontal, Server } from 'lucide-react';
 import { JoinByCode } from '../../components/join-by-code';
 
 
@@ -164,7 +164,7 @@ export default function HomePage() {
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
             {/* Card 4: Authentication by Google */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-red-400 via-yellow-400 to-blue-500 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-red-400 via-yellow-400 to-blue-500 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-red-500 via-yellow-400 to-blue-500 text-white flex items-center justify-center shadow-lg">
                   <Shield className="h-7 w-7" />
@@ -175,7 +175,7 @@ export default function HomePage() {
             </div>
             {/* Card 1 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-500 via-orange-400 to-blue-400 text-white flex items-center justify-center shadow-lg">
                   <Calendar className="h-7 w-7" />
@@ -186,7 +186,7 @@ export default function HomePage() {
             </div>
             {/* Card 1b: Plan timeline */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-green-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-green-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-green-400 via-amber-400 to-orange-400 text-white flex items-center justify-center shadow-lg">
                   <CalendarClock className="h-7 w-7" />
@@ -197,7 +197,7 @@ export default function HomePage() {
             </div>
             {/* Card 2 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-amber-400 to-orange-400 text-white flex items-center justify-center shadow-lg">
                   <QrCode className="h-7 w-7" />
@@ -208,7 +208,7 @@ export default function HomePage() {
             </div>
             {/* Card 3 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
                   <Upload className="h-7 w-7" />
@@ -219,7 +219,7 @@ export default function HomePage() {
             </div>
             {/* Card 4 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-orange-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-blue-400 via-orange-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-orange-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
                   <CheckCircle2 className="h-7 w-7" />
@@ -230,7 +230,7 @@ export default function HomePage() {
             </div>
              {/* Card 1 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-amber-400 via-orange-300 to-blue-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-amber-500 via-orange-400 to-blue-400 text-white flex items-center justify-center shadow-lg">
                   <Shield className="h-7 w-7" />
@@ -241,7 +241,7 @@ export default function HomePage() {
             </div>
             {/* Card 2 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-blue-400 via-amber-300 to-orange-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-400 via-amber-400 to-orange-400 text-white flex items-center justify-center shadow-lg">
                   <Users className="h-7 w-7" />
@@ -252,13 +252,49 @@ export default function HomePage() {
             </div>
             {/* Card 3 */}
             <div className="relative group">
-              <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity"></div>
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-orange-400 via-blue-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
                   <ImageIcon className="h-7 w-7" />
                 </div>
                 <h3 className="mt-6 font-bold text-xl text-gray-900">Beautiful galleries</h3>
                 <p className="mt-3 text-xs text-gray-600">Pixel-perfect, responsive layouts that make your event look amazing on any screen.</p>
+              </div>
+            </div>
+
+            {/* New Card: Event Chat */}
+            <div className="relative group">
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-indigo-400 via-blue-400 to-cyan-400 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-500 via-blue-500 to-cyan-400 text-white flex items-center justify-center shadow-lg">
+                  <MessageCircle className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Event Chat</h3>
+                <p className="mt-3 text-xs text-gray-600">Keep the conversation flowing. Guests can chat, react, and coordinate right inside your event.</p>
+              </div>
+            </div>
+
+            {/* New Card: Slideshow */}
+            <div className="relative group">
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-fuchsia-400 via-rose-300 to-amber-300 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-fuchsia-500 via-rose-400 to-amber-400 text-white flex items-center justify-center shadow-lg">
+                  <SlidersHorizontal className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Slideshow</h3>
+                <p className="mt-3 text-xs text-gray-600">Instant, dynamic slideshow of approved photos—perfect for projectors and venue screens.</p>
+              </div>
+            </div>
+
+            {/* New Card: Secure Hetzner Storage */}
+            <div className="relative group">
+              <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-300 to-blue-300 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
+              <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
+                <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-400 to-blue-400 text-white flex items-center justify-center shadow-lg">
+                  <Server className="h-7 w-7" />
+                </div>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Secure Hetzner storage</h3>
+                <p className="mt-3 text-xs text-gray-600">Photos are stored securely on Hetzner Storage Bucket with presigned access and strict privacy controls.</p>
               </div>
             </div>
 
