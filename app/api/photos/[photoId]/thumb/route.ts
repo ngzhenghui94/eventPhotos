@@ -34,7 +34,7 @@ export async function GET(
   const { photoId: photoIdStr } = await context.params;
   const photoId = parseInt(photoIdStr);
   if (!photoId) return NextResponse.json({ error: 'Invalid photo ID' }, { status: 400 });
-  try { console.info('[api][thumb][start]', { photoId }); } catch {}
+  // removed verbose start log
 
   type PhotoMeta = { eventId: number; s3Key: string | null; filePath: string | null };
   const cacheKey = `photo:meta:${photoId}`;
@@ -46,7 +46,7 @@ export async function GET(
   try {
     const cachedUrl = await redis.get<string>(urlCacheKey);
     if (cachedUrl) {
-      try { console.info('[api][thumb][cache-hit-url]', { photoId, ms: Date.now() - t0 }); } catch {}
+  // removed verbose cache-hit-url log
       return NextResponse.redirect(cachedUrl, {
         headers: {
           'Cache-Control': 'private, max-age=60',
@@ -65,9 +65,9 @@ export async function GET(
       filePath: photo.filePath ?? null,
     };
   await redis.set(cacheKey, meta, { ex: PHOTO_META_TTL_SECONDS });
-    try { console.info('[api][thumb][meta-cache-store]', { photoId, eventId: meta.eventId, hasS3Key: !!meta.s3Key }); } catch {}
+    // removed verbose meta-cache-store log
   } else {
-    try { console.info('[api][thumb][meta-cache-hit]', { photoId, eventId: meta.eventId, hasS3Key: !!meta.s3Key }); } catch {}
+    // removed verbose meta-cache-hit log
   }
 
   const url = new URL(request.url);
@@ -88,19 +88,9 @@ export async function GET(
     userId: user?.id,
     accessCode: providedCode || undefined,
   });
-  try {
-    console.info('[api][thumb][auth]', {
-      photoId,
-      eventId: meta.eventId,
-      hasUser: !!user,
-      hasCodeCookie: !!codeFromCookie,
-      hasCodeHeader: !!codeFromHeader,
-      hasCodeQuery: !!codeFromQuery,
-      allowed: !!canAccess,
-    });
-  } catch {}
+  // removed verbose auth log
   if (!canAccess) {
-    try { console.warn('[api][thumb][403]', { photoId, eventId: meta.eventId, hasUser: !!user, hasCode: !!(providedCode) }); } catch {}
+    // keep only error response without noisy log
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -126,10 +116,6 @@ export async function GET(
     }
     const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: preferredKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
     try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
-    try {
-      const uo = new URL(signed);
-      console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: preferredKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
-    } catch { console.info('[api][thumb][exists]', { photoId, eventId: meta.eventId, key: preferredKey, ms: Date.now() - t0 }); }
     return NextResponse.redirect(signed, {
       headers: {
         'Cache-Control': 'private, max-age=60',
@@ -142,11 +128,7 @@ export async function GET(
   try {
     await s3.send(new HeadObjectCommand({ Bucket: BUCKET_NAME, Key: key }));
   } catch (e: any) {
-    try {
-      const status = e?.$metadata?.httpStatusCode;
-      const code = e?.Code || e?.name;
-      console.warn('[api][thumb][origin-missing] original S3 object not found (originals keep their file extension, e.g. .jpg). Thumbnails are generated/served as WebP.', { photoId, eventId: meta.eventId, key, code, status });
-    } catch {}
+    // removed origin-missing warning log
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url), {
       headers: {
         'Cache-Control': 'private, max-age=60',
@@ -162,7 +144,7 @@ export async function GET(
     const out = await sharp(source).rotate().resize(512, 512, { fit: 'inside' }).webp({ quality: 78 }).toBuffer();
     const contentType: 'image/webp' = 'image/webp';
     const outKey = preferredKey;
-    try { console.info('[api][thumb][generate]', { photoId, eventId: meta.eventId, outKey, outBytes: out.length }); } catch {}
+  // removed verbose generate log
     // Store back to S3 for future requests (best-effort)
     try {
       await s3.send(new PutObjectCommand({
@@ -172,16 +154,12 @@ export async function GET(
         ContentType: contentType,
         CacheControl: THUMBNAIL_CACHE_CONTROL,
       }));
-      try { console.info('[api][thumb][stored]', { photoId, key: outKey }); } catch {}
+  // removed verbose stored log
     } catch {}
     const signed = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET_NAME, Key: outKey }), { expiresIn: SIGNED_URL_TTL_SECONDS });
   // Mirror cache for webp variant
   try { await redis.set(`photo:thumb:url:${photoId}:webp`, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
   try { await redis.set(`photo:thumb:exists:${photoId}:webp`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
-    try {
-      const uo = new URL(signed);
-      console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, key: outKey, host: `${uo.protocol}//${uo.host}`, ms: Date.now() - t0 });
-    } catch { console.info('[api][thumb][signed]', { photoId, eventId: meta.eventId, key: outKey, ms: Date.now() - t0 }); }
     return NextResponse.redirect(signed, {
       headers: {
         'Cache-Control': 'private, max-age=60',
@@ -189,12 +167,11 @@ export async function GET(
       },
     });
   } catch (err: any) {
+    // keep only error logging path
     try {
       const status = err?.$metadata?.httpStatusCode;
       const code = err?.Code || err?.name;
-      if (code === 'NoSuchKey' || status === 404) {
-        console.warn('[api][thumb][generate-failed]', { photoId, eventId: meta.eventId, code, status });
-      } else {
+      if (!(code === 'NoSuchKey' || status === 404)) {
         console.error('[api][thumb][generate-failed]', { photoId, eventId: meta.eventId, code, status });
       }
     } catch {}

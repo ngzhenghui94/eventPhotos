@@ -15,8 +15,7 @@ export async function POST(request: NextRequest) {
     const eventId = Number(payload?.eventId);
     const guestName = typeof payload?.guestName === 'string' ? payload.guestName : null;
     const guestEmail = typeof payload?.guestEmail === 'string' ? payload.guestEmail : null;
-    const items: Array<{ key: string; originalFilename: string; mimeType: string; fileSize: number }> = Array.isArray(payload?.items) ? payload.items : [];
-    console.info('[api][guest-finalize][start]', { eventId, count: items.length });
+  const items: Array<{ key: string; originalFilename: string; mimeType: string; fileSize: number }> = Array.isArray(payload?.items) ? payload.items : [];
     if (!eventId || !Number.isFinite(eventId)) return Response.json({ error: 'Invalid event ID' }, { status: 400 });
     if (!items.length) return Response.json({ error: 'No items' }, { status: 400 });
 
@@ -39,11 +38,9 @@ export async function POST(request: NextRequest) {
         isApproved: !event.requireApproval,
       }));
     if (records.length === 0) {
-      console.warn('[api][guest-finalize][no-valid-items]', { eventId, items });
       return Response.json({ error: 'No valid items' }, { status: 400 });
     }
     const inserted = await db.insert(photos).values(records).returning({ id: photos.id });
-    console.info('[api][guest-finalize][ok]', { eventId, count: inserted.length });
     // Invalidate via version bump and clear owner list cache
     try {
       await bumpEventVersion(eventId);
