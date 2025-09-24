@@ -155,11 +155,12 @@ export async function updateUserSubscription(data: UserSubscriptionData): Promis
  * Logs user activity with optional details
  */
 export async function logActivity(data: ActivityLogData): Promise<void> {
-  validateRequiredFields(data, ['userId', 'action']);
+  validateRequiredFields(data, ['action']);
   
   return withDatabaseErrorHandling(async () => {
     await db.insert(activityLogs).values({
-      userId: data.userId,
+      userId: data.userId ?? null,
+      eventId: data.eventId ?? null,
       action: data.action,
       ipAddress: data.ipAddress || null,
       detail: data.detail || null,
@@ -404,11 +405,18 @@ export async function getEventStats(eventId: number): Promise<EventStats> {
       last: sql<Date>`max(${photos.uploadedAt})`,
     }).from(photos).where(eq(photos.eventId, eventId));
     const row = rows[0] as any;
+    // Also compute last download timestamp from activity logs for this event
+    const lastDownloadRows = await db
+      .select({ last: sql<Date>`max(${activityLogs.timestamp})` })
+      .from(activityLogs)
+      .where(and(eq(activityLogs.eventId, eventId), eq(activityLogs.action, ActivityType.DOWNLOAD_PHOTO)));
+    const lastDownload = (lastDownloadRows?.[0] as any)?.last || null;
     const stats: EventStats = {
       totalPhotos: Number(row?.total || 0),
       approvedPhotos: Number(row?.approved || 0),
       pendingApprovals: Math.max(0, Number(row?.total || 0) - Number(row?.approved || 0)),
       lastUploadAt: row?.last ? new Date(row.last).toISOString() : null,
+      lastDownloadAt: lastDownload ? new Date(lastDownload).toISOString() : null,
     };
     await setEventStatsCached(eventId, stats);
     return stats;
@@ -449,6 +457,7 @@ export async function getUserEventsStats(userId: number, filterEventIds?: number
         approvedPhotos: approved,
         pendingApprovals: Math.max(0, total - approved),
         lastUploadAt: (r as any)?.last ? new Date((r as any).last).toISOString() : null,
+        // lastDownloadAt intentionally omitted in batch for simplicity/perf
       };
     }
     // For filtered ids with no rows (no photos), return zero stats

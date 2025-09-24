@@ -17,8 +17,10 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 import JSZip from 'jszip';
 import { Readable } from 'stream';
-import { getPhotoById, canUserAccessEvent, getUser } from '@/lib/db/queries';
+import { getPhotoById, canUserAccessEvent, getUser, logActivity } from '@/lib/db/queries';
 import { getSignedDownloadUrl } from '@/lib/s3';
+import { ActivityType } from '@/lib/db/schema';
+import { bumpEventVersion } from '@/lib/utils/cache';
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,16 +40,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { photoIds, accessCode } = await request.json();
+  const { photoIds, accessCode } = await request.json();
     if (!Array.isArray(photoIds) || photoIds.length === 0) {
       return NextResponse.json({ error: 'No photo IDs provided' }, { status: 400 });
     }
     const user = await getUser();
     const zip = new JSZip();
     let totalBytes = 0;
-    // Parallel fetch with bounded concurrency; add file streams to zip
+  // Parallel fetch with bounded concurrency; add file streams to zip
     const concurrency = 4;
     let current = 0;
+  let eventIdForActivity: number | null = null;
     async function worker() {
       while (true) {
         const i = current++;
@@ -58,7 +61,9 @@ export async function POST(request: NextRequest) {
         // Authorize using user session or provided access code (for guests)
         const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id, accessCode });
         if (!canAccess) continue;
-        const filename = photo.originalFilename || photo.filename;
+  const filename = photo.originalFilename || photo.filename;
+  // capture eventId for activity logging (all photos assumed from same event for this UI)
+  if (!eventIdForActivity) eventIdForActivity = photo.eventId;
         if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
           totalBytes += photo.fileSize;
         }
@@ -88,6 +93,19 @@ export async function POST(request: NextRequest) {
       }
     }
     await Promise.all(Array.from({ length: Math.min(concurrency, photoIds.length) }, () => worker()));
+    // Best-effort: log a bulk download at the event level and bump version to refresh stats cache
+    try {
+      if (eventIdForActivity) {
+        await logActivity({
+          userId: user?.id ?? null,
+          eventId: eventIdForActivity,
+          action: ActivityType.DOWNLOAD_PHOTO,
+          ipAddress: ip || undefined,
+          detail: `Bulk downloaded ${photoIds.length} photos for event ${eventIdForActivity}`,
+        });
+        await bumpEventVersion(eventIdForActivity);
+      }
+    } catch {}
     // Stream the zip to the client to avoid buffering in memory. Convert Node stream to Web stream for NextResponse
     const nodeStream = zip.generateNodeStream({ type: 'nodebuffer', streamFiles: true, compression: 'STORE' });
     let body: any;

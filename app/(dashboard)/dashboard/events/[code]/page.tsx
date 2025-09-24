@@ -215,7 +215,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
             icon={<BarChart3 className="w-6 h-6 text-violet-700" />}
             gradientClass="border-violet-200 bg-gradient-to-r from-violet-50 to-orange-50"
           >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="rounded-lg bg-white/70 border border-violet-100 p-4 shadow-sm">
                 <div className="text-xs uppercase tracking-wide text-violet-700">Total Photos</div>
                 <div className="text-2xl font-extrabold text-violet-900">{stats?.totalPhotos ?? (photos?.length || 0)}</div>
@@ -234,6 +234,14 @@ export default async function Page({ params }: { params: Promise<{ code: string 
                 </div>
                 <div className="text-sm font-semibold text-blue-900 mt-1">
                   {stats?.lastUploadAt ? new Date(stats.lastUploadAt).toLocaleString() : '—'}
+                </div>
+              </div>
+              <div className="rounded-lg bg-white/70 border border-indigo-100 p-4 shadow-sm">
+                <div className="flex items-center gap-2 text-xs uppercase tracking-wide text-indigo-700">
+                  <Clock className="w-4 h-4" /> Last Downloaded
+                </div>
+                <div className="text-sm font-semibold text-indigo-900 mt-1">
+                  {stats?.lastDownloadAt ? new Date(stats.lastDownloadAt).toLocaleString() : '—'}
                 </div>
               </div>
             </div>

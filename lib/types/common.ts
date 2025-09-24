@@ -20,7 +20,8 @@ export interface UserSubscriptionData {
 }
 
 export interface ActivityLogData {
-  userId: number;
+  userId?: number | null;
+  eventId?: number | null;
   action: string;
   ipAddress?: string;
   detail?: string;
@@ -69,4 +70,5 @@ export interface EventStats {
   approvedPhotos: number;
   pendingApprovals: number;
   lastUploadAt: string | null;
+  lastDownloadAt?: string | null;
 }

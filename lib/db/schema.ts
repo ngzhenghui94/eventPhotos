@@ -90,6 +90,7 @@ export const photos = pgTable('photos', {
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').references(() => users.id),
+  eventId: integer('event_id').references(() => events.id),
   action: text('action').notNull(),
   detail: text('detail'),
   timestamp: timestamp('timestamp').notNull().defaultNow(),
@@ -213,4 +214,5 @@ export enum ActivityType {
   UPLOAD_PHOTO = 'UPLOAD_PHOTO',
   DELETE_PHOTO = 'DELETE_PHOTO',
   APPROVE_PHOTO = 'APPROVE_PHOTO',
+  DOWNLOAD_PHOTO = 'DOWNLOAD_PHOTO',
 }
