@@ -150,3 +150,12 @@ Open http://localhost:3000
 - Use helpers from `lib/**` (S3, Stripe, queries); avoid instantiating clients inline
 - Validate server actions with Zod + `validatedAction` helpers
 - Prefer versioned event keys and the query helpers for DB access
+
+---
+
+## Documentation
+
+- API Reference: `docs/api-reference.md`
+- Functions Reference: `docs/functions-reference.md`
+- Components Reference: `docs/components-reference.md`
+- Features Guide: `docs/features.md`
