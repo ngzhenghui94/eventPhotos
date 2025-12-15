@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import type { User } from '@/lib/db/schema';
@@ -41,10 +40,10 @@ export function UserMenuClient({
       return (
         <>
           <DropdownMenuItem>
-            <Link href="/api/auth/google" className="w-full">Sign in</Link>
+            <a href="/api/auth/google" className="w-full">Sign in</a>
           </DropdownMenuItem>
           <DropdownMenuItem>
-            <Link href="/api/auth/google" className="w-full">Create free event</Link>
+            <a href="/api/auth/google" className="w-full">Create free event</a>
           </DropdownMenuItem>
         </>
       );
@@ -52,10 +51,10 @@ export function UserMenuClient({
     return (
       <>
         <DropdownMenuItem>
-          <Link href="/dashboard/general" className="flex w-full items-center">
+          <a href="/dashboard/general" className="flex w-full items-center">
             <UserIcon className="mr-2 h-4 w-4" />
             <span>Edit Profile</span>
-          </Link>
+          </a>
         </DropdownMenuItem>
         <DropdownMenuItem>
           <button type="button" className="flex w-full" onClick={handleSignOut}>
@@ -73,10 +72,10 @@ export function UserMenuClient({
         {/* Desktop actions */}
         <div className="hidden sm:flex gap-2 items-center">
           <Button asChild variant="ghost" className="rounded-full h-9 px-4">
-            <Link href="/api/auth/google">Sign in</Link>
+            <a href="/api/auth/google">Sign in</a>
           </Button>
           <Button asChild className="rounded-full h-9 px-4">
-            <Link href="/api/auth/google">Create free event</Link>
+            <a href="/api/auth/google">Create free event</a>
           </Button>
         </div>
         {/* Mobile actions */}
@@ -90,10 +89,10 @@ export function UserMenuClient({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem>
-                <Link href="/api/auth/google" className="w-full">Sign in</Link>
+                <a href="/api/auth/google" className="w-full">Sign in</a>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <Link href="/api/auth/google" className="w-full">Create free event</Link>
+                <a href="/api/auth/google" className="w-full">Create free event</a>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -120,10 +119,10 @@ export function UserMenuClient({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="flex flex-col gap-1">
             <DropdownMenuItem className="cursor-pointer">
-              <Link href="/dashboard/general" className="flex w-full items-center">
+              <a href="/dashboard/general" className="flex w-full items-center">
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Edit Profile</span>
-              </Link>
+              </a>
             </DropdownMenuItem>
             <form action={handleSignOut} className="w-full">
               <button type="submit" className="flex w-full">
@@ -147,10 +146,10 @@ export function UserMenuClient({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem>
-              <Link href="/dashboard/general" className="flex w-full items-center">
+              <a href="/dashboard/general" className="flex w-full items-center">
                 <UserIcon className="mr-2 h-4 w-4" />
                 <span>Edit Profile</span>
-              </Link>
+              </a>
             </DropdownMenuItem>
             <DropdownMenuItem>
               <button type="button" className="flex w-full" onClick={handleSignOut}>

@@ -13,7 +13,7 @@ import { deleteManyFromS3, deriveThumbKey } from '@/lib/s3';
 const createEventSchema = z.object({
   name: z.string().min(1, 'Event name is required').max(200, 'Event name too long'),
   description: z.string().optional(),
-  date: z.string().min(1, 'Event date is required'),
+  date: z.string().optional(),
   location: z.string().optional(),
   isPublic: z.boolean().optional(),
   allowGuestUploads: z.boolean().optional(),
@@ -25,7 +25,7 @@ export const createEvent = validatedActionWithUser(
   async (data, _, user) => {
     // Idempotency guard (5s) per user + name + date
     const safeName = (data.name || '').trim().toUpperCase();
-    const safeDate = new Date(data.date).toISOString();
+    const safeDate = data.date ? new Date(data.date).toISOString() : 'NO_DATE';
     const idemKey = `idem:event:create:${user.id}:${safeName}:${safeDate}`;
     const acquired = await redis.set(idemKey, '1', { nx: true, ex: 5 });
     if (!acquired) {
@@ -45,7 +45,7 @@ export const createEvent = validatedActionWithUser(
       const [newEvent] = await db.insert(events).values({
         name: data.name,
         description: (data.description ?? '').toString(),
-        date: new Date(data.date),
+        date: data.date ? new Date(data.date) : null,
         location: (data.location ?? '').toString(),
         eventCode,
         accessCode,
@@ -94,7 +94,7 @@ export const updateEvent = validatedActionWithUser(
         .set({
           name: data.name ?? existing.name,
           description: (data.description ?? existing.description ?? '').toString(),
-          date: data.date ? new Date(data.date) : existing.date,
+          date: data.date ? new Date(data.date) : (existing.date ?? null),
           location: (data.location ?? existing.location ?? '').toString(),
           isPublic: typeof data.isPublic === 'boolean' ? data.isPublic : existing.isPublic,
           allowGuestUploads: typeof data.allowGuestUploads === 'boolean' ? data.allowGuestUploads : existing.allowGuestUploads,

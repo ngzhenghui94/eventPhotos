@@ -131,12 +131,11 @@ const NewEventPage = () => {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <Label htmlFor="date" className="text-base font-semibold text-gray-700">Event Date *</Label>
+                  <Label htmlFor="date" className="text-base font-semibold text-gray-700">Event Date</Label>
                   <Input
                     id="date"
                     name="date"
                     type="datetime-local"
-                    required
                     className="mt-2 border-2 border-amber-200 rounded-lg focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
                     disabled={eventLimitReached}
                   />

@@ -88,9 +88,10 @@ export function makeStateToken() {
 
 export async function setOAuthCookies(state: string, redirect?: string | null) {
   const jar = await cookies();
-  jar.set('oauth_state', state, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 600 });
+  const secure = process.env.NODE_ENV === 'production';
+  jar.set('oauth_state', state, { httpOnly: true, sameSite: 'lax', secure, maxAge: 600, path: '/' });
   if (redirect) {
-    jar.set('oauth_redirect', redirect, { httpOnly: true, sameSite: 'lax', secure: true, maxAge: 600 });
+    jar.set('oauth_redirect', redirect, { httpOnly: true, sameSite: 'lax', secure, maxAge: 600, path: '/' });
   }
 }
 

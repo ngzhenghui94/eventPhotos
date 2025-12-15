@@ -64,7 +64,7 @@ export default async function Page({ params }: { params: Promise<{ code: string 
   const photos = await getPhotosForEvent(eventId);
   const stats = await getEventStats(eventId);
 
-  const eventDate = new Date(event.date);
+  const eventDate = event.date ? new Date(event.date) : null;
   const photoCount = photos?.length || 0;
   const approvedCount = (photos as any[])?.filter((p) => p.isApproved)?.length || 0;
   // Use host's planName (event creator) for limits and caps

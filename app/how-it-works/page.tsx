@@ -156,9 +156,9 @@ export default function HowItWorksPage() {
         </div>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-4">
-        <Link href="/api/auth/google">
+        <a href="/api/auth/google">
           <Button size="lg" className="rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-orange-500 hover:to-amber-500 shadow-lg text-lg px-6 py-3">Create free event</Button>
-        </Link>
+        </a>
         <Link href="/pricing">
           <Button size="lg" variant="outline" className="rounded-full text-lg px-6 py-3 border-2 border-gray-300">See pricing</Button>
         </Link>

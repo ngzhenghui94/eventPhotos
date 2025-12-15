@@ -45,7 +45,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
   const hasAccess = event.isPublic || (!!accessCodeCookie && accessCodeCookie.toUpperCase() === event.accessCode.toUpperCase());
 
   const photos = photosRaw || [];
-  const eventDate = new Date(event.date);
+  const eventDate = event.date ? new Date(event.date) : null;
   const photoCount = photos?.length || 0;
   const hostPlan = normalizePlanName(event.createdBy?.planName as any);
   const isBusinessPlan = hostPlan === 'business';
@@ -92,7 +92,7 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold text-slate-900 truncate">{event.name}</h1>
               <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600 mt-1">
-                <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {eventDate.toLocaleDateString()}</span>
+                <span className="inline-flex items-center gap-1.5"><Calendar className="h-4 w-4" /> {eventDate ? eventDate.toLocaleDateString() : 'No date set'}</span>
                 {event.location && (
                   <span className="inline-flex items-center gap-1.5"><MapPin className="h-4 w-4" /> {event.location}</span>
                 )}

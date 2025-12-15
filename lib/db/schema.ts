@@ -56,7 +56,7 @@ export const events = pgTable('events', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 200 }).notNull(),
   description: text('description'),
-  date: timestamp('date').notNull(),
+  date: timestamp('date'),
   location: varchar('location', { length: 255 }),
   category: varchar('category', { length: 32 }).notNull().default('General'),
   eventCode: varchar('event_code', { length: 50 }).notNull().unique(),

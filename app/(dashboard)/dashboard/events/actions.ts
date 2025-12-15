@@ -12,7 +12,7 @@ import { redis } from '@/lib/upstash';
 const createEventSchema = z.object({
   name: z.string().min(1, 'Event name is required').max(200, 'Event name too long'),
   description: z.string().optional(),
-  date: z.string().min(1, 'Event date is required'),
+  date: z.string().optional(),
   location: z.string().optional(),
   category: z.string().min(1, 'Category is required').max(32),
   isPublic: z.boolean().optional(),
@@ -43,7 +43,7 @@ export async function createEventAction(formData: FormData) {
   const data = {
     name: formData.get('name') as string,
     description: formData.get('description') as string || '',
-    date: formData.get('date') as string,
+    date: (formData.get('date') as string) || undefined,
     location: formData.get('location') as string || '',
     category: (formData.get('category') as string) || 'General',
     isPublic: formData.get('isPublic') === 'on',
@@ -57,7 +57,7 @@ export async function createEventAction(formData: FormData) {
   }
   // Idempotency key based on user + name + date (5s window)
   const safeName = (result.data.name || '').trim().toUpperCase();
-  const safeDate = new Date(result.data.date).toISOString();
+  const safeDate = result.data.date ? new Date(result.data.date).toISOString() : 'NO_DATE';
   const idemKey = `idem:event:create:${user.id}:${safeName}:${safeDate}`;
   const acquired = await redis.set(idemKey, '1', { nx: true, ex: 5 });
 
@@ -82,7 +82,7 @@ export async function createEventAction(formData: FormData) {
     .values({
       name: result.data.name,
       description: (result.data.description ?? '').toString(),
-      date: new Date(result.data.date),
+      date: result.data.date ? new Date(result.data.date) : null,
       location: (result.data.location ?? '').toString(),
       eventCode,
       accessCode,
