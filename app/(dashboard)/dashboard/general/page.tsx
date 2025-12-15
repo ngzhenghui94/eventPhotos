@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
 import useSWR from 'swr';
 import { Suspense } from 'react';
+import { concurrentUploadLimit, eventLimit, normalizePlanName, photoLimitPerEvent, uploadLimitBytes, type PlanName } from '@/lib/plans';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -23,6 +24,7 @@ type CurrentUser = {
   role: string;
   isOwner: boolean;
   planName: string | null;
+  stripeCustomerId?: string | null;
   emailVerifiedAt: string | Date | null;
   createdAt: string | Date;
   updatedAt: string | Date;
@@ -94,52 +96,21 @@ function AccountFormWithData({ state }: { state: ActionState }) {
 
 export default function GeneralPage() {
   const { data: user } = useSWR<CurrentUser>('/api/user', fetcher);
-  const planName = user?.planName || 'free';
-  const planFeatures: Record<string, string[]> = {
-    Free: [
-      '1 Event',
-      '20MB per upload',
-      '5MB per photo',
-      'Guest Photo Sharing',
-      'Basic Photo Gallery',
-      'Photo Download & Export'
-    ],
-    Starter: [
-      '1 Event',
-      '50 photos per event',
-      '20MB per upload',
-      'Guest Photo Sharing',
-      'Basic Photo Gallery',
-      'Photo Download & Export'
-    ],
-    Hobby: [
-      '5 Events',
-      '100 photos per event',
-      '25MB per upload',
-      'Guest Photo Sharing',
-      'Basic Photo Gallery',
-      'Photo Download & Export'
-    ],
-    Pro: [
-      '20 Events',
-      '500 photos per event',
-      '50MB per upload',
-      'Guest Photo Sharing',
-      'Advanced Photo Gallery',
-      'Photo Download & Export'
-    ],
-    Business: [
-      'Unlimited Events',
-      '1000 photos per event',
-      '100MB per upload',
-      'Guest Photo Sharing',
-      'Advanced Photo Gallery',
-      'Photo Download & Export',
-      'Teams Enabled'
-    ]
-  };
-  const planKey = planName.charAt(0).toUpperCase() + planName.slice(1);
-  const features = planFeatures[planKey] || planFeatures.Free;
+  const plan = normalizePlanName(user?.planName);
+  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+  const evtLimit = eventLimit(plan);
+  const perEventPhotoLimit = photoLimitPerEvent(plan);
+  const uploadMb = Math.round(uploadLimitBytes(plan) / (1024 * 1024));
+  const isAdvancedGallery = plan === 'pro' || plan === 'business';
+  const features = [
+    `${evtLimit === null ? 'Unlimited' : evtLimit} event${evtLimit === 1 ? '' : 's'}`,
+    `${perEventPhotoLimit === null ? 'Unlimited' : perEventPhotoLimit} photos per event`,
+    `${uploadMb}MB per upload`,
+    `${concurrentUploadLimit(plan)} concurrent uploads`,
+    'Guest Photo Sharing',
+    isAdvancedGallery ? 'Advanced Photo Gallery' : 'Basic Photo Gallery',
+    'Photo Download & Export',
+  ];
   // Subscription expiry progress bar logic
   const subscriptionStart = user?.subscriptionStart ? new Date(user.subscriptionStart) : null;
   const subscriptionEnd = user?.subscriptionEnd ? new Date(user.subscriptionEnd) : null;
@@ -200,7 +171,7 @@ export default function GeneralPage() {
           </div>
           <span className="text-gray-700 mb-2">Your current plan details are shown below.</span>
           <div className="flex flex-col gap-1 mt-2">
-            <span className="font-medium text-gray-700">Plan: <span className="ml-2 text-orange-600 font-semibold">{planName.charAt(0).toUpperCase() + planName.slice(1)}</span></span>
+            <span className="font-medium text-gray-700">Plan: <span className="ml-2 text-orange-600 font-semibold">{planLabel}</span></span>
             <span className="font-medium text-gray-700">Email: <span className="ml-2">{user?.email}</span></span>
             <span className="font-medium text-gray-700 mb-1">Features:</span>
             <ul className="mb-2 ml-2 list-none">
@@ -211,7 +182,7 @@ export default function GeneralPage() {
                 </li>
               ))}
             </ul>
-            {planKey !== 'Free' && subscriptionStart && subscriptionEnd && (
+            {plan !== 'free' && subscriptionStart && subscriptionEnd && (
               <div className="mt-2">
                 <div className="flex justify-between text-xs text-gray-500 mb-1">
                   <span>Start: {subscriptionStart.toLocaleDateString()}</span>
@@ -232,6 +203,16 @@ export default function GeneralPage() {
             {user?.subscriptionStatus && (
               <span className="font-medium text-gray-700">Status: <span className="ml-2">{user.subscriptionStatus.charAt(0).toUpperCase() + user.subscriptionStatus.slice(1)}</span></span>
             )}
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button asChild className="bg-orange-500 hover:bg-orange-600 text-white">
+                <a href="/dashboard/upgrade">Upgrade plan</a>
+              </Button>
+              {user?.stripeCustomerId ? (
+                <Button asChild variant="secondary">
+                  <a href="/api/stripe/portal">Manage subscription</a>
+                </Button>
+              ) : null}
+            </div>
           </div>
         </div>
         <div className="flex items-center justify-center">

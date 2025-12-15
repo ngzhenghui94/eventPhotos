@@ -21,8 +21,9 @@ export function uploadLimitBytes(plan: PlanName): number {
     case 'starter':
       return 20 * 1024 * 1024; // 20MB
     case 'free':
-      return 15 * 1024 * 1024; // 5MB
+      return 5 * 1024 * 1024; // 5MB
     default:
+      // Exhaustive safety fallback
       return 5 * 1024 * 1024; // 5MB
   }
 }

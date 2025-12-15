@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUser } from '@/lib/db/queries';
-import { createCheckoutSession } from '@/lib/payments/stripe';
+import { createCheckoutSessionUrl } from '@/lib/payments/stripe';
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
@@ -15,6 +15,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.redirect(new URL(`/api/auth/google?redirect=${encodeURIComponent(back)}`, req.url));
   }
 
-  // Teams feature removed; Stripe checkout is not available
-  return NextResponse.redirect(new URL('/pricing', req.url));
+  // Start Stripe checkout
+  try {
+    const checkoutUrl = await createCheckoutSessionUrl({ priceId, origin: req.nextUrl.origin });
+    return NextResponse.redirect(checkoutUrl);
+  } catch (e) {
+    return NextResponse.redirect(new URL('/pricing', req.url));
+  }
 }

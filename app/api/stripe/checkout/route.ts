@@ -5,6 +5,7 @@ import { setSession } from '@/lib/auth/session';
 import { NextRequest, NextResponse } from 'next/server';
 import { stripe } from '@/lib/payments/stripe';
 import Stripe from 'stripe';
+import { normalizePlanName } from '@/lib/plans';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -67,26 +68,12 @@ export async function GET(request: NextRequest) {
       throw new Error('User not found in database.');
     }
 
-    // Determine plan name from Stripe price or product
-    let planName = plan.nickname;
-    // Try to get product name if nickname is missing and product is not deleted
-    if (!planName && plan.product && typeof plan.product !== 'string' && 'name' in plan.product) {
-      planName = (plan.product as Stripe.Product).name;
-    }
-    // Fallback: map priceId to plan name if needed
-    const priceIdToPlan: Record<string, string> = {
-      // TODO: Fill in with your actual Stripe price IDs from Stripe dashboard
-      'price_starter_id': 'Starter',
-      'price_hobby_id': 'Hobby',
-      'price_pro_id': 'Pro',
-      'price_business_id': 'Business',
-    };
-    if (!planName && plan.id && priceIdToPlan[plan.id]) {
-      planName = priceIdToPlan[plan.id];
-    }
-    if (!planName) {
-      planName = 'Unknown';
-    }
+    // Determine plan name from Stripe price/product and normalize to our internal plan key
+    const rawPlanName =
+      plan.nickname ||
+      (plan.product && typeof plan.product !== 'string' && 'name' in plan.product ? (plan.product as Stripe.Product).name : '') ||
+      '';
+    const planName = normalizePlanName(rawPlanName);
     const sub = subscription as Stripe.Subscription;
     let subscriptionEnd = null;
     if (sub.status === 'active' || sub.status === 'trialing') {
@@ -98,8 +85,8 @@ export async function GET(request: NextRequest) {
       .set({
         stripeCustomerId: customerId,
         stripeSubscriptionId: subscriptionId,
-        subscriptionStatus: 'paid',
-        subscriptionStart: new Date(subscription.start_date * 1000),
+        subscriptionStatus: sub.status === 'active' || sub.status === 'trialing' ? 'paid' : 'free',
+        subscriptionStart: (sub as any).current_period_start ? new Date((sub as any).current_period_start * 1000) : new Date(subscription.start_date * 1000),
         subscriptionEnd,
         planName,
         updatedAt: new Date()

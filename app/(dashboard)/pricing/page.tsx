@@ -4,6 +4,7 @@ import { Check, Crown } from 'lucide-react';
 import { getStripeProducts, getStripePrices } from '@/lib/payments/stripe';
 import { SubmitButton } from './submit-button';
 import { brand } from '@/lib/brand';
+import { normalizePlanName } from '@/lib/plans';
 
 // Prices are fresh for one hour max
 export default async function PricingPage() {
@@ -29,11 +30,11 @@ export default async function PricingPage() {
       getStripePrices()
     ]);
 
-    const byName = (n: string) => products.find(p => p.name.toLowerCase() === n);
-    const starterProduct = byName('starter');
-    const hobbyProduct = byName('hobby');
-    const proProduct = byName('profession');
-    const businessProduct = byName('business');
+    const byPlan = (plan: PlanName) => products.find(p => normalizePlanName(p.name) === plan);
+    const starterProduct = byPlan('starter');
+    const hobbyProduct = byPlan('hobby');
+    const proProduct = byPlan('pro');
+    const businessProduct = byPlan('business');
 
     const priceForProduct = (productId?: string) => prices.find(pr => pr.productId === productId);
     const starterPrice = priceForProduct(starterProduct?.id);
@@ -135,7 +136,6 @@ export default async function PricingPage() {
                 'Guest Photo Sharing',
                 (plan === 'pro' || plan === 'business' ? 'Advanced Photo Gallery' : 'Basic Photo Gallery'),
                 'Photo Download & Export',
-                ...(plan === 'business' ? ['Teams Enabled'] : []),
               ]}
               priceId={priceId}
               free={free}
@@ -222,7 +222,7 @@ function PricingCard({
       <div className="mt-8 w-full">
         {free ? (
           <form action={chooseFreePlanAction} className="w-full">
-            <SubmitButton disabled={true} />
+            <SubmitButton />
           </form>
         ) : priceId ? (
           <form action={checkoutAction} className="w-full">
@@ -235,7 +235,7 @@ function PricingCard({
               <SubmitButton />
             </a>
             <p className="text-xs text-gray-500">
-              Stripe price not configured. Set STRIPE_PRICE_BASE_ID / STRIPE_PRICE_PLUS_ID in your environment.
+              Stripe isn&apos;t configured (or products/prices couldn&apos;t be loaded). Set `STRIPE_SECRET_KEY` and ensure your Stripe products are named Starter/Hobby/Pro/Business.
             </p>
           </div>
         )}

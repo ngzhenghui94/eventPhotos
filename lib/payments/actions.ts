@@ -2,8 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { createCheckoutSession, createCustomerPortalSession } from './stripe';
-// import removed: withTeam
-// import removed: updateTeamSubscription
+import { getUser, updateUserSubscription } from '@/lib/db/queries';
 
 
 export const checkoutAction = async (formData: FormData) => {
@@ -18,6 +17,21 @@ export const customerPortalAction = async () => {
 };
 
 export const chooseFreePlanAction = async () => {
-  // TODO: Replace team logic with user or event context as needed
-  redirect('/dashboard');
+  const user = await getUser();
+  if (!user) {
+    redirect('/api/auth/google?redirect=%2Fdashboard%2Fgeneral');
+  }
+
+  // If the user already has an active Stripe customer, use the portal to cancel/downgrade properly.
+  if (user.stripeCustomerId) {
+    redirect('/api/stripe/portal');
+  }
+
+  await updateUserSubscription({
+    userId: user.id,
+    planName: 'free',
+    subscriptionStatus: 'free',
+  });
+
+  redirect('/dashboard/general');
 };

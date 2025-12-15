@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { getStripeProducts, getStripePrices } from '@/lib/payments/stripe';
 import { SubmitButton } from '../../pricing/submit-button';
 import { brand } from '@/lib/brand';
+import { normalizePlanName, type PlanName } from '@/lib/plans';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -30,11 +31,11 @@ export default async function UpgradePage() {
 			getStripePrices()
 		]);
 
-		const byName = (n: string) => products.find(p => p.name.toLowerCase() === n);
-		const starterProduct = byName('starter');
-		const hobbyProduct = byName('hobby');
-		const proProduct = byName('profession');
-		const businessProduct = byName('business');
+		const byPlan = (plan: PlanName) => products.find(p => normalizePlanName(p.name) === plan);
+		const starterProduct = byPlan('starter');
+		const hobbyProduct = byPlan('hobby');
+		const proProduct = byPlan('pro');
+		const businessProduct = byPlan('business');
 
 		const priceForProduct = (productId?: string) => prices.find(pr => pr.productId === productId);
 		const starterPrice = priceForProduct(starterProduct?.id);
@@ -142,7 +143,6 @@ export default async function UpgradePage() {
 										'Guest Photo Sharing',
 										'Advanced Photo Gallery',
 										'Photo Download & Export',
-										'Teams Enabled',
 									]}
 									priceId={businessStripeId}
 								/>
@@ -193,7 +193,7 @@ function PricingCard({
 				</ul>
 				   {free ? (
 					   <form action={chooseFreePlanAction} className="w-full">
-						   <SubmitButton disabled />
+						   <SubmitButton />
 					   </form>
 				) : priceId ? (
 					<form action={checkoutAction} className="w-full">
@@ -205,7 +205,7 @@ function PricingCard({
 						<a href="/api/auth/google" className="inline-block w-full">
 							<SubmitButton />
 						</a>
-						<p className="text-xs text-gray-500">Stripe price not configured. Set STRIPE_PRICE_BASE_ID / STRIPE_PRICE_PLUS_ID in your environment.</p>
+						<p className="text-xs text-gray-500">Stripe isn&apos;t configured (or products/prices couldn&apos;t be loaded). Set `STRIPE_SECRET_KEY` and ensure your Stripe products are named Starter/Hobby/Pro/Business.</p>
 					</div>
 				)}
 			</div>
