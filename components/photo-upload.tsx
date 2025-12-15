@@ -63,7 +63,12 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
     try {
       console.info('[host-upload][start]', { traceId, eventId, planName, files: selectedFiles.map(f => ({ name: f.name, size: f.size, type: f.type })) });
       // 1) Ask server for presigned PUT URLs
-      const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
+      const meta = selectedFiles.map((f) => ({
+        name: f.name,
+        type: f.type,
+        size: f.size,
+        clientId: `${f.name}:${f.size}:${(f as any).lastModified ?? 0}`,
+      }));
       let uploads, maxFileSize;
       try {
         const result = await createSignedUploadUrlsAction(eventId, meta, planName);
@@ -84,7 +89,10 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
       }
 
       // 2) Upload directly to S3 using presigned URLs with bounded concurrency, show progress
-      const remaining = [...uploads];
+      const uploadByClientId = new Map<string, any>();
+      for (const u of uploads) {
+        if (u?.clientId) uploadByClientId.set(u.clientId, u);
+      }
       const succeeded: typeof uploads = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
@@ -96,9 +104,20 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
           const idx = cursor++;
           if (idx >= selectedFiles.length) return;
           const file = selectedFiles[idx];
-          const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
-          if (uIdx === -1) continue;
-          const u = remaining.splice(uIdx, 1)[0];
+          const clientId = `${file.name}:${file.size}:${(file as any).lastModified ?? 0}`;
+          const u = uploadByClientId.get(clientId);
+          if (!u) {
+            // File likely filtered out by server validation (size/type/limit)
+            failures.push({ name: file.name, detail: 'Not eligible (too large, invalid type, or plan/event limit reached)' });
+            setUploadProgress((prev) => {
+              const next = [...prev];
+              next[idx] = 0;
+              return next;
+            });
+            continue;
+          }
+          // Ensure we don't attempt the same upload twice
+          uploadByClientId.delete(clientId);
           let uploadTarget = 'unknown';
           try { const uo = new URL(u.url); uploadTarget = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
           const startedAt = Date.now();

@@ -216,20 +216,25 @@ export async function uploadPhotosAction(formData: FormData) {
     const event = await db.query.events.findFirst({ where: eq(events.id, eventId) });
     if (!event) throw new Error('Event not found');
     if (event.createdBy !== user.id) throw new Error('You do not have permission to upload photos to this event');
-    // Use planName from argument, event, or user
-  const plan = planName ? normalizePlanName(planName) : 'free';
+    // Use planName from argument (host plan passed down by server component)
+    const plan = planName ? normalizePlanName(planName) : 'free';
     const MAX_FILE_SIZE = uploadLimitBytes(plan);
+    const MAX_PHOTOS = photoLimitPerEvent(plan);
     const currentCountRes = await db.select({ count: sql<number>`count(*)` }).from(photos).where(eq(photos.eventId, eventId));
     const currentCount = currentCountRes?.[0]?.count ?? 0;
+    let remaining = Number.MAX_SAFE_INTEGER;
+    if (MAX_PHOTOS !== null) remaining = Math.max(0, MAX_PHOTOS - currentCount);
+    if (remaining === 0) throw new Error('Photo limit for this event has been reached.');
     console.info('[actions][createSignedUploadUrlsAction][start]', { eventId, fileCount: files.length, planName: planName ?? null });
     const uploads: UploadDescriptor[] = [];
     for (const f of files) {
       if (!f || f.size === 0) continue;
       if (!f.type?.startsWith('image/')) continue;
       if (f.size > MAX_FILE_SIZE) continue;
+      if (uploads.length >= remaining) break;
       const key = generatePhotoKey(eventId, f.name);
       const url = await getSignedUploadUrl(key, f.type);
-      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
+      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size, clientId: f.clientId });
     }
     if (uploads.length === 0) {
       console.warn('[actions][createSignedUploadUrlsAction][no-valid-files]', { eventId, files });
@@ -286,11 +291,12 @@ export async function uploadPhotosAction(formData: FormData) {
     return { count: inserted.length };
   }
 
-  type FileMeta = { name: string; type: string; size: number };
+  type FileMeta = { name: string; type: string; size: number; clientId?: string };
   type UploadDescriptor = {
     key: string;
     url: string;
     originalFilename: string;
     mimeType: string;
     fileSize: number;
+    clientId?: string;
   };

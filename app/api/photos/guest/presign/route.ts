@@ -10,7 +10,7 @@ import { sql, eq } from 'drizzle-orm';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type FileMeta = { name: string; type: string; size: number };
+type FileMeta = { name: string; type: string; size: number; clientId?: string };
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,14 +46,14 @@ export async function POST(request: NextRequest) {
     if (MAX_PHOTOS !== null) remaining = Math.max(0, MAX_PHOTOS - currentCount);
     if (remaining === 0) return Response.json({ error: 'Photo limit for this event has been reached.' }, { status: 400 });
 
-    const uploads: Array<{ key: string; url: string; originalFilename: string; mimeType: string; fileSize: number }> = [];
+    const uploads: Array<{ key: string; url: string; originalFilename: string; mimeType: string; fileSize: number; clientId?: string }> = [];
     for (const f of files) {
       if (!f || !f.size || !f.type?.startsWith('image/')) continue;
       if (f.size > MAX_FILE_SIZE) continue;
       if (uploads.length >= remaining) break;
       const key = generatePhotoKey(eventId, f.name);
       const url = await getSignedUploadUrl(key, f.type);
-      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size });
+      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size, clientId: f.clientId });
     }
     if (uploads.length === 0) {
       return Response.json({ error: 'No valid files to upload' }, { status: 400 });

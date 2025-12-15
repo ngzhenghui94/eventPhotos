@@ -5,6 +5,7 @@ import { getEventById } from '@/lib/db/queries';
 import { redis } from '@/lib/upstash';
 import { bumpEventVersion } from '@/lib/utils/cache';
 import { getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
+import { precomputeThumbsForUploadedPhotos } from '@/lib/photos/processing';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -40,7 +41,7 @@ export async function POST(request: NextRequest) {
     if (records.length === 0) {
       return Response.json({ error: 'No valid items' }, { status: 400 });
     }
-    const inserted = await db.insert(photos).values(records).returning({ id: photos.id });
+    const inserted = await db.insert(photos).values(records).returning({ id: photos.id, filePath: photos.filePath });
     // Invalidate via version bump and clear owner list cache
     try {
       await bumpEventVersion(eventId);
@@ -63,6 +64,16 @@ export async function POST(request: NextRequest) {
           await setEventStatsCached(eventId, next);
         }
       } catch {}
+    } catch {}
+    // Fire-and-forget thumbnail precompute; do not block response
+    try {
+      const items = inserted
+        .map((rec) => {
+          const key = rec.filePath?.startsWith('s3:') ? rec.filePath.replace(/^s3:/, '') : null;
+          return key ? { photoId: rec.id as number, s3Key: key } : null;
+        })
+        .filter(Boolean) as { photoId: number; s3Key: string }[];
+      if (items.length) precomputeThumbsForUploadedPhotos(items);
     } catch {}
     return Response.json({ count: inserted.length });
   } catch (err) {

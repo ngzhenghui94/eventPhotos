@@ -42,25 +42,17 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
   }, [eventId]);
   const router = useRouter();
   const [maxFileSizeMB, setMaxFileSizeMB] = useState(10);
-  const [eventInfo, setEventInfo] = useState<any>(null);
   useEffect(() => {
     let isMounted = true;
     async function fetchAllData() {
       try {
-        const [hostPlanRes, eventRes] = await Promise.all([
-          fetch(`/api/events/${eventId}/host-plan`),
-          fetch(`/api/events/${eventId}`)
-        ]);
+        const hostPlanRes = await fetch(`/api/events/${eventId}/host-plan`);
         let maxFileSize = 10485760;
         if (hostPlanRes.ok) {
           const data = await hostPlanRes.json();
           maxFileSize = data.maxFileSize || 10485760;
         }
         if (isMounted) setMaxFileSizeMB(Math.floor(maxFileSize / 1024 / 1024));
-        if (eventRes.ok) {
-          const eventData = await eventRes.json();
-          if (isMounted) setEventInfo(eventData);
-        }
       } catch (err) {
         console.error('Failed to fetch event data:', err);
       }
@@ -126,7 +118,12 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
       const accessCode = cookieName ? (cookieMap[cookieName] || '') : '';
 
       // 1) Request presigned URLs for all files
-      const meta = selectedFiles.map(f => ({ name: f.name, type: f.type, size: f.size }));
+      const meta = selectedFiles.map((f) => ({
+        name: f.name,
+        type: f.type,
+        size: f.size,
+        clientId: `${f.name}:${f.size}:${(f as any).lastModified ?? 0}`,
+      }));
       const presignRes = await fetch('/api/photos/guest/presign', {
         method: 'POST',
         headers: {
@@ -141,12 +138,15 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         console.error('[guest-upload][presign][error]', { traceId, status: presignRes.status, body: data });
         throw new Error(data?.error || 'Failed to create upload URLs');
       }
-      type UploadDescriptor = { key: string; url: string; originalFilename: string; mimeType: string; fileSize: number };
+      type UploadDescriptor = { key: string; url: string; originalFilename: string; mimeType: string; fileSize: number; clientId?: string };
       const { uploads }: { uploads: UploadDescriptor[] } = await presignRes.json();
       console.info('[guest-upload][presign][ok]', { traceId, count: uploads.length, destinations: uploads.map(u => ({ key: u.key, host: (() => { try { const uo = new URL(u.url); return `${uo.protocol}//${uo.host}`; } catch { return 'invalid-url'; } })() })) });
 
       // 2) PUT files directly to S3 with bounded concurrency and progress
-      const remaining = [...uploads];
+      const uploadByClientId = new Map<string, UploadDescriptor>();
+      for (const u of uploads) {
+        if (u?.clientId) uploadByClientId.set(u.clientId, u);
+      }
       const succeeded: UploadDescriptor[] = [];
       const failures: Array<{ name: string; status?: number; detail?: string }> = [];
 
@@ -157,9 +157,13 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
           const idx = cursor++;
           if (idx >= selectedFiles.length) return;
           const file = selectedFiles[idx];
-          const uIdx = remaining.findIndex(u => u.originalFilename === file.name && u.fileSize === file.size);
-          if (uIdx === -1) continue;
-          const u = remaining.splice(uIdx, 1)[0];
+          const clientId = `${file.name}:${file.size}:${(file as any).lastModified ?? 0}`;
+          const u = uploadByClientId.get(clientId);
+          if (!u) {
+            failures.push({ name: file.name, detail: 'Not eligible (too large, invalid type, or plan/event limit reached)' });
+            continue;
+          }
+          uploadByClientId.delete(clientId);
           let uploadTarget = 'unknown';
           try { const uo = new URL(u.url); uploadTarget = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
           const startedAt = Date.now();
