@@ -192,7 +192,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
             xhr.onerror = () => {
               failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
               const isMixedContent = uploadTarget.startsWith('http://') && window.location.protocol === 'https:';
-              console.error('[guest-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
+              console.error('[guest-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure HETZNER_S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
               resolve();
             };
             xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
@@ -238,7 +238,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
         toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
         // Log summary with a hint for common prod issues
         const hasStatus0 = failures.some(f => !f.status || f.status === 0);
-        console.error('[guest-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and S3_ENDPOINT uses https.' : undefined });
+        console.error('[guest-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and HETZNER_S3_ENDPOINT uses https.' : undefined });
       } else {
         console.info('[guest-upload][done]', { traceId, uploaded: selectedFiles.length });
         toast.success('Photos uploaded');

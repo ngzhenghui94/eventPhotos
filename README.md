@@ -1,6 +1,6 @@
 # The Crowd Grid (Next.js Event Photo Sharing)
 
-The Crowd Grid is an event photo sharing app built with Next.js App Router, Postgres (Drizzle), Stripe, and S3-compatible storage. Hosts create events, collect/approve guest photos, and share a fast, secure gallery.
+The Crowd Grid is an event photo sharing app built with Next.js App Router, Postgres (Drizzle), Stripe, and S3-compatible storage (Hetzner). Hosts create events, collect/approve guest photos, and share a fast, secure gallery.
 
 Live demo: coming soon.
 
@@ -19,7 +19,7 @@ Live demo: coming soon.
 - Framework: Next.js App Router (server components + API routes)
 - Auth: JWT session cookie; `lib/auth/session.ts` with helpers in `lib/db/queries.ts`
 - DB: Postgres via Drizzle; access through `lib/db/queries.ts`
-- Storage: S3-compatible (Backblaze B2 / Hetzner / R2 / S3), presigned URLs via `lib/s3.ts`
+- Storage: S3-compatible (Hetzner), presigned URLs via `lib/s3.ts`
 - Payments: Stripe via `lib/payments/stripe.ts`
 - Caching: Upstash Redis + client micro-caches
 
@@ -88,14 +88,14 @@ CDN
 ## Image pipeline and https note
 
 - API returns 307 to a presigned S3 URL (saves server bandwidth)
-- In production we coerce S3 endpoint to https even if the env value is `http://…` to avoid mixed-content blocked images
+- In production we coerce the S3 endpoint to https even if the env value is `http://…` to avoid mixed-content blocked images
 	- Code: `lib/s3.ts` and `app/api/photos/[photoId]/thumb/route.ts`
 
 ---
 
 ## Getting Started
 
-Prereqs: Node 18+, Postgres, Stripe account; optional S3-compatible storage (e.g. Backblaze B2).
+Prereqs: Node 18+, Postgres, Stripe account; optional Hetzner S3.
 
 1) Install deps
 ```bash
@@ -105,7 +105,7 @@ pnpm install
 2) Configure environment
 - See `ENVIRONMENT.md` for the full list. Important:
 	- `POSTGRES_URL`, `AUTH_SECRET`
-	- S3-compatible: `S3_ENDPOINT` (prefer https), `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` (legacy `HETZNER_S3_*` supported)
+	- Hetzner S3: `HETZNER_S3_ENDPOINT` (prefer https), `HETZNER_S3_REGION`, `HETZNER_S3_ACCESS_KEY`, `HETZNER_S3_SECRET_KEY`, `HETZNER_S3_BUCKET`
 	- Stripe: `STRIPE_SECRET_KEY`; webhooks to `/api/stripe/webhook`
 
 3) Database

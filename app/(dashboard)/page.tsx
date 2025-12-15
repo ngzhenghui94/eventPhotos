@@ -286,15 +286,15 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* New Card: Secure S3-compatible Storage */}
+            {/* New Card: Secure Hetzner Storage */}
             <div className="relative group">
               <div className="absolute -inset-3 rounded-2xl bg-gradient-to-br from-emerald-400 via-teal-300 to-blue-300 opacity-40 blur-xl group-hover:opacity-60 transition-opacity mask-soft pointer-events-none"></div>
               <div className="glass-card p-8 shadow-2xl border border-amber-100/40 backdrop-blur-md bg-white/80 hover:bg-white/95 hover:border-amber-300/60 rounded-2xl relative z-10">
                 <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-emerald-500 via-teal-400 to-blue-400 text-white flex items-center justify-center shadow-lg">
                   <Server className="h-7 w-7" />
                 </div>
-                <h3 className="mt-6 font-bold text-xl text-gray-900">Secure photo storage</h3>
-                <p className="mt-3 text-xs text-gray-600">Photos are stored securely in S3-compatible object storage (e.g. Backblaze B2) with presigned access and strict privacy controls.</p>
+                <h3 className="mt-6 font-bold text-xl text-gray-900">Secure Hetzner storage</h3>
+                <p className="mt-3 text-xs text-gray-600">Photos are stored securely on Hetzner Storage Bucket with presigned access and strict privacy controls.</p>
               </div>
             </div>
 

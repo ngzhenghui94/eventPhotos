@@ -5,65 +5,12 @@ import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
-const truthy = (v?: string) => {
-  const s = clean(v)?.toLowerCase();
-  return s === '1' || s === 'true' || s === 'yes' || s === 'y' || s === 'on';
-};
-const first = (...vals: Array<string | undefined>) => vals.find((v) => !!clean(v));
-
-function isDnsCompatibleBucket(bucket: string) {
-  // Rough check: lower-case letters, digits, dots and hyphens only.
-  // Dots are technically allowed but often break TLS with virtual-hosted style.
-  return /^[a-z0-9.-]+$/.test(bucket);
-}
-
-function bucketPrefersPathStyle(bucket: string) {
-  // If bucket isn't DNS-compatible OR contains dot(s), prefer path-style to avoid TLS/DNS issues.
-  if (!bucket) return false;
-  if (!isDnsCompatibleBucket(bucket)) return true;
-  if (bucket.includes('.')) return true;
-  return false;
-}
-
-function normalizeEndpoint(rawEndpoint: string | undefined, bucket: string | undefined) {
-  if (!rawEndpoint) return rawEndpoint;
-  try {
-    const u = new URL(rawEndpoint);
-    const b = (bucket || '').toLowerCase();
-    // Common misconfig: user sets S3_ENDPOINT to "https://<bucket>.s3.<region>...."
-    // but the SDK will *also* prepend bucket for virtual-hosted style.
-    if (b && u.hostname.toLowerCase().startsWith(`${b}.`)) {
-      u.hostname = u.hostname.slice(b.length + 1);
-    }
-    // Normalize trailing slash
-    u.pathname = u.pathname.replace(/\/+$/, '');
-    return u.toString();
-  } catch {
-    return rawEndpoint;
-  }
-}
-
-/**
- * S3-compatible storage configuration.
- *
- * Preferred envs (provider-agnostic):
- * - S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET
- * Optional:
- * - S3_FORCE_PATH_STYLE=true|false (Hetzner typically needs true; Backblaze B2 usually works with false)
- *
- * Backward-compatible envs (legacy):
- * - HETZNER_S3_ENDPOINT, HETZNER_S3_REGION, HETZNER_S3_ACCESS_KEY, HETZNER_S3_SECRET_KEY, HETZNER_S3_BUCKET
- */
-const BUCKET_NAME = clean(first(process.env.S3_BUCKET, process.env.HETZNER_S3_BUCKET));
-const ENDPOINT = clean(normalizeEndpoint(first(process.env.S3_ENDPOINT, process.env.HETZNER_S3_ENDPOINT), BUCKET_NAME));
-const REGION = clean(first(process.env.S3_REGION, process.env.HETZNER_S3_REGION, 'eu-central-1'))!;
-const ACCESS_KEY_ID = clean(first(process.env.S3_ACCESS_KEY_ID, process.env.S3_ACCESS_KEY, process.env.HETZNER_S3_ACCESS_KEY));
-const SECRET_ACCESS_KEY = clean(first(process.env.S3_SECRET_ACCESS_KEY, process.env.S3_SECRET_KEY, process.env.HETZNER_S3_SECRET_KEY));
-const FORCE_PATH_STYLE =
-  typeof process.env.S3_FORCE_PATH_STYLE === 'string'
-    ? truthy(process.env.S3_FORCE_PATH_STYLE)
-    : // Default: if legacy Hetzner envs are used (and S3_* not set), preserve prior behavior
-      ((!!clean(process.env.HETZNER_S3_ENDPOINT) && !clean(process.env.S3_ENDPOINT)) || (!!BUCKET_NAME && bucketPrefersPathStyle(BUCKET_NAME)));
+const ENDPOINT = clean(process.env.HETZNER_S3_ENDPOINT);
+const REGION = clean(process.env.HETZNER_S3_REGION || 'eu-central-1')!;
+const ACCESS_KEY_ID = clean(process.env.HETZNER_S3_ACCESS_KEY);
+const SECRET_ACCESS_KEY = clean(process.env.HETZNER_S3_SECRET_KEY);
+const BUCKET_NAME = clean(process.env.HETZNER_S3_BUCKET);
+const FORCE_PATH_STYLE = true; // Hetzner requires path-style URLs
 
 // Singleton S3 client instance
 let s3Client: S3Client | null = null;
@@ -72,15 +19,9 @@ let configValidated = false;
 function getS3Client(): S3Client {
   if (!s3Client) {
     ensureConfigured(); // Only validate config once
-    // Useful runtime hints for common misconfigurations
-    try {
-      if (BUCKET_NAME && bucketPrefersPathStyle(BUCKET_NAME) && typeof process.env.S3_FORCE_PATH_STYLE !== 'string') {
-        console.warn('[s3][config] Bucket name suggests path-style URLs (dots/uppercase/underscores). Using forcePathStyle=true for compatibility.', { bucket: BUCKET_NAME });
-      }
-    } catch {}
     try {
       if (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string' && ENDPOINT.startsWith('http://')) {
-        console.warn('[s3][config] Using http endpoint in production may break browser uploads due to mixed content. Consider switching S3_ENDPOINT to https. Current:', ENDPOINT);
+        console.warn('[s3][config] Using http endpoint in production may break browser uploads due to mixed content. Consider switching HETZNER_S3_ENDPOINT to https. Current:', ENDPOINT);
       }
     } catch {}
     // In production, coerce any http endpoint to https to avoid mixed-content when generating presigned URLs
@@ -105,15 +46,15 @@ function ensureConfigured(): void {
   if (configValidated) return;
   
   const missing: string[] = [];
-  if (!BUCKET_NAME) missing.push('S3_BUCKET');
-  if (!REGION) missing.push('S3_REGION');
-  if (!ACCESS_KEY_ID) missing.push('S3_ACCESS_KEY_ID');
-  if (!SECRET_ACCESS_KEY) missing.push('S3_SECRET_ACCESS_KEY');
-  if (!ENDPOINT) missing.push('S3_ENDPOINT');
+  if (!BUCKET_NAME) missing.push('HETZNER_S3_BUCKET');
+  if (!REGION) missing.push('HETZNER_S3_REGION');
+  if (!ACCESS_KEY_ID) missing.push('HETZNER_S3_ACCESS_KEY');
+  if (!SECRET_ACCESS_KEY) missing.push('HETZNER_S3_SECRET_KEY');
+  if (!ENDPOINT) missing.push('HETZNER_S3_ENDPOINT');
   
   if (missing.length) {
     throw new Error(
-      `S3 is not configured. Missing environment variables: ${missing.join(', ')}. Add them to .env.local and restart the server. (Legacy HETZNER_S3_* envs are also supported.)`
+      `S3 is not configured. Missing environment variables: ${missing.join(', ')}. Add them to .env.local and restart the server.`
     );
   }
   
