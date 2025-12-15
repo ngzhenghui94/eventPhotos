@@ -227,15 +227,24 @@ export async function uploadPhotosAction(formData: FormData) {
     if (remaining === 0) throw new Error('Photo limit for this event has been reached.');
     console.info('[actions][createSignedUploadUrlsAction][start]', { eventId, fileCount: files.length, planName: planName ?? null });
     const uploads: UploadDescriptor[] = [];
-    for (const f of files) {
-      if (!f || f.size === 0) continue;
-      if (!f.type?.startsWith('image/')) continue;
-      if (f.size > MAX_FILE_SIZE) continue;
-      if (uploads.length >= remaining) break;
-      const key = generatePhotoKey(eventId, f.name);
-      const url = await getSignedUploadUrl(key, f.type);
-      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size, clientId: f.clientId });
+    const candidates = files
+      .filter((f) => !!f && f.size > 0 && f.type?.startsWith('image/') && f.size <= MAX_FILE_SIZE)
+      .slice(0, remaining);
+
+    // Bounded concurrency to reduce end-to-end latency for large batches without spiking CPU
+    const concurrency = 10;
+    let cursor = 0;
+    async function worker() {
+      while (true) {
+        const idx = cursor++;
+        if (idx >= candidates.length) return;
+        const f = candidates[idx]!;
+        const key = generatePhotoKey(eventId, f.name);
+        const url = await getSignedUploadUrl(key, f.type);
+        uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size, clientId: f.clientId });
+      }
     }
+    await Promise.all(Array.from({ length: Math.min(concurrency, candidates.length) }, () => worker()));
     if (uploads.length === 0) {
       console.warn('[actions][createSignedUploadUrlsAction][no-valid-files]', { eventId, files });
       throw new Error('No valid files to upload');

@@ -12,6 +12,26 @@ export const dynamic = 'force-dynamic';
 
 type FileMeta = { name: string; type: string; size: number; clientId?: string };
 
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T, idx: number) => Promise<R>
+): Promise<R[]> {
+  const limit = Math.max(1, Math.min(25, Math.floor(concurrency)));
+  const out: R[] = new Array(items.length) as any;
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (true) {
+        const idx = cursor++;
+        if (idx >= items.length) return;
+        out[idx] = await fn(items[idx]!, idx);
+      }
+    })
+  );
+  return out;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const payload = await request.json();
@@ -56,15 +76,15 @@ export async function POST(request: NextRequest) {
     if (MAX_PHOTOS !== null) remaining = Math.max(0, MAX_PHOTOS - currentCount);
     if (remaining === 0) return Response.json({ error: 'Photo limit for this event has been reached.' }, { status: 400 });
 
-    const uploads: Array<{ key: string; url: string; originalFilename: string; mimeType: string; fileSize: number; clientId?: string }> = [];
-    for (const f of files) {
-      if (!f || !f.size || !f.type?.startsWith('image/')) continue;
-      if (f.size > MAX_FILE_SIZE) continue;
-      if (uploads.length >= remaining) break;
+    const candidates = files
+      .filter((f) => !!f && !!f.size && f.type?.startsWith('image/') && f.size <= MAX_FILE_SIZE)
+      .slice(0, remaining);
+
+    const uploads = (await mapWithConcurrency(candidates, 10, async (f) => {
       const key = generatePhotoKey(eventId, f.name);
       const url = await getSignedUploadUrl(key, f.type);
-      uploads.push({ key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size, clientId: f.clientId });
-    }
+      return { key, url, originalFilename: f.name, mimeType: f.type, fileSize: f.size, clientId: f.clientId };
+    })).filter(Boolean);
     if (uploads.length === 0) {
       return Response.json({ error: 'No valid files to upload' }, { status: 400 });
     }

@@ -489,6 +489,27 @@ export async function getPhotoById(photoId: number) {
 }
 
 /**
+ * Batch fetch photos by ids (minimal columns for bulk operations).
+ */
+export async function getPhotosByIds(photoIds: number[]): Promise<Array<Pick<PhotoData, 'id' | 'eventId' | 'filePath' | 'filename' | 'originalFilename' | 'fileSize'>>> {
+  return withDatabaseErrorHandling(async () => {
+    const ids = Array.from(new Set(photoIds.filter((n) => Number.isFinite(n) && n > 0).map((n) => Math.floor(n))));
+    if (ids.length === 0) return [];
+    return db.query.photos.findMany({
+      where: inArray(photos.id, ids),
+      columns: {
+        id: true,
+        eventId: true,
+        filePath: true,
+        filename: true,
+        originalFilename: true,
+        fileSize: true,
+      },
+    }) as any;
+  }, 'getPhotosByIds');
+}
+
+/**
  * Gets all photos for an event with optimized query
  */
 export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
