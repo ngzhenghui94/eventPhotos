@@ -19,7 +19,7 @@ Live demo: coming soon.
 - Framework: Next.js App Router (server components + API routes)
 - Auth: JWT session cookie; `lib/auth/session.ts` with helpers in `lib/db/queries.ts`
 - DB: Postgres via Drizzle; access through `lib/db/queries.ts`
-- Storage: S3-compatible (Hetzner), presigned URLs via `lib/s3.ts`
+- Storage: S3-compatible (Backblaze B2 / Hetzner / R2 / S3), presigned URLs via `lib/s3.ts`
 - Payments: Stripe via `lib/payments/stripe.ts`
 - Caching: Upstash Redis + client micro-caches
 
@@ -81,7 +81,7 @@ Browser/cache headers
 - App 307 redirects (to S3) include `Cache-Control: private, max-age=60` to reduce repeat hits while scrolling
 
 CDN
-- See `docs/hetzner-cdn.md` for a quick Cloudflare/Hetzner setup and an example Nginx config
+- See `docs/hetzner-cdn.md` for CDN notes (Cloudflare + S3-compatible endpoints) and an example Nginx config
 
 ---
 
@@ -95,7 +95,7 @@ CDN
 
 ## Getting Started
 
-Prereqs: Node 18+, pnpm, Postgres, Stripe account; optional Hetzner S3.
+Prereqs: Node 18+, Postgres, Stripe account; optional S3-compatible storage (e.g. Backblaze B2).
 
 1) Install deps
 ```bash
@@ -105,7 +105,7 @@ pnpm install
 2) Configure environment
 - See `ENVIRONMENT.md` for the full list. Important:
 	- `POSTGRES_URL`, `AUTH_SECRET`
-	- Hetzner S3: `HETZNER_S3_ENDPOINT` (prefer https), `HETZNER_S3_REGION`, `HETZNER_S3_ACCESS_KEY`, `HETZNER_S3_SECRET_KEY`, `HETZNER_S3_BUCKET`
+	- S3-compatible: `S3_ENDPOINT` (prefer https), `S3_REGION`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_BUCKET` (legacy `HETZNER_S3_*` supported)
 	- Stripe: `STRIPE_SECRET_KEY`; webhooks to `/api/stripe/webhook`
 
 3) Database

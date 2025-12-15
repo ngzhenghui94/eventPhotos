@@ -9,11 +9,21 @@ import { cookies } from 'next/headers';
 // derive thumb key locally to avoid module hot-reload issues
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
-const REGION = clean(process.env.HETZNER_S3_REGION || 'eu-central-1')!;
-const ACCESS_KEY_ID = clean(process.env.HETZNER_S3_ACCESS_KEY);
-const SECRET_ACCESS_KEY = clean(process.env.HETZNER_S3_SECRET_KEY);
-const ENDPOINT = clean(process.env.HETZNER_S3_ENDPOINT);
-const BUCKET_NAME = clean(process.env.HETZNER_S3_BUCKET);
+const truthy = (v?: string) => {
+  const s = clean(v)?.toLowerCase();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'y' || s === 'on';
+};
+const first = (...vals: Array<string | undefined>) => vals.find((v) => !!clean(v));
+
+const REGION = clean(first(process.env.S3_REGION, process.env.HETZNER_S3_REGION, 'eu-central-1'))!;
+const ACCESS_KEY_ID = clean(first(process.env.S3_ACCESS_KEY_ID, process.env.S3_ACCESS_KEY, process.env.HETZNER_S3_ACCESS_KEY));
+const SECRET_ACCESS_KEY = clean(first(process.env.S3_SECRET_ACCESS_KEY, process.env.S3_SECRET_KEY, process.env.HETZNER_S3_SECRET_KEY));
+const ENDPOINT = clean(first(process.env.S3_ENDPOINT, process.env.HETZNER_S3_ENDPOINT));
+const BUCKET_NAME = clean(first(process.env.S3_BUCKET, process.env.HETZNER_S3_BUCKET));
+const FORCE_PATH_STYLE =
+  typeof process.env.S3_FORCE_PATH_STYLE === 'string'
+    ? truthy(process.env.S3_FORCE_PATH_STYLE)
+    : (!!clean(process.env.HETZNER_S3_ENDPOINT) && !clean(process.env.S3_ENDPOINT));
 
 // Coerce to https in production to avoid mixed-content blocked images
 const endpointToUse = (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string')
@@ -22,7 +32,7 @@ const endpointToUse = (process.env.NODE_ENV === 'production' && typeof ENDPOINT 
 const s3 = new S3Client({
   region: REGION,
   endpoint: endpointToUse,
-  forcePathStyle: true,
+  forcePathStyle: FORCE_PATH_STYLE,
   credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
 });
 

@@ -146,7 +146,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
             let target = 'unknown';
             try { const uo = new URL(u.url); target = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
             const isMixedContent = target.startsWith('http://') && window.location.protocol === 'https:';
-            console.error('[gallery-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, target, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure HETZNER_S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
+            console.error('[gallery-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, target, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
             resolve();
           };
           xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
@@ -187,7 +187,7 @@ export default function PublicGallery({ params }: PublicGalleryProps) {
         const first = failures[0];
         setError(`Some uploads failed: ${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}`);
         const hasStatus0 = failures.some(f => !f.status || f.status === 0);
-        console.error('[gallery-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and HETZNER_S3_ENDPOINT uses https.' : undefined });
+        console.error('[gallery-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and S3_ENDPOINT uses https.' : undefined });
       }
     } catch (err) {
       console.error('[gallery-upload][exception]', { traceId, err });

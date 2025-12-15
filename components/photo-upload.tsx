@@ -146,7 +146,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
             xhr.onerror = () => {
               failures.push({ name: u.originalFilename, status: xhr.status, detail: 'Network error' });
               const isMixedContent = uploadTarget.startsWith('http://') && window.location.protocol === 'https:';
-              console.error('[host-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure HETZNER_S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
+              console.error('[host-upload][put][network-error]', { traceId, file: file.name, status: xhr.status, ms: Date.now() - startedAt, target: uploadTarget, hint: isMixedContent ? 'Possible Mixed Content: uploading from https page to http URL. Ensure S3_ENDPOINT is https.' : 'Possible CORS or networking issue. Verify bucket CORS allows PUT from this origin.' });
               resolve();
             };
             xhr.send(file);
@@ -174,7 +174,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
         const first = failures[0];
         toast.error(`Some uploads failed (${failures.length})`, { description: `${first.name}${first.status ? ` (${first.status})` : ''}${first.detail ? `: ${first.detail}` : ''}` });
         const hasStatus0 = failures.some(f => !f.status || f.status === 0);
-        console.error('[host-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and HETZNER_S3_ENDPOINT uses https.' : undefined });
+        console.error('[host-upload][summary][partial-failures]', { traceId, failures, hint: hasStatus0 ? 'Status 0 often indicates CORS or mixed content. Ensure bucket CORS allows this origin and S3_ENDPOINT uses https.' : undefined });
       } else {
         console.info('[host-upload][done]', { traceId, uploaded: succeeded.length });
         toast.success(`Uploaded ${succeeded.length} file${succeeded.length !== 1 ? 's' : ''}`);

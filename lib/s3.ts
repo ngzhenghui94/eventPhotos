@@ -5,13 +5,33 @@ import { Agent as HttpAgent } from 'http';
 import { Agent as HttpsAgent } from 'https';
 
 const clean = (v?: string) => v?.trim().replace(/^['"]|['"]$/g, '');
+const truthy = (v?: string) => {
+  const s = clean(v)?.toLowerCase();
+  return s === '1' || s === 'true' || s === 'yes' || s === 'y' || s === 'on';
+};
+const first = (...vals: Array<string | undefined>) => vals.find((v) => !!clean(v));
 
-// Hetzner S3 configuration
-const ENDPOINT = clean(process.env.HETZNER_S3_ENDPOINT);
-const REGION = clean(process.env.HETZNER_S3_REGION || 'eu-central-1')!;
-const ACCESS_KEY_ID = clean(process.env.HETZNER_S3_ACCESS_KEY);
-const SECRET_ACCESS_KEY = clean(process.env.HETZNER_S3_SECRET_KEY);
-const BUCKET_NAME = clean(process.env.HETZNER_S3_BUCKET);
+/**
+ * S3-compatible storage configuration.
+ *
+ * Preferred envs (provider-agnostic):
+ * - S3_ENDPOINT, S3_REGION, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, S3_BUCKET
+ * Optional:
+ * - S3_FORCE_PATH_STYLE=true|false (Hetzner typically needs true; Backblaze B2 usually works with false)
+ *
+ * Backward-compatible envs (legacy):
+ * - HETZNER_S3_ENDPOINT, HETZNER_S3_REGION, HETZNER_S3_ACCESS_KEY, HETZNER_S3_SECRET_KEY, HETZNER_S3_BUCKET
+ */
+const ENDPOINT = clean(first(process.env.S3_ENDPOINT, process.env.HETZNER_S3_ENDPOINT));
+const REGION = clean(first(process.env.S3_REGION, process.env.HETZNER_S3_REGION, 'eu-central-1'))!;
+const ACCESS_KEY_ID = clean(first(process.env.S3_ACCESS_KEY_ID, process.env.S3_ACCESS_KEY, process.env.HETZNER_S3_ACCESS_KEY));
+const SECRET_ACCESS_KEY = clean(first(process.env.S3_SECRET_ACCESS_KEY, process.env.S3_SECRET_KEY, process.env.HETZNER_S3_SECRET_KEY));
+const BUCKET_NAME = clean(first(process.env.S3_BUCKET, process.env.HETZNER_S3_BUCKET));
+const FORCE_PATH_STYLE =
+  typeof process.env.S3_FORCE_PATH_STYLE === 'string'
+    ? truthy(process.env.S3_FORCE_PATH_STYLE)
+    : // Default: if legacy Hetzner envs are used (and S3_* not set), preserve prior behavior
+      (!!clean(process.env.HETZNER_S3_ENDPOINT) && !clean(process.env.S3_ENDPOINT));
 
 // Singleton S3 client instance
 let s3Client: S3Client | null = null;
@@ -22,7 +42,7 @@ function getS3Client(): S3Client {
     ensureConfigured(); // Only validate config once
     try {
       if (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string' && ENDPOINT.startsWith('http://')) {
-        console.warn('[s3][config] Using http endpoint in production may break browser uploads due to mixed content. Consider switching HETZNER_S3_ENDPOINT to https. Current:', ENDPOINT);
+        console.warn('[s3][config] Using http endpoint in production may break browser uploads due to mixed content. Consider switching S3_ENDPOINT to https. Current:', ENDPOINT);
       }
     } catch {}
     // In production, coerce any http endpoint to https to avoid mixed-content when generating presigned URLs
@@ -32,7 +52,7 @@ function getS3Client(): S3Client {
     s3Client = new S3Client({
       region: REGION,
       endpoint: endpointToUse,
-      forcePathStyle: true, // Hetzner requires path-style URLs
+      forcePathStyle: FORCE_PATH_STYLE,
       credentials: { accessKeyId: ACCESS_KEY_ID!, secretAccessKey: SECRET_ACCESS_KEY! },
       requestHandler: new NodeHttpHandler({
         httpAgent: new HttpAgent({ keepAlive: true, keepAliveMsecs: 1000 }),
@@ -47,15 +67,15 @@ function ensureConfigured(): void {
   if (configValidated) return;
   
   const missing: string[] = [];
-  if (!BUCKET_NAME) missing.push('HETZNER_S3_BUCKET');
-  if (!REGION) missing.push('HETZNER_S3_REGION');
-  if (!ACCESS_KEY_ID) missing.push('HETZNER_S3_ACCESS_KEY');
-  if (!SECRET_ACCESS_KEY) missing.push('HETZNER_S3_SECRET_KEY');
-  if (!ENDPOINT) missing.push('HETZNER_S3_ENDPOINT');
+  if (!BUCKET_NAME) missing.push('S3_BUCKET');
+  if (!REGION) missing.push('S3_REGION');
+  if (!ACCESS_KEY_ID) missing.push('S3_ACCESS_KEY_ID');
+  if (!SECRET_ACCESS_KEY) missing.push('S3_SECRET_ACCESS_KEY');
+  if (!ENDPOINT) missing.push('S3_ENDPOINT');
   
   if (missing.length) {
     throw new Error(
-      `S3 is not configured. Missing environment variables: ${missing.join(', ')}. Add them to .env.local and restart the server.`
+      `S3 is not configured. Missing environment variables: ${missing.join(', ')}. Add them to .env.local and restart the server. (Legacy HETZNER_S3_* envs are also supported.)`
     );
   }
   
