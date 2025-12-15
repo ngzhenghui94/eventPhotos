@@ -9,6 +9,7 @@ import { deletePhotoAction, deletePhotosBulkAction } from '@/lib/photos/actions'
 import { VirtualizedPhotoGrid } from './virtualized-photo-grid';
 import { OptimizedImage } from './optimized-image';
 import type { Photo, User } from '@/lib/db/schema';
+import { useRouter } from 'next/navigation';
 
 interface PhotoGalleryProps {
   photos: (Photo & { uploadedByUser?: Pick<User, 'id' | 'name' | 'email'> | null })[];
@@ -25,6 +26,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [downloading, setDownloading] = useState(false);
   const [useVirtualized, setUseVirtualized] = useState(photos.length > 50);
+  const router = useRouter();
   
   const allIds = useMemo(() => photos.map(p => p.id), [photos]);
   const allSelected = selectedIds.size > 0 && selectedIds.size === allIds.length;
@@ -50,7 +52,6 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
     : 50;
 
   const [confirmingId, setConfirmingId] = useState<number | null>(null);
-  const { refresh } = require('next/navigation');
   const handleDeletePhoto = async (photoId: number) => {
     if (confirmingId !== photoId) {
       setConfirmingId(photoId);
@@ -70,11 +71,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
         window.dispatchEvent(new Event('photos:changed'));
       }
       // Use Next.js router.refresh for server-side revalidation
-      if (typeof refresh === 'function') {
-        refresh();
-      } else if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
+      router.refresh();
     } catch (error: unknown) {
       // Suppress toast for NEXT_REDIRECT errors
       if (error && typeof error === 'object' && 'digest' in error && (error as any).digest === 'NEXT_REDIRECT') {
@@ -134,11 +131,7 @@ export function PhotoGallery({ photos, eventId, currentUserId, canManage, access
         window.dispatchEvent(new Event('photos:changed'));
       }
       // Use Next.js router.refresh for server-side revalidation
-      if (typeof refresh === 'function') {
-        refresh();
-      } else if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
+      router.refresh();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : typeof err === 'string' ? err : 'Unknown error';
       toast.error(`Failed to delete photos: ${message}`);
