@@ -51,7 +51,7 @@ export interface EventWithPhotoCount {
   id: number;
   name: string;
   description: string | null;
-  date: Date; // This should match the schema - NOT NULL
+  date: Date | null;
   location: string | null;
   category: string;
   eventCode: string;

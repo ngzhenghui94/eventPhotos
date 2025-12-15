@@ -14,16 +14,39 @@ const truthy = (v?: string) => {
   return s === '1' || s === 'true' || s === 'yes' || s === 'y' || s === 'on';
 };
 const first = (...vals: Array<string | undefined>) => vals.find((v) => !!clean(v));
+function isDnsCompatibleBucket(bucket: string) {
+  return /^[a-z0-9.-]+$/.test(bucket);
+}
+function bucketPrefersPathStyle(bucket: string) {
+  if (!bucket) return false;
+  if (!isDnsCompatibleBucket(bucket)) return true;
+  if (bucket.includes('.')) return true;
+  return false;
+}
+function normalizeEndpoint(rawEndpoint: string | undefined, bucket: string | undefined) {
+  if (!rawEndpoint) return rawEndpoint;
+  try {
+    const u = new URL(rawEndpoint);
+    const b = (bucket || '').toLowerCase();
+    if (b && u.hostname.toLowerCase().startsWith(`${b}.`)) {
+      u.hostname = u.hostname.slice(b.length + 1);
+    }
+    u.pathname = u.pathname.replace(/\/+$/, '');
+    return u.toString();
+  } catch {
+    return rawEndpoint;
+  }
+}
 
 const REGION = clean(first(process.env.S3_REGION, process.env.HETZNER_S3_REGION, 'eu-central-1'))!;
 const ACCESS_KEY_ID = clean(first(process.env.S3_ACCESS_KEY_ID, process.env.S3_ACCESS_KEY, process.env.HETZNER_S3_ACCESS_KEY));
 const SECRET_ACCESS_KEY = clean(first(process.env.S3_SECRET_ACCESS_KEY, process.env.S3_SECRET_KEY, process.env.HETZNER_S3_SECRET_KEY));
-const ENDPOINT = clean(first(process.env.S3_ENDPOINT, process.env.HETZNER_S3_ENDPOINT));
 const BUCKET_NAME = clean(first(process.env.S3_BUCKET, process.env.HETZNER_S3_BUCKET));
+const ENDPOINT = clean(normalizeEndpoint(first(process.env.S3_ENDPOINT, process.env.HETZNER_S3_ENDPOINT), BUCKET_NAME));
 const FORCE_PATH_STYLE =
   typeof process.env.S3_FORCE_PATH_STYLE === 'string'
     ? truthy(process.env.S3_FORCE_PATH_STYLE)
-    : (!!clean(process.env.HETZNER_S3_ENDPOINT) && !clean(process.env.S3_ENDPOINT));
+    : ((!!clean(process.env.HETZNER_S3_ENDPOINT) && !clean(process.env.S3_ENDPOINT)) || (!!BUCKET_NAME && bucketPrefersPathStyle(BUCKET_NAME)));
 
 // Coerce to https in production to avoid mixed-content blocked images
 const endpointToUse = (process.env.NODE_ENV === 'production' && typeof ENDPOINT === 'string')
