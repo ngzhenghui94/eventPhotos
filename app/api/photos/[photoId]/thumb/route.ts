@@ -50,7 +50,7 @@ export async function GET(
   // removed verbose cache-hit-url log
       return NextResponse.redirect(cachedUrl, {
         headers: {
-          'Cache-Control': 'private, max-age=60',
+          'Cache-Control': 'private, max-age=300',
           'Vary': 'Accept',
         },
       });
@@ -74,25 +74,31 @@ export async function GET(
   const url = new URL(request.url);
   const codeFromHeader = request.headers.get('x-access-code') || undefined;
   const codeFromQuery = url.searchParams.get('code') || undefined;
-  const user = await getUser().catch(() => null);
-  // Resolve event to compute cookie key for private events
-  let codeFromCookie: string | undefined;
-  try {
+  const providedExplicit = (codeFromHeader || codeFromQuery)?.toUpperCase().trim();
+
+  // Perf note: avoid loading/verifying session (getUser) when a guest access code is explicitly provided.
+  if (providedExplicit) {
     const ev = await getEventById(meta.eventId);
-    if (ev?.eventCode) {
-      const cookieKey = `evt:${ev.eventCode}:access`;
-      codeFromCookie = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
+    if (!ev) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    if (!ev.isPublic) {
+      const ok = providedExplicit === (ev.accessCode || '').toUpperCase().trim();
+      if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
-  } catch {}
-  const providedCode = (codeFromCookie || codeFromHeader || codeFromQuery)?.toUpperCase().trim();
-  const canAccess = await canUserAccessEvent(meta.eventId, {
-    userId: user?.id,
-    accessCode: providedCode || undefined,
-  });
-  // removed verbose auth log
-  if (!canAccess) {
-    // keep only error response without noisy log
-    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  } else {
+    const user = await getUser().catch(() => null);
+    if (user?.id) {
+      const ok = await canUserAccessEvent(meta.eventId, { userId: user.id });
+      if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    } else {
+      const ev = await getEventById(meta.eventId);
+      if (!ev) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      if (!ev.isPublic) {
+        const cookieKey = `evt:${ev.eventCode}:access`;
+        const cookieCode = (await cookies()).get(cookieKey)?.value?.toUpperCase().trim();
+        const ok = !!cookieCode && cookieCode === (ev.accessCode || '').toUpperCase().trim();
+        if (!ok) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
   }
 
   if (!meta.s3Key) {
@@ -119,7 +125,7 @@ export async function GET(
     try { await redis.set(urlCacheKey, signed, { ex: SIGNED_URL_REDIS_MIRROR_SECONDS }); } catch {}
     return NextResponse.redirect(signed, {
       headers: {
-        'Cache-Control': 'private, max-age=60',
+        'Cache-Control': 'private, max-age=300',
         'Vary': 'Accept',
       },
     });
@@ -132,7 +138,7 @@ export async function GET(
     // removed origin-missing warning log
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url), {
       headers: {
-        'Cache-Control': 'private, max-age=60',
+        'Cache-Control': 'private, max-age=300',
         'Vary': 'Accept',
       },
     });
@@ -163,7 +169,7 @@ export async function GET(
   try { await redis.set(`photo:thumb:exists:${photoId}:webp`, 1, { ex: THUMB_EXISTS_TTL_SECONDS }); } catch {}
     return NextResponse.redirect(signed, {
       headers: {
-        'Cache-Control': 'private, max-age=60',
+        'Cache-Control': 'private, max-age=300',
         'Vary': 'Accept',
       },
     });
@@ -178,7 +184,7 @@ export async function GET(
     } catch {}
     return NextResponse.redirect(new URL(`/api/photos/${photoId}`, request.url), {
       headers: {
-        'Cache-Control': 'private, max-age=60',
+        'Cache-Control': 'private, max-age=300',
         'Vary': 'Accept',
       },
     });

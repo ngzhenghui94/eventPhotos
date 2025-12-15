@@ -11,11 +11,13 @@ type EventItem = import('@/lib/db/schema').Event & {
   role?: 'host' | 'organizer' | 'photographer' | 'customer' | null;
 };
 
-function formatDate(date: Date | string) {
+function formatDate(date: Date | string | null | undefined) {
+  if (!date) return 'No date';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
-function formatCreated(date: Date | string) {
+function formatCreated(date: Date | string | null | undefined) {
+  if (!date) return '';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }

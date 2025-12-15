@@ -49,11 +49,14 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasMore, setHasMore] = useState(false);
+  const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
 
   const cacheKey = useMemo(() => 
     `photos-${eventId}-${accessCode || 'public'}-${filterApproved ? 'approved' : 'all'}`,
     [eventId, accessCode, filterApproved]
   );
+
+  const PAGE_SIZE = 120;
 
   const fetchPhotos = useCallback(async (attempt = 1): Promise<void> => {
     try {
@@ -74,6 +77,8 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
       const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const url = new URL(`/api/events/${eventId}`, window.location.origin);
+      url.searchParams.set('limit', String(PAGE_SIZE));
+      if (filterApproved) url.searchParams.set('approvedOnly', '1');
       if (accessCode) {
         url.searchParams.set('code', accessCode);
       }
@@ -111,6 +116,8 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
       }));
 
       setPhotos(photosData);
+      setHasMore(!!data?.page?.hasMore);
+      setNextBeforeId(typeof data?.page?.nextBeforeId === 'number' ? data.page.nextBeforeId : null);
       
       // Cache the results
       if (enableCache) {
@@ -121,7 +128,7 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
         });
       }
 
-      setHasMore(false); // TODO: Implement pagination
+      // hasMore handled above
     } catch (err) {
       console.error('Error fetching photos:', err);
       
@@ -148,9 +155,34 @@ export function usePhotos(options: UsePhotosOptions): UsePhotosReturn {
   }, []);
 
   const loadMore = useCallback(async () => {
-    // TODO: Implement pagination
-    console.log('Pagination not yet implemented');
-  }, []);
+    if (!hasMore || !nextBeforeId) return;
+    try {
+      const url = new URL(`/api/events/${eventId}`, window.location.origin);
+      url.searchParams.set('limit', String(PAGE_SIZE));
+      url.searchParams.set('beforeId', String(nextBeforeId));
+      if (filterApproved) url.searchParams.set('approvedOnly', '1');
+      if (accessCode) url.searchParams.set('code', accessCode);
+      const response = await fetch(url.toString(), {
+        cache: 'no-store',
+        headers: accessCode ? { 'x-access-code': accessCode } : {},
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      const data = await response.json();
+      let more: PhotoWithMeta[] = data.photos || [];
+      if (filterApproved) more = more.filter((p) => p.isApproved);
+      more = more.map((photo) => ({ ...photo, thumbnailLoaded: false, fullImageLoaded: false }));
+      setPhotos((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const merged = [...prev];
+        for (const p of more) if (!seen.has(p.id)) merged.push(p);
+        return merged;
+      });
+      setHasMore(!!data?.page?.hasMore);
+      setNextBeforeId(typeof data?.page?.nextBeforeId === 'number' ? data.page.nextBeforeId : null);
+    } catch (e) {
+      console.error('Error loading more photos:', e);
+    }
+  }, [accessCode, eventId, filterApproved, hasMore, nextBeforeId]);
 
   const refetch = useCallback(async () => {
     // Clear cache and refetch
