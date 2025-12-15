@@ -20,6 +20,7 @@ import { OptimizedSlideshow } from '@/components/optimized-slideshow';
 import TimelineCollapsibleCard from '@/components/timeline-collapsible-card';
 import { BulkDownload } from '@/components/bulk-download';
 import { normalizePlanName } from '@/lib/plans';
+import { getPhotosForEventPage } from '@/lib/db/queries';
 
 interface GuestEventPageProps { params: Promise<{ code: string }>; }
 
@@ -36,14 +37,14 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
   }
 
   // Coalesce server-side: event + photos in one helper call
-  const bundled = await getEventWithPhotos(event.id);
-  const photosRaw = bundled?.photos || [];
+  const firstPage = await getPhotosForEventPage(event.id, { limit: 120, approvedOnly: true });
+  const photosRaw = firstPage?.photos || [];
 
   const cookieKey = `evt:${event.eventCode}:access`;
   const accessCodeCookie = cookieStore.get(cookieKey)?.value || '';
   const hasAccess = event.isPublic || (!!accessCodeCookie && accessCodeCookie.toUpperCase() === event.accessCode.toUpperCase());
 
-  const photos = (photosRaw || []).filter((p: any) => p.isApproved);
+  const photos = photosRaw || [];
   const eventDate = new Date(event.date);
   const photoCount = photos?.length || 0;
   const hostPlan = normalizePlanName(event.createdBy?.planName as any);
@@ -198,8 +199,12 @@ export default async function GuestEventPage({ params }: GuestEventPageProps) {
               {hasAccess ? (
                 <GuestPhotoGrid
                   photos={photos || []}
+                  eventId={event.id}
                   accessCode={event.isPublic ? undefined : accessCodeCookie}
                   className="mt-4"
+                  enablePagination={true}
+                  initialHasMore={!!firstPage?.hasMore}
+                  initialNextBeforeId={firstPage?.nextBeforeId ?? null}
                 />
               ) : (
                 <PrivateAccessGate eventName={event.name} eventCode={event.eventCode} />

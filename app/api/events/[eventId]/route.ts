@@ -1,6 +1,5 @@
 import { NextRequest } from 'next/server';
-import { getUser, getEventById, getPhotosForEvent, canUserAccessEvent } from '@/lib/db/queries';
-import { getSignedDownloadUrl } from '@/lib/s3';
+import { getUser, getEventById, getPhotosForEvent, getPhotosForEventPage, canUserAccessEvent } from '@/lib/db/queries';
 
 export async function GET(
   request: NextRequest,
@@ -22,6 +21,12 @@ export async function GET(
       const user = await getUser();
       const url = new URL(request.url);
       const code = request.headers.get('x-access-code') || url.searchParams.get('code') || null;
+      const limitParam = url.searchParams.get('limit');
+      const beforeIdParam = url.searchParams.get('beforeId');
+      const approvedOnlyParam = url.searchParams.get('approvedOnly');
+      const limit = limitParam ? Number(limitParam) : undefined;
+      const beforeId = beforeIdParam ? Number(beforeIdParam) : undefined;
+      const approvedOnly = approvedOnlyParam === '1' || approvedOnlyParam === 'true';
       const canAccess = await canUserAccessEvent(eventId, { 
         userId: user?.id, 
         accessCode: code ?? undefined 
@@ -36,23 +41,20 @@ export async function GET(
         return Response.json({ error: 'Event not found' }, { status: 404 });
       }
 
-      const rawPhotos = await getPhotosForEvent(eventId);
+      const page = (typeof limit === 'number' && Number.isFinite(limit))
+        ? await getPhotosForEventPage(eventId, { limit, beforeId, approvedOnly })
+        : { photos: await getPhotosForEvent(eventId), hasMore: false, nextBeforeId: null };
+      const rawPhotos = page.photos;
 
       // Map file paths: if S3 key, provide signed URL via /api/photos/[id] for viewing
-      const photos = await Promise.all(
-        rawPhotos.map(async (p) => {
-          if (p.filePath?.startsWith('s3:')) {
-            // We will not expose the raw signed URL here; the client will call /api/photos/[id]
-            // which now redirects to a short-lived signed S3 URL after authorization checks.
-            return {
-              ...p,
-              // Keep a placeholder; frontends will use /api/photos/:id
-              filePath: `/api/photos/${p.id}`,
-            };
-          }
-          return p;
-        })
-      );
+      const photos = rawPhotos.map((p) => {
+        if (p.filePath?.startsWith('s3:')) {
+          // We will not expose the raw signed URL here; the client will call /api/photos/[id]
+          // which redirects to a short-lived signed S3 URL after authorization checks.
+          return { ...p, filePath: `/api/photos/${p.id}` };
+        }
+        return p;
+      });
 
       return Response.json({
         event: {
@@ -67,6 +69,11 @@ export async function GET(
           category: event.category,
         },
         photos,
+        page: {
+          hasMore: page.hasMore,
+          nextBeforeId: page.nextBeforeId,
+          limit: typeof limit === 'number' && Number.isFinite(limit) ? limit : null,
+        }
       });
     };
 

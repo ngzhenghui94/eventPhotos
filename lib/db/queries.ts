@@ -1,4 +1,4 @@
-import { desc, and, eq, isNull, inArray, sql } from 'drizzle-orm';
+import { desc, and, eq, isNull, inArray, sql, lt } from 'drizzle-orm';
 import { cookies } from 'next/headers';
 import { db } from './drizzle';
 import { activityLogs, users, events, photos, eventTimelines, ActivityType, eventMessages, eventMembers } from './schema';
@@ -514,6 +514,58 @@ export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
       })
     );
   }, 'getPhotosForEvent');
+}
+
+/**
+ * Paginated photos for an event (cursor by id).
+ * Designed for <500 photos/event to reduce initial payload size.
+ */
+export async function getPhotosForEventPage(
+  eventId: number,
+  options?: { limit?: number; beforeId?: number; approvedOnly?: boolean }
+): Promise<{ photos: PhotoData[]; hasMore: boolean; nextBeforeId: number | null }> {
+  const limit = Math.max(1, Math.min(200, Math.floor(options?.limit ?? 120)));
+  const beforeId = typeof options?.beforeId === 'number' && Number.isFinite(options.beforeId)
+    ? Math.floor(options.beforeId)
+    : undefined;
+  const approvedOnly = !!options?.approvedOnly;
+
+  return withDatabaseErrorHandling(async () => {
+    const whereClause = approvedOnly
+      ? (beforeId
+          ? and(eq(photos.eventId, eventId), lt(photos.id, beforeId), eq(photos.isApproved, true))
+          : and(eq(photos.eventId, eventId), eq(photos.isApproved, true)))
+      : (beforeId
+          ? and(eq(photos.eventId, eventId), lt(photos.id, beforeId))
+          : eq(photos.eventId, eventId));
+
+    // Fetch limit+1 so we can tell if there's more
+    const rows = await db.query.photos.findMany({
+      where: whereClause as any,
+      orderBy: [desc(photos.id)],
+      limit: limit + 1,
+      columns: {
+        id: true,
+        filename: true,
+        filePath: true,
+        originalFilename: true,
+        mimeType: true,
+        fileSize: true,
+        eventId: true,
+        uploadedAt: true,
+        isApproved: true,
+        uploadedBy: true,
+        guestName: true,
+        guestEmail: true,
+      },
+    });
+
+    const hasMore = rows.length > limit;
+    const sliced = hasMore ? rows.slice(0, limit) : rows;
+    const nextBeforeId = hasMore ? (sliced[sliced.length - 1]?.id ?? null) : null;
+
+    return { photos: sliced as any, hasMore, nextBeforeId };
+  }, 'getPhotosForEventPage');
 }
 
 /**

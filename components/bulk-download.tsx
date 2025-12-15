@@ -13,6 +13,22 @@ interface BulkDownloadProps {
   fullWidth?: boolean;
 }
 
+function filenameFromContentDisposition(header: string | null): string | null {
+  if (!header) return null;
+  // Prefer filename* (RFC 5987)
+  const mStar = header.match(/filename\*\s*=\s*UTF-8''([^;]+)/i);
+  if (mStar && mStar[1]) {
+    try {
+      return decodeURIComponent(mStar[1].trim());
+    } catch {
+      return mStar[1].trim();
+    }
+  }
+  const m = header.match(/filename\s*=\s*"([^"]+)"/i) || header.match(/filename\s*=\s*([^;]+)/i);
+  if (m && m[1]) return m[1].trim();
+  return null;
+}
+
 export function BulkDownload({ photos, accessCode, compact, fullWidth }: BulkDownloadProps) {
   const [loading, setLoading] = React.useState(false);
   const [progress, setProgress] = React.useState<number | null>(null);
@@ -92,7 +108,11 @@ export function BulkDownload({ photos, accessCode, compact, fullWidth }: BulkDow
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = 'photos.zip';
+      const headerName =
+        filenameFromContentDisposition(res.headers.get('Content-Disposition')) ||
+        res.headers.get('X-Zip-Filename') ||
+        'photos.zip';
+      link.download = headerName;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

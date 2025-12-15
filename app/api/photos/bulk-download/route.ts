@@ -18,11 +18,26 @@ export const dynamic = 'force-dynamic';
 // Allow longer execution for large zips (Vercel/Next-specific hint)
 export const maxDuration = 300; // seconds
 import { Readable } from 'stream';
-import { getPhotoById, canUserAccessEvent, getUser, logActivity } from '@/lib/db/queries';
+import { getPhotoById, getEventById, canUserAccessEvent, getUser, logActivity } from '@/lib/db/queries';
 import { getSignedDownloadUrl, getS3ClientInternal, getBucketName } from '@/lib/s3';
 import { ActivityType } from '@/lib/db/schema';
 import { bumpEventVersion } from '@/lib/utils/cache';
 import { SIGNED_URL_TTL_SECONDS } from '@/lib/config/cache';
+
+function sanitizeZipBaseName(name: string): string {
+  const raw = (name || '').trim().replace(/\s+/g, ' ');
+  // Remove characters that commonly break downloads/OS filenames
+  const cleaned = raw.replace(/[\/\\?%*:|"<>]/g, '').trim();
+  const truncated = cleaned.length > 80 ? cleaned.slice(0, 80).trim() : cleaned;
+  return truncated || 'event-photos';
+}
+
+function contentDispositionForFilename(filename: string) {
+  // Provide both filename and filename* for better UTF-8 support
+  const asciiFallback = filename.replace(/[^\x20-\x7E]+/g, '_');
+  const encoded = encodeURIComponent(filename);
+  return `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encoded}`;
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,6 +66,7 @@ export async function POST(request: NextRequest) {
     const bucket = getBucketName();
     let totalBytes = 0;
     let eventIdForActivity: number | null = null;
+    let eventZipName: string | null = null;
 
     // Create archiver instance for streaming zip
   const { default: createArchiver } = await import('archiver');
@@ -67,7 +83,16 @@ export async function POST(request: NextRequest) {
           const canAccess = await canUserAccessEvent(photo.eventId, { userId: user?.id, accessCode });
           if (!canAccess) continue;
           const filename = photo.originalFilename || photo.filename || `photo-${photo.id}`;
-          if (!eventIdForActivity) eventIdForActivity = photo.eventId;
+          if (!eventIdForActivity) {
+            eventIdForActivity = photo.eventId;
+            // Resolve event name once (best-effort)
+            try {
+              const ev = await getEventById(photo.eventId);
+              if (ev?.name) {
+                eventZipName = `${sanitizeZipBaseName(ev.name)}.zip`;
+              }
+            } catch {}
+          }
           if (typeof photo.fileSize === 'number' && Number.isFinite(photo.fileSize)) {
             totalBytes += photo.fileSize;
           }
@@ -128,11 +153,13 @@ export async function POST(request: NextRequest) {
     } catch {
       body = archive as any;
     }
+    const zipName = eventZipName || 'photos.zip';
     return new NextResponse(body, {
       status: 200,
       headers: {
         'Content-Type': 'application/zip',
-        'Content-Disposition': 'attachment; filename="photos.zip"',
+        'Content-Disposition': contentDispositionForFilename(zipName),
+        'X-Zip-Filename': zipName,
         'X-Total-Bytes': String(totalBytes || 0),
         'Cache-Control': 'no-store',
         // No Content-Length because we are streaming

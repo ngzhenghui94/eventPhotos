@@ -16,13 +16,25 @@ interface GuestPhotoGridProps {
   photos: GuestPhoto[];
   accessCode?: string;
   className?: string;
+  eventId?: number;
+  enablePagination?: boolean;
+  initialHasMore?: boolean;
+  initialNextBeforeId?: number | null;
 }
 
 export function GuestPhotoGrid({ 
   photos, 
   accessCode, 
-  className = ''
+  className = '',
+  eventId,
+  enablePagination = false,
+  initialHasMore = false,
+  initialNextBeforeId = null,
 }: GuestPhotoGridProps) {
+  const [items, setItems] = useState<GuestPhoto[]>(photos);
+  const [hasMore, setHasMore] = useState<boolean>(initialHasMore);
+  const [nextBeforeId, setNextBeforeId] = useState<number | null>(initialNextBeforeId);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [selectedPhotos, setSelectedPhotos] = useState<GuestPhoto[]>([]);
@@ -51,17 +63,50 @@ export function GuestPhotoGrid({
   };
 
   const handleSelectAll = () => {
-    if (selectedPhotos.length === photos.length) {
+    if (selectedPhotos.length === items.length) {
       setSelectedPhotos([]);
     } else {
-      setSelectedPhotos(photos.slice(0, 10));
-      if (photos.length > 10) {
+      setSelectedPhotos(items.slice(0, 10));
+      if (items.length > 10) {
         toast.warning('Selected the first 10 photos. You can select a maximum of 10.');
       }
     }
   };
 
-  if (photos.length === 0) {
+  async function loadMore() {
+    if (!enablePagination || !eventId || !hasMore || !nextBeforeId || isLoadingMore) return;
+    setIsLoadingMore(true);
+    try {
+      const url = new URL(`/api/events/${eventId}`, window.location.origin);
+      url.searchParams.set('limit', '120');
+      url.searchParams.set('beforeId', String(nextBeforeId));
+      url.searchParams.set('approvedOnly', '1');
+      // Private events: pass code if provided
+      if (accessCode) url.searchParams.set('code', accessCode);
+      const res = await fetch(url.toString(), {
+        headers: accessCode ? { 'x-access-code': accessCode } : {},
+        cache: 'no-store',
+      });
+      if (!res.ok) throw new Error('Failed to load more photos');
+      const json = await res.json();
+      const newPhotos: GuestPhoto[] = Array.isArray(json?.photos) ? json.photos : [];
+      const page = json?.page || {};
+      setItems((prev) => {
+        const seen = new Set(prev.map((p) => p.id));
+        const merged = [...prev];
+        for (const p of newPhotos) if (p?.id && !seen.has(p.id)) merged.push(p);
+        return merged;
+      });
+      setHasMore(!!page.hasMore);
+      setNextBeforeId(page.nextBeforeId ?? null);
+    } catch (e) {
+      toast.error('Could not load more photos.');
+    } finally {
+      setIsLoadingMore(false);
+    }
+  }
+
+  if (items.length === 0) {
     return (
       <div className="text-center py-12">
         <div className="w-24 h-24 mx-auto mb-4 bg-gray-100 rounded-lg flex items-center justify-center">
@@ -83,13 +128,13 @@ export function GuestPhotoGrid({
           <div className="text-sm text-gray-600">
             {isSelectMode
               ? `${selectedPhotos.length} selected`
-              : `${photos.length} photo${photos.length !== 1 ? 's' : ''}`}
+              : `${items.length} photo${items.length !== 1 ? 's' : ''}`}
           </div>
           <div className="flex items-center gap-2">
             {isSelectMode && (
               <>
                 <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-                  {selectedPhotos.length === photos.length ? 'Deselect All' : 'Select All'}
+                  {selectedPhotos.length === items.length ? 'Deselect All' : 'Select All'}
                 </Button>
                 <BulkDownload photos={selectedPhotos} accessCode={accessCode} />
               </>
@@ -109,7 +154,7 @@ export function GuestPhotoGrid({
 
         {/* Photo Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4">
-          {photos.map((photo, index) => (
+          {items.map((photo, index) => (
             <GuestPhotoCard
               key={photo.id}
               photo={photo}
@@ -122,12 +167,20 @@ export function GuestPhotoGrid({
             />
           ))}
         </div>
+
+        {enablePagination && hasMore && (
+          <div className="mt-6 flex justify-center">
+            <Button variant="outline" onClick={loadMore} disabled={isLoadingMore}>
+              {isLoadingMore ? 'Loading…' : 'Load more'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Photo Modal */}
       {selectedIndex !== null && !isSelectMode && (
         <GuestPhotoModal
-          photos={photos}
+          photos={items}
           currentIndex={selectedIndex}
           accessCode={accessCode}
           onClose={() => setSelectedIndex(null)}
