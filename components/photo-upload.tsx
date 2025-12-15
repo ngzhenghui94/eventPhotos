@@ -304,12 +304,13 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
 
         {/* Upload Button */}
         {selectedFiles.length > 0 && (
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setSelectedFiles([])}
               disabled={isUploading}
+              className="whitespace-nowrap"
             >
               Clear All
             </Button>
@@ -317,6 +318,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
               type="button"
               onClick={handleUpload}
               disabled={isUploading}
+              className="whitespace-nowrap"
             >
               {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} Photo${selectedFiles.length !== 1 ? 's' : ''}`}
             </Button>

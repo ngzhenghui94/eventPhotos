@@ -407,12 +407,13 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
 
         {/* Upload Button */}
         {selectedFiles.length > 0 && (
-          <div className="flex justify-end space-x-2">
+          <div className="flex flex-col sm:flex-row sm:justify-end gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setSelectedFiles([])}
               disabled={isUploading}
+              className="whitespace-nowrap"
             >
               Clear All
             </Button>
@@ -420,6 +421,7 @@ export function GuestPhotoUpload({ eventId }: GuestPhotoUploadProps) {
               type="button"
               onClick={handleUpload}
               disabled={isUploading || !guestName.trim()}
+              className="whitespace-nowrap"
             >
               {isUploading ? 'Uploading...' : `Upload ${selectedFiles.length} Photo${selectedFiles.length !== 1 ? 's' : ''}`}
             </Button>
