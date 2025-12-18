@@ -1,10 +1,14 @@
-import { requireSuperAdmin } from '@/lib/auth/admin';
+import { isSuperAdminUser } from '@/lib/auth/admin';
+import { getUser } from '@/lib/db/queries';
 import { getS3ClientInternal, getBucketName } from '@/lib/s3';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import JSZip from 'jszip';
 
 export async function POST(request: Request) {
-  await requireSuperAdmin();
+  const user = await getUser();
+  if (!isSuperAdminUser(user)) {
+    return Response.json({ error: 'Forbidden' }, { status: 403 });
+  }
   let body: any;
   try {
     body = await request.json();
