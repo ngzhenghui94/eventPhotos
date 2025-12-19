@@ -119,7 +119,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
           // Ensure we don't attempt the same upload twice
           uploadByClientId.delete(clientId);
           let uploadTarget = 'unknown';
-          try { const uo = new URL(u.url); uploadTarget = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch {}
+          try { const uo = new URL(u.url); uploadTarget = `${uo.protocol}//${uo.host}${uo.pathname}`; } catch { }
           const startedAt = Date.now();
           await new Promise<void>((resolve) => {
             const xhr = new XMLHttpRequest();
@@ -164,7 +164,7 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
           mimeType: u.mimeType,
           fileSize: u.fileSize,
         })));
-  console.info('[host-upload][finalize][ok]', { traceId });
+        console.info('[host-upload][finalize][ok]', { traceId });
       }
 
       setSelectedFiles([]);
@@ -211,11 +211,10 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
       <CardContent className="space-y-4">
         {/* File Drop Zone */}
         <div
-          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-            isDragging
+          className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${isDragging
               ? 'border-amber-500 bg-amber-50'
               : 'border-gray-300 hover:border-gray-400'
-          }`}
+            }`}
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -254,48 +253,50 @@ export function PhotoUpload({ eventId, planName }: PhotoUploadProps) {
 
         {/* Selected Files */}
         {selectedFiles.length > 0 && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <h4 className="font-medium text-gray-900">
               Selected Files ({selectedFiles.length})
             </h4>
-            <div className="space-y-2 max-h-48 overflow-y-auto">
+            <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
               {selectedFiles.map((file, index) => (
                 <div
                   key={index}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                  className="p-3 bg-gray-50 rounded-lg"
                 >
-                  <div className="flex items-center space-x-3">
-                    <ImageIcon className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <p className="text-sm font-medium text-gray-900 truncate max-w-xs">
-                        {file.name}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {formatFileSize(file.size)}
-                      </p>
-                      {isUploading && (
-                        <div className="w-32 mt-2">
-                          <div className="h-2 rounded bg-gray-200 overflow-hidden">
-                            <div
-                              className="h-2 rounded bg-blue-500 transition-all duration-200"
-                              style={{ width: `${uploadProgress[index] || 0}%` }}
-                            />
-                          </div>
-                          <div className="text-xs text-gray-500 mt-1 text-right">{uploadProgress[index] || 0}%</div>
-                        </div>
-                      )}
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <ImageIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {formatFileSize(file.size)}
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      className="text-gray-400 hover:text-gray-600 flex-shrink-0"
+                      disabled={isUploading}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFile(index)}
-                    className="text-gray-400 hover:text-gray-600"
-                    disabled={isUploading}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                  {isUploading && (
+                    <div className="mt-2">
+                      <div className="h-2 rounded bg-gray-200 overflow-hidden">
+                        <div
+                          className="h-2 rounded bg-blue-500 transition-all duration-200"
+                          style={{ width: `${uploadProgress[index] || 0}%` }}
+                        />
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1 text-right">{uploadProgress[index] || 0}%</div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
