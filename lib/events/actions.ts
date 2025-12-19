@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '@/lib/db/drizzle';
-import { events, ActivityType, eventTimelines, photos } from '@/lib/db/schema';
+import { events, ActivityType, eventTimelines, photos, activityLogs } from '@/lib/db/schema';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { eq, sql, and, desc } from 'drizzle-orm';
 import { redis } from '@/lib/upstash';
@@ -119,8 +119,8 @@ const deleteEventSchema = z.object({
 export const deleteEvent = validatedActionWithUser(
   deleteEventSchema,
   async (data, _, user) => {
-  // Note: `validatedActionWithUser` already verifies user is logged in.
-  // Only the Host (event creator) can delete an event.
+    // Note: `validatedActionWithUser` already verifies user is logged in.
+    // Only the Host (event creator) can delete an event.
     const existing = await db.query.events.findFirst({
       where: eq(events.id, data.eventId),
       columns: { createdBy: true },
@@ -156,6 +156,8 @@ export const deleteEvent = validatedActionWithUser(
       // 4. Delete all related DB records (photos, timelines, and the event itself)
       // Drizzle doesn't have cascade deletes, so we do it manually.
       await db.delete(photos).where(eq(photos.eventId, data.eventId));
+      // Nullify eventId in activity logs to prevent FK constraint error
+      await db.update(activityLogs).set({ eventId: null }).where(eq(activityLogs.eventId, data.eventId));
       await db.delete(eventTimelines).where(eq(eventTimelines.eventId, data.eventId));
       await db.delete(events).where(eq(events.id, data.eventId));
 

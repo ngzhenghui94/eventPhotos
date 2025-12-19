@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireSuperAdminApi } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
-import { events, photos } from '@/lib/db/schema';
+import { events, photos, activityLogs, eventTimelines } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 import { redis } from '@/lib/upstash';
 import { bumpEventVersion } from '@/lib/utils/cache';
@@ -20,7 +20,13 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
   })).map(p => p.id);
   // delete photos first to avoid FK constraint issues
   await db.delete(photos).where(eq(photos.eventId, eventId));
+  // remove event association from activity logs
+  await db.update(activityLogs).set({ eventId: null }).where(eq(activityLogs.eventId, eventId));
+  // delete event timelines
+  await db.delete(eventTimelines).where(eq(eventTimelines.eventId, eventId));
+  // delete the event
   await db.delete(events).where(eq(events.id, eventId));
+
   // Invalidate caches for event, photos, timeline, counts, and owner list
   try {
     await Promise.all([

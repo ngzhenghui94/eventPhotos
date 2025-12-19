@@ -20,7 +20,7 @@ import { EVENT_TIMELINE_TTL_SECONDS, EVENT_BY_ID_TTL_SECONDS, EVENT_BY_CODE_TTL_
  */
 export async function getEventTimeline(eventId: number): Promise<EventTimeline[]> {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:${eventId}:timeline`, EVENT_TIMELINE_TTL_SECONDS, async () =>
+    return cacheWrap(`evt:${eventId}:timeline`, EVENT_TIMELINE_TTL_SECONDS, async () =>
       db.query.eventTimelines.findMany({
         where: eq(eventTimelines.eventId, eventId),
         orderBy: [eventTimelines.time],
@@ -36,7 +36,7 @@ export async function createEventTimelineEntry(data: NewEventTimeline): Promise<
   validateRequiredFields(data, ['eventId', 'title', 'time']);
   return withDatabaseErrorHandling(async () => {
     const [created] = await db.insert(eventTimelines).values(data).returning();
-    try { await redis.del(`evt:${data.eventId}:timeline`); } catch {}
+    try { await redis.del(`evt:${data.eventId}:timeline`); } catch { }
     return created;
   }, 'createEventTimelineEntry');
 }
@@ -51,7 +51,7 @@ export async function updateEventTimelineEntry(id: number, data: Partial<NewEven
       .where(eq(eventTimelines.id, id))
       .returning();
     if (updated) {
-      try { await redis.del(`evt:${updated.eventId}:timeline`); } catch {}
+      try { await redis.del(`evt:${updated.eventId}:timeline`); } catch { }
     }
     return updated || null;
   }, 'updateEventTimelineEntry');
@@ -65,7 +65,7 @@ export async function deleteEventTimelineEntry(id: number): Promise<void> {
     const existing = await getTimelineEntryById(id);
     await db.delete(eventTimelines).where(eq(eventTimelines.id, id));
     if (existing) {
-      try { await redis.del(`evt:${existing.eventId}:timeline`); } catch {}
+      try { await redis.del(`evt:${existing.eventId}:timeline`); } catch { }
     }
   }, 'deleteEventTimelineEntry');
 }
@@ -133,7 +133,7 @@ export async function getUser() {
  */
 export async function updateUserSubscription(data: UserSubscriptionData): Promise<void> {
   validateRequiredFields(data, ['userId', 'planName', 'subscriptionStatus']);
-  
+
   return withDatabaseErrorHandling(async () => {
     await db.update(users)
       .set({
@@ -157,7 +157,7 @@ export async function updateUserSubscription(data: UserSubscriptionData): Promis
  */
 export async function logActivity(data: ActivityLogData): Promise<void> {
   validateRequiredFields(data, ['action']);
-  
+
   return withDatabaseErrorHandling(async () => {
     await db.insert(activityLogs).values({
       userId: data.userId ?? null,
@@ -200,7 +200,7 @@ export async function getActivityLogs(eventId: number, options: PaginationOption
  */
 export async function getEventById(eventId: number) {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:id:${eventId}`, EVENT_BY_ID_TTL_SECONDS, async () =>
+    return cacheWrap(`evt:id:${eventId}`, EVENT_BY_ID_TTL_SECONDS, async () =>
       findFirst(
         db.query.events.findMany({
           where: eq(events.id, eventId),
@@ -232,7 +232,7 @@ export async function getEventByAccessCode(code: string) {
  */
 export async function getEventByEventCode(code: string) {
   return withDatabaseErrorHandling(async () => {
-  return cacheWrap(`evt:code:${code}`, EVENT_BY_CODE_TTL_SECONDS, async () =>
+    return cacheWrap(`evt:code:${code}`, EVENT_BY_CODE_TTL_SECONDS, async () =>
       db.query.events.findFirst({
         where: eq(events.eventCode, code),
         with: {
@@ -272,7 +272,7 @@ export async function canUserAccessEvent(eventId: number, options: EventAccessOp
           });
           byUser = !!membership;
         }
-        try { await redis.set(userKey, byUser ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch {}
+        try { await redis.set(userKey, byUser ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch { }
       }
     }
 
@@ -284,7 +284,7 @@ export async function canUserAccessEvent(eventId: number, options: EventAccessOp
       else if (cached === 0) byCode = false;
       else {
         byCode = code === (event.accessCode || '').toUpperCase().trim();
-        try { await redis.set(codeKey, byCode ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch {}
+        try { await redis.set(codeKey, byCode ? 1 : 0, { ex: ACCESS_CHECK_TTL_SECONDS }); } catch { }
       }
     }
 
@@ -397,7 +397,7 @@ export async function addOrUpdateEventMember(eventId: number, userId: number, ro
         .returning();
       row = inserted;
     }
-    try { await bumpEventVersion(eventId); } catch {}
+    try { await bumpEventVersion(eventId); } catch { }
     return row;
   }, 'addOrUpdateEventMember');
 }
@@ -410,7 +410,7 @@ export async function removeEventMember(eventId: number, userId: number) {
       throw new Error('Cannot remove host from event');
     }
     await db.delete(eventMembers).where(and(eq(eventMembers.eventId, eventId), eq(eventMembers.userId, userId)));
-    try { await bumpEventVersion(eventId); } catch {}
+    try { await bumpEventVersion(eventId); } catch { }
   }, 'removeEventMember');
 }
 
@@ -437,6 +437,9 @@ export async function getUserEvents(userId: number): Promise<EventWithPhotoCount
         createdAt: events.createdAt,
         updatedAt: events.updatedAt,
         photoCount: sql<number>`coalesce(count(${photos.id}), 0)`,
+        approvedCount: sql<number>`coalesce(sum(case when ${photos.isApproved} then 1 else 0 end), 0)`,
+        pendingCount: sql<number>`coalesce(sum(case when ${photos.isApproved} = false then 1 else 0 end), 0)`,
+        lastUploadAt: sql<Date | null>`max(${photos.uploadedAt})`,
         role: sql<'host' | 'organizer' | 'photographer' | 'customer' | null>`max(case
           when ${events.createdBy} = ${userId} then 'host'
           when em.role = 'host' then 'host'
@@ -514,7 +517,7 @@ export async function getPhotosByIds(photoIds: number[]): Promise<Array<Pick<Pho
  */
 export async function getPhotosForEvent(eventId: number): Promise<PhotoData[]> {
   return withDatabaseErrorHandling(async () => {
-  return versionedCacheWrap(eventId, 'photos', EVENT_PHOTOS_TTL_SECONDS, async () =>
+    return versionedCacheWrap(eventId, 'photos', EVENT_PHOTOS_TTL_SECONDS, async () =>
       db.query.photos.findMany({
         where: eq(photos.eventId, eventId),
         orderBy: [desc(photos.uploadedAt)],
@@ -554,11 +557,11 @@ export async function getPhotosForEventPage(
   return withDatabaseErrorHandling(async () => {
     const whereClause = approvedOnly
       ? (beforeId
-          ? and(eq(photos.eventId, eventId), lt(photos.id, beforeId), eq(photos.isApproved, true))
-          : and(eq(photos.eventId, eventId), eq(photos.isApproved, true)))
+        ? and(eq(photos.eventId, eventId), lt(photos.id, beforeId), eq(photos.isApproved, true))
+        : and(eq(photos.eventId, eventId), eq(photos.isApproved, true)))
       : (beforeId
-          ? and(eq(photos.eventId, eventId), lt(photos.id, beforeId))
-          : eq(photos.eventId, eventId));
+        ? and(eq(photos.eventId, eventId), lt(photos.id, beforeId))
+        : eq(photos.eventId, eventId));
 
     // Fetch limit+1 so we can tell if there's more
     const rows = await db.query.photos.findMany({

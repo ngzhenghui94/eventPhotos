@@ -63,6 +63,9 @@ export interface EventWithPhotoCount {
   createdAt: Date;
   updatedAt: Date;
   photoCount: number;
+  approvedCount?: number;
+  pendingCount?: number;
+  lastUploadAt?: Date | null;
   role?: 'host' | 'organizer' | 'photographer' | 'customer' | null;
 }
 

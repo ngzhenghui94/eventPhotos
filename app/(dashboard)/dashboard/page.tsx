@@ -16,7 +16,7 @@ const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
     let info: any = null;
-    try { info = await res.json(); } catch {}
+    try { info = await res.json(); } catch { }
     const err = new Error(info?.error || `Request failed with ${res.status}`) as any;
     err.status = res.status;
     err.info = info;
@@ -29,36 +29,31 @@ export default function DashboardPage() {
   const [sortDir, setSortDir] = useState<'desc' | 'asc'>('desc');
   const { data: events, error, isLoading } = useSWR<EventWithPhotoCount[]>('/api/events', fetcher);
 
-  // Aggregate event stats across all events by calling the new stats endpoint per event
-  const eventIds = useMemo(() => (Array.isArray(events) ? events.map(e => e.id) : []), [events]);
-  const { data: aggStats } = useSWR<{
-    totalPhotos: number;
-    approvedPhotos: number;
-    pendingApprovals: number;
-    lastUploadAt: string | null;
-  }>(
-    eventIds && eventIds.length > 0 ? ['dashboard-batch-stats', eventIds] : null,
-    async ([, ids]: [string, number[]]) => {
-      const res = await fetch('/api/dashboard/stats', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ eventIds: ids }),
-      });
-      if (!res.ok) throw new Error('Failed to load aggregated stats');
-      const json = await res.json();
-      return json.aggregate as { totalPhotos: number; approvedPhotos: number; pendingApprovals: number; lastUploadAt: string | null };
-    },
-    { revalidateOnFocus: true, revalidateIfStale: true }
-  );
+  // Compute aggregate event stats directly from the events list
+  // No need for a separate API call since we optimized `getUserEvents` to return these counts
+  const aggStats = useMemo(() => {
+    if (!Array.isArray(events)) return null;
+    return events.reduce((acc, event) => ({
+      totalPhotos: acc.totalPhotos + Number(event.photoCount || 0),
+      approvedPhotos: acc.approvedPhotos + Number(event.approvedCount || 0),
+      pendingApprovals: acc.pendingApprovals + Number(event.pendingCount || 0),
+      // Find the most recent upload date across all events
+      lastUploadAt: (!acc.lastUploadAt || (event.lastUploadAt && new Date(event.lastUploadAt) > new Date(acc.lastUploadAt)))
+        ? (event.lastUploadAt ? new Date(event.lastUploadAt).toISOString() : acc.lastUploadAt)
+        : acc.lastUploadAt
+    }), {
+      totalPhotos: 0,
+      approvedPhotos: 0,
+      pendingApprovals: 0,
+      lastUploadAt: null as string | null
+    });
+  }, [events]);
 
   // Listen for photo changes (deletes/uploads) and revalidate relevant data
   useEffect(() => {
     function onPhotosChanged() {
-      // Revalidate events list (photoCount) and aggregated stats
+      // Revalidate events list which now includes all stats
       mutate('/api/events');
-      if (eventIds && eventIds.length > 0) {
-        mutate(['dashboard-batch-stats', eventIds]);
-      }
     }
     if (typeof window !== 'undefined') {
       window.addEventListener('photos:changed', onPhotosChanged);
@@ -68,7 +63,7 @@ export default function DashboardPage() {
         window.removeEventListener('photos:changed', onPhotosChanged);
       }
     };
-  }, [mutate, eventIds]);
+  }, [mutate]);
 
   if (error) {
     return (
