@@ -14,3 +14,16 @@ export async function requireSuperAdmin(): Promise<User> {
   }
   return user!;
 }
+
+/**
+ * API-safe version of requireSuperAdmin.
+ * Returns user if authorized, null if not (caller must return 403 response).
+ * Use this in API routes instead of requireSuperAdmin() which uses redirect().
+ */
+export async function requireSuperAdminApi(): Promise<User | null> {
+  const user = await getUser();
+  if (!isSuperAdminUser(user)) {
+    return null;
+  }
+  return user;
+}

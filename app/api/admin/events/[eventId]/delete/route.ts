@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireSuperAdmin } from '@/lib/auth/admin';
+import { requireSuperAdminApi } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { events, photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -7,7 +7,8 @@ import { redis } from '@/lib/upstash';
 import { bumpEventVersion } from '@/lib/utils/cache';
 
 export async function POST(request: Request, context: { params: Promise<{ eventId: string }> }) {
-  await requireSuperAdmin();
+  const user = await requireSuperAdminApi();
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { eventId: eventIdParam } = await context.params;
   const eventId = Number(eventIdParam);
   if (!eventId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
@@ -40,6 +41,6 @@ export async function POST(request: Request, context: { params: Promise<{ eventI
     if (ev?.createdBy) {
       await redis.del(`user:${ev.createdBy}:events:list:v2`);
     }
-  } catch {}
+  } catch { }
   return NextResponse.redirect(new URL('/dashboard/admin/events', request.url), { status: 303 });
 }

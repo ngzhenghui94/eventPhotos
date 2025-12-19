@@ -1,8 +1,9 @@
-import { requireSuperAdmin } from '@/lib/auth/admin';
+import { requireSuperAdminApi } from '@/lib/auth/admin';
 import { deleteFromS3 } from '@/lib/s3';
 
 export async function POST(request: Request) {
-  await requireSuperAdmin();
+  const user = await requireSuperAdminApi();
+  if (!user) return Response.json({ error: 'Forbidden' }, { status: 403 });
   let body: any;
   try {
     body = await request.json();

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { requireSuperAdmin } from '@/lib/auth/admin';
+import { requireSuperAdminApi } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { photos } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
@@ -12,7 +12,8 @@ import { bumpEventVersion } from '@/lib/utils/cache';
 import { getEventStatsCached, setEventStatsCached } from '@/lib/utils/cache';
 
 export async function POST(request: Request, context: { params: Promise<{ photoId: string }> }) {
-  await requireSuperAdmin();
+  const user = await requireSuperAdminApi();
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { photoId: photoIdParam } = await context.params;
   const photoId = Number(photoIdParam);
   if (!photoId) return NextResponse.json({ error: 'Invalid id' }, { status: 400 });
@@ -24,9 +25,9 @@ export async function POST(request: Request, context: { params: Promise<{ photoI
         await deleteFromS3(p.filePath.replace(/^s3:/, ''));
       } else {
         const filePath = join(process.cwd(), 'public', p.filePath);
-        await fs.unlink(filePath).catch(() => {});
+        await fs.unlink(filePath).catch(() => { });
       }
-    } catch {}
+    } catch { }
   }
 
   await db.delete(photos).where(eq(photos.id, photoId));
@@ -55,8 +56,8 @@ export async function POST(request: Request, context: { params: Promise<{ photoI
           };
           await setEventStatsCached(p.eventId, next);
         }
-      } catch {}
-    } catch {}
+      } catch { }
+    } catch { }
   }
   return NextResponse.redirect(new URL('/dashboard/admin/photos', request.url), { status: 303 });
 }

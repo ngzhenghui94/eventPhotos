@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server';
-import { requireSuperAdmin } from '@/lib/auth/admin';
+import { requireSuperAdminApi } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { invitations } from '@/lib/db/schema';
 import { eq } from 'drizzle-orm';
 
 export async function POST(request: Request, context: { params: Promise<{ invitationId: string }> }) {
-  await requireSuperAdmin();
+  const user = await requireSuperAdminApi();
+  if (!user) return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   const { invitationId } = await context.params;
   const id = Number(invitationId);
   const form = await request.formData();

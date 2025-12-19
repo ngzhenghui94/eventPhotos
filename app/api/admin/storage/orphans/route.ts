@@ -1,4 +1,4 @@
-import { requireSuperAdmin } from '@/lib/auth/admin';
+import { requireSuperAdminApi } from '@/lib/auth/admin';
 import { db } from '@/lib/db/drizzle';
 import { photos, events } from '@/lib/db/schema';
 import { listAllObjects } from '@/lib/s3';
@@ -12,7 +12,8 @@ function keyFromFilePath(filePath: string): string | null {
 }
 
 export async function GET() {
-  await requireSuperAdmin();
+  const user = await requireSuperAdminApi();
+  if (!user) return Response.json({ error: 'Forbidden' }, { status: 403 });
 
   // 1) Get all S3 objects (limit to our photos prefix for efficiency)
   const objects = await listAllObjects('events/');
